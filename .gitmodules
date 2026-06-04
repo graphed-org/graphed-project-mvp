@@ -1,0 +1,6 @@
+[submodule "graphed-orchestrator"]
+	path = graphed-orchestrator
+	url = git@github.com:graphed-org/graphed-orchestrator.git
+[submodule "graphed-corpus"]
+	path = graphed-corpus
+	url = git@github.com:graphed-org/graphed-corpus.git
