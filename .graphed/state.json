@@ -4,8 +4,8 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "RUNNING",
-  "updated_at": "2026-06-04T20:40:00Z",
-  "note": "Project-level rollup. Authoritative per-repo detail lives in each repo's .graphed/state.json. See .graphed/SCHEMA.md for the update discipline. ORCH, M0 (6 repos), M0.5, M1, M2, and M3 are DONE and CI-green. M3 now includes ADL 1-8 end-to-end integration tests that reproduce the corpus histograms bit-for-bit. Next: M4 (graphed-core optimizer: DCE/CSE + equality-saturation stage fusion via egg).",
+  "updated_at": "2026-06-04T21:00:00Z",
+  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (6 repos), M0.5, M1, M2, M3 DONE and CI-green. M3: ADL 1-8 end-to-end integration tests (reproduce corpus histograms bit-for-bit) + experimental Python 3.14/3.14t CI (passing). Next: M4 (graphed-core optimizer: DCE/CSE + equality-saturation stage fusion via egg).",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
     "cumulative_tokens_cap": null,
