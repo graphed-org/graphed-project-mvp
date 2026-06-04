@@ -1,0 +1,28 @@
+# scratch build area for staging new sub-repos before submodule-add
+/.build/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Rust
+target/
+**/*.rs.bk
+
+# build / docs
+dist/
+build/
+_build/
+*.whl
+
+# OS / editor
+.DS_Store
+*.swp
