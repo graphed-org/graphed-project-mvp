@@ -13,3 +13,6 @@
 [submodule "graphed-numpy"]
 	path = graphed-numpy
 	url = git@github.com:graphed-org/graphed-numpy.git
+[submodule "graphed-awkward"]
+	path = graphed-awkward
+	url = git@github.com:graphed-org/graphed-awkward.git
