@@ -3,9 +3,9 @@
   "project": "graphed",
   "org": "graphed-org",
   "meta_repo": "graphed-project",
-  "pipeline_status": "PENDING",
-  "updated_at": "2026-06-04T15:08:26Z",
-  "note": "Project-level rollup. Authoritative per-repo detail lives in each repo's .graphed/state.json. See .graphed/SCHEMA.md for the update discipline. The pipeline cannot RUN any milestone until graphed-orchestrator is built and its B.8 faker suite is green.",
+  "pipeline_status": "RUNNING",
+  "updated_at": "2026-06-04T16:12:00Z",
+  "note": "Project-level rollup. Authoritative per-repo detail lives in each repo's .graphed/state.json. See .graphed/SCHEMA.md for the update discipline. ORCH (the deterministic orchestrator + B.8 faker suite) is DONE and CI-green, so the pipeline may now RUN milestones. Next: M0 spine for graphed-corpus, then M0.5.",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
     "cumulative_tokens_cap": null,
@@ -13,7 +13,7 @@
     "consecutive_pauses_cap": 2,
     "tripped": false
   },
-  "current_milestone": null,
+  "current_milestone": "M0.5",
   "phases": ["PENDING", "DECOMPOSE", "TEST_AUTHORING", "TEST_SANITY", "FROZEN", "IMPLEMENTING", "REVIEW", "DONE"],
   "side_states": ["TEST_DISPUTE", "ESCALATED", "PAUSED", "ABORTED"],
   "repos": {
@@ -30,8 +30,8 @@
     "graphed-preserve": {"role": "M9 preservation bundle", "created": false, "visibility": null, "is_submodule": false}
   },
   "milestones": {
-    "ORCH": {"title": "Deterministic orchestrator engine (Part B + B.8 faker suite)", "repos": ["graphed-orchestrator"], "status": "PENDING", "phase": "PENDING", "blocks": ["any milestone RUN"], "blocked_on": null, "iterations_cap": null},
-    "M0":   {"title": "Repository spine (per repo)", "repos": ["all"], "status": "PENDING", "phase": "PENDING", "blocked_on": null, "iterations_cap": 8},
+    "ORCH": {"title": "Deterministic orchestrator engine (Part B + B.8 faker suite)", "repos": ["graphed-orchestrator"], "status": "DONE", "phase": "DONE", "blocks": ["any milestone RUN"], "blocked_on": null, "iterations_cap": null, "evidence": "41 frozen tests, 97% line+branch coverage, mypy --strict clean, CI green on A.5 matrix incl. 3.13t/3.14/3.14t"},
+    "M0":   {"title": "Repository spine (per repo)", "repos": ["graphed-orchestrator (DONE)", "graphed-corpus (pending)"], "status": "IN_PROGRESS", "phase": "per-repo", "blocked_on": null, "iterations_cap": 8, "note": "DONE for graphed-orchestrator; graphed-corpus spine pending"},
     "M0.5": {"title": "Reference corpus study & Required Operations Catalog", "repos": ["graphed-corpus"], "status": "PENDING", "phase": "PENDING", "blocked_on": ["M0:graphed-corpus"], "iterations_cap": 6},
     "M1":   {"title": "graphed-core thread-safe interned graph IR", "repos": ["graphed-core"], "status": "PENDING", "phase": "PENDING", "blocked_on": ["M0.5"], "iterations_cap": 12},
     "M2":   {"title": "frontend + backend protocol + graphed-numpy", "repos": ["graphed", "graphed-numpy"], "status": "PENDING", "phase": "PENDING", "blocked_on": ["M1"], "iterations_cap": 10},
