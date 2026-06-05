@@ -49,7 +49,7 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `1a389e0` | ✅ submodule |
 | [graphed-corpus](https://github.com/graphed-org/graphed-corpus) | M0.5 requirements + fixtures | `eebd14e` | ✅ submodule |
 | [graphed-debug](https://github.com/graphed-org/graphed-debug) | M6 debug/tracebacks | `bba6b77` | ✅ submodule |
-| [graphed-exec-local](https://github.com/graphed-org/graphed-exec-local) | M7 reference executor | `9e282c9` | ✅ submodule |
+| [graphed-exec-local](https://github.com/graphed-org/graphed-exec-local) | M7 reference executor | `af5913f` | ✅ submodule |
 | [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M2 trivial backend | `66dab2a` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `ed85a25` | ✅ submodule |
 | [graphed-checkpoint](https://github.com/graphed-org/graphed-checkpoint) | M8 checkpoint/resume | — | lazy |
