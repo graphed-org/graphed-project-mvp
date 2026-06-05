@@ -4,8 +4,8 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "RUNNING",
-  "updated_at": "2026-06-05T03:00:00Z",
-  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (6 repos), M0.5, M1, M2, M3, M4, M5 DONE and CI-green. M5: necessary-buffer column projection (reporting typetracer + numpy field-touch tracking), over-touch protected. Orchestrator hardened with a CI-confirmation gate (DONE requires the pinned commit's CI green; in_progress != green). Next: M6 (graphed-debug).",
+  "updated_at": "2026-06-05T17:30:00Z",
+  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (7 repos), M0.5, M1, M2, M3, M4, M5, M6 DONE and CI-green. M6: graphed-debug (opt-level lowering, picklable source-mapped tracebacks surfacing across a process boundary, visualization). Orchestrator hardened with a CI-confirmation gate (DONE requires the pinned commit's CI green; in_progress != green; transient gh failures retried). Next: M7 (graphed-exec-local + executor protocol).",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
     "cumulative_tokens_cap": null,
@@ -13,7 +13,7 @@
     "consecutive_pauses_cap": 2,
     "tripped": false
   },
-  "current_milestone": "M6",
+  "current_milestone": "M7",
   "phases": [
     "PENDING",
     "DECOMPOSE",
@@ -75,9 +75,9 @@
     },
     "graphed-debug": {
       "role": "M6 debug/tracebacks",
-      "created": false,
-      "visibility": null,
-      "is_submodule": false
+      "created": true,
+      "visibility": "public",
+      "is_submodule": true
     },
     "graphed-exec-local": {
       "role": "M7 reference executor",
@@ -117,7 +117,8 @@
       "title": "Repository spine (per repo)",
       "repos": [
         "graphed-orchestrator (DONE)",
-        "graphed-corpus (DONE)"
+        "graphed-corpus (DONE)",
+        "graphed-debug (DONE)"
       ],
       "status": "DONE",
       "phase": "DONE",
@@ -200,11 +201,11 @@
       "repos": [
         "graphed-debug"
       ],
-      "status": "PENDING",
-      "phase": "PENDING",
+      "status": "DONE",
+      "phase": "DONE",
       "blocked_on": null,
       "iterations_cap": 10,
-      "note": "next: graphed-debug \u2014 opt-level lowering, source-mapped tracebacks (StageError picklable across a process boundary), visualization"
+      "evidence": "graphed-debug (new repo). lower(session,array,opt_level): 0 = 1:1 op<->node + inter-op assertions; >=1 fuses op-runs between boundaries, each op keeping exact provenance (same error line at any opt level). StageError carries failing op + user source-frame chain + input forms + partition, all plain data; custom __reduce__/__setstate__ make it PICKLABLE -> round-trips intact across a process boundary (never an opaque string). run() executes op-by-op, localizing failures deep inside a fused stage. format_traceback collapses graphed* frames (user line last/marked), identical after pickle. visualize() = deterministic Mermaid/Graphviz + provenance + projected columns. 29 frozen tests incl. a REAL multiprocessing (spawn) process-boundary test re-raising at the user's analysis line (A.3 #8); 97% coverage; green on the full A.5 matrix incl. 3.14t. (graphed gained Session.source_value support.)"
     },
     "M7": {
       "title": "Execution-layer contract + graphed-exec-local",
@@ -214,10 +215,9 @@
       ],
       "status": "PENDING",
       "phase": "PENDING",
-      "blocked_on": [
-        "M6"
-      ],
-      "iterations_cap": 16
+      "blocked_on": null,
+      "iterations_cap": 16,
+      "note": "next: graphed-exec-local (+ graphed-core Executor protocol) \u2014 AGC ttbar slice end-to-end bit-for-bit; thousands of tiny tasks no deadlock/stall/race (incl. 3.14t); tree reduction; remote StageError surfaces via M6"
     },
     "M8": {
       "title": "graphed-checkpoint: plan serialization + checkpoint/resume",

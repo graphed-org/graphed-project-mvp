@@ -16,3 +16,6 @@
 [submodule "graphed-awkward"]
 	path = graphed-awkward
 	url = git@github.com:graphed-org/graphed-awkward.git
+[submodule "graphed-debug"]
+	path = graphed-debug
+	url = git@github.com:graphed-org/graphed-debug.git
