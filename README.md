@@ -44,12 +44,12 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | Repo | Role | Pinned commit | State |
 |---|---|---|:--:|
 | [graphed-project](https://github.com/graphed-org/graphed-project) | meta/superproject | — | meta |
-| [graphed](https://github.com/graphed-org/graphed) | M2/M3 frontend | `5d62b20` | ✅ submodule |
-| [graphed-awkward](https://github.com/graphed-org/graphed-awkward) | M3/M5 reference backend | `1a1bf2a` | ✅ submodule |
-| [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `ccede74` | ✅ submodule |
+| [graphed](https://github.com/graphed-org/graphed) | M2/M3 frontend | `2402cd9` | ✅ submodule |
+| [graphed-awkward](https://github.com/graphed-org/graphed-awkward) | M3/M5 reference backend | `27c1555` | ✅ submodule |
+| [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `f54e57b` | ✅ submodule |
 | [graphed-corpus](https://github.com/graphed-org/graphed-corpus) | M0.5 requirements + fixtures | `eebd14e` | ✅ submodule |
-| [graphed-debug](https://github.com/graphed-org/graphed-debug) | M6 debug/tracebacks | `35ff083` | ✅ submodule |
-| [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M2 trivial backend | `9b5f465` | ✅ submodule |
+| [graphed-debug](https://github.com/graphed-org/graphed-debug) | M6 debug/tracebacks | `bba6b77` | ✅ submodule |
+| [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M2 trivial backend | `66dab2a` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `ed85a25` | ✅ submodule |
 | [graphed-checkpoint](https://github.com/graphed-org/graphed-checkpoint) | M8 checkpoint/resume | — | lazy |
 | [graphed-exec-local](https://github.com/graphed-org/graphed-exec-local) | M7 reference executor | — | lazy |
@@ -77,4 +77,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-05T17:01:58Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-05T17:31:51Z).</sub>

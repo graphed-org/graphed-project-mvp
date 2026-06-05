@@ -4,8 +4,8 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "RUNNING",
-  "updated_at": "2026-06-05T17:01:58Z",
-  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (7 repos), M0.5, M1, M2, M3, M4, M5, M6 DONE and CI-green. M6: graphed-debug (opt-level lowering, picklable source-mapped tracebacks surfacing across a process boundary, visualization). Orchestrator hardened with a CI-confirmation gate (DONE requires the pinned commit's CI green; in_progress != green; transient gh failures retried). Next: M7 (graphed-exec-local + executor protocol).",
+  "updated_at": "2026-06-05T17:31:51Z",
+  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (7 repos), M0.5, M1, M2, M3, M4, M5, M6 DONE and CI-green. M6: graphed-debug (opt-level lowering, picklable source-mapped tracebacks surfacing across a process boundary, visualization). Orchestrator hardened with a CI-confirmation gate (DONE requires the pinned commit's CI green; in_progress != green; transient gh failures retried). Next: M7 (graphed-exec-local + executor protocol). Complex-topology tests (diamond/star/nested, shared sub-DAGs) added across graphed-core (optimizer + interning), graphed (materialize evaluates a shared apex once), graphed-numpy/graphed-awkward (projection no over/under-touch through re-converging branches), and graphed-debug (lowering + error localization) \u2014 guarding the dask-optimizer failure modes (O(N^2), CSE blow-up, DCE on two-path nodes, shared-subgraph re-execution).",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
     "cumulative_tokens_cap": null,
