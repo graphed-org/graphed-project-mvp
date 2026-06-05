@@ -1,0 +1,26 @@
+name: readme-sync
+
+# Keep README.md generated-and-in-sync with .graphed/state.json. The generator is unit-tested, then
+# `--check` fails the build if the committed README has drifted from the state + pinned submodules.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  readme:
+    name: README generated + in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        # no submodules needed: the generator reads pins via `git ls-tree HEAD`
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test deps
+        run: python -m pip install --upgrade pip pytest
+      - name: Test the generator
+        run: python -m pytest scripts/test_gen_readme.py -v
+      - name: README.md is in sync with .graphed/state.json
+        run: python scripts/gen_readme.py --check

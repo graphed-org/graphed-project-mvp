@@ -11,27 +11,28 @@ This repo holds the root [`CLAUDE.md`](CLAUDE.md), the authoritative plan
 each package lives in its own repo under the [`graphed-org`](https://github.com/graphed-org)
 organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wheels, Sphinx).
 
-> This README is the easily-accessible high-level status. The authoritative machine-readable state
-> is [`.graphed/state.json`](.graphed/state.json) (this repo) and one per sub-repo.
+> ⚙️ **This file is generated** by [`scripts/gen_readme.py`](scripts/gen_readme.py) from
+> [`.graphed/state.json`](.graphed/state.json) + the live submodule pins, and CI fails if it drifts.
+> Edit the state, not this file. The machine-readable source of truth is `.graphed/state.json`.
 
 ## Milestone status
 
 **8 of 12 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **M6**.
 
 | Milestone | Status | Repo(s) | What it delivered |
-|-----------|:------:|---------|-------------------|
-| **ORCH** | ✅ DONE | graphed-orchestrator | Deterministic state machine, mechanical gates, stall/escalation ladder, B.8 faker suite, **CI-confirmation gate** |
-| **M0** | ✅ DONE | every repo | Per-repo CI / tooling / wheels / Sphinx spine |
-| **M0.5** | ✅ DONE | graphed-corpus | Required Operations Catalog + ADL 1–8 / AGC-ttbar / TTGamma fixtures (reproduced bit-for-bit) |
-| **M1** | ✅ DONE | graphed-core | Thread-safe interned IR (Rust + PyO3); hash-consing = CSE |
-| **M2** | ✅ DONE | graphed, graphed-numpy | Python frontend + `Backend` protocol + trivial numpy backend |
-| **M3** | ✅ DONE | graphed-awkward, graphed | awkward typetracer forms + real provenance + correctionlib/ONNX `External` nodes |
-| **M4** | ✅ DONE | graphed-core | Optimizer: DCE/CSE + equality-saturation stage fusion (`egg` behind `RewriteEngine`); super-linear-reduction CI benchmark guard |
-| **M5** | ✅ DONE | graphed-awkward, graphed-numpy, graphed | Necessary-buffer (column) projection — **over-touch protected** |
-| **M6** | ⬜ PENDING | graphed-debug | opt-level lowering (`opt_level=0` is 1:1) + picklable source-mapped `StageError` |
-| **M7** | ⬜ PENDING | graphed-exec-local, graphed-core | Reference executor + exec protocol (AGC ttbar slice end-to-end) |
-| **M8** | ⬜ PENDING | graphed-checkpoint, graphed-core | Deterministic `Plan` serialization + content-addressed checkpoint/resume |
-| **M9** | ⬜ PENDING | graphed-preserve | Self-contained content-addressed Preservation Bundle |
+|---|:--:|---|---|
+| **ORCH** | ✅ DONE | graphed-orchestrator | Deterministic orchestrator engine (Part B + B.8 faker suite) |
+| **M0** | ✅ DONE | graphed-orchestrator, graphed-corpus | Repository spine (per repo) |
+| **M0.5** | ✅ DONE | graphed-corpus | Reference corpus study & Required Operations Catalog |
+| **M1** | ✅ DONE | graphed-core | graphed-core thread-safe interned graph IR |
+| **M2** | ✅ DONE | graphed, graphed-numpy | frontend + backend protocol + graphed-numpy |
+| **M3** | ✅ DONE | graphed-awkward, graphed | graphed-awkward typetracer forms + provenance |
+| **M4** | ✅ DONE | graphed-core | graphed-core optimizer: DCE/CSE + equality-saturation stage fusion |
+| **M5** | ✅ DONE | graphed-awkward, graphed-numpy, graphed | Necessary-buffer (column) projection |
+| **M6** | ⬜ PENDING | graphed-debug | graphed-debug: opt-level lowering, source-mapped tracebacks, viz |
+| **M7** | ⬜ PENDING | graphed-exec-local, graphed-core | Execution-layer contract + graphed-exec-local |
+| **M8** | ⬜ PENDING | graphed-checkpoint, graphed-core | graphed-checkpoint: plan serialization + checkpoint/resume |
+| **M9** | ⬜ PENDING | graphed-preserve | graphed-preserve: analysis preservation bundle |
 
 The development process is a **gated three-role pipeline** (test-author → implementer → reviewer)
 coordinated by the deterministic `graphed-orchestrator`. A milestone is `DONE` only when every
@@ -40,19 +41,19 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 
 ## Repositories
 
-| Repo | Milestones | Pinned commit | Exists |
-|------|------------|---------------|:------:|
-| [graphed-project](https://github.com/graphed-org/graphed-project) | meta / superproject | — | ✅ |
-| [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | ORCH, M0 | `44b1a8c` | ✅ |
-| [graphed-corpus](https://github.com/graphed-org/graphed-corpus) | M0, M0.5 | `f7a2f23` | ✅ |
-| [graphed-core](https://github.com/graphed-org/graphed-core) | M0, M1, M4 | `101cb8d` | ✅ |
-| [graphed](https://github.com/graphed-org/graphed) | M0, M2, M3, M5 | `3eb4241` | ✅ |
-| [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M0, M2, M5 | `9b5f465` | ✅ |
-| [graphed-awkward](https://github.com/graphed-org/graphed-awkward) | M0, M3, M5 | `1a1bf2a` | ✅ |
-| graphed-debug | M6 | — | lazy |
-| graphed-exec-local | M7 | — | lazy |
-| graphed-checkpoint | M8 | — | lazy |
-| graphed-preserve | M9 | — | lazy |
+| Repo | Role | Pinned commit | State |
+|---|---|---|:--:|
+| [graphed-project](https://github.com/graphed-org/graphed-project) | meta/superproject | — | meta |
+| [graphed](https://github.com/graphed-org/graphed) | M2/M3 frontend | `3eb4241` | ✅ submodule |
+| [graphed-awkward](https://github.com/graphed-org/graphed-awkward) | M3/M5 reference backend | `1a1bf2a` | ✅ submodule |
+| [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `101cb8d` | ✅ submodule |
+| [graphed-corpus](https://github.com/graphed-org/graphed-corpus) | M0.5 requirements + fixtures | `f7a2f23` | ✅ submodule |
+| [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M2 trivial backend | `9b5f465` | ✅ submodule |
+| [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `44b1a8c` | ✅ submodule |
+| [graphed-checkpoint](https://github.com/graphed-org/graphed-checkpoint) | M8 checkpoint/resume | — | lazy |
+| [graphed-debug](https://github.com/graphed-org/graphed-debug) | M6 debug/tracebacks | — | lazy |
+| [graphed-exec-local](https://github.com/graphed-org/graphed-exec-local) | M7 reference executor | — | lazy |
+| [graphed-preserve](https://github.com/graphed-org/graphed-preserve) | M9 preservation bundle | — | lazy |
 
 `lazy` repos are created when their milestone begins.
 
@@ -76,4 +77,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Status as of 2026-06-05. Maintained alongside <code>.graphed/state.json</code>.</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-05T03:00:00Z).</sub>

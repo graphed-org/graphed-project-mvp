@@ -72,6 +72,11 @@ git pull && git submodule update --init --recursive
 When a submodule advances, commit the updated submodule pointer in `graphed-project` so the
 superproject pins a known-good revision of each package.
 
+The root `README.md` is **generated** from `.graphed/state.json` + the live submodule pins by
+`scripts/gen_readme.py` — never edit it by hand. After changing `.graphed/state.json` or advancing a
+submodule, run `python scripts/gen_readme.py` and commit the refreshed README; the `readme-sync` CI
+workflow runs the generator's tests and `--check`, failing if the committed README has drifted.
+
 ### Creating a new package repo (lazy, when a milestone starts)
 
 Only create a repo when its milestone enters `DECOMPOSE`/`TEST_AUTHORING`. Recipe:
