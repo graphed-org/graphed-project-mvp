@@ -4,8 +4,8 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "RUNNING",
-  "updated_at": "2026-06-04T23:30:00Z",
-  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (6 repos), M0.5, M1, M2, M3, M4 DONE and CI-green. M4: graphed-core optimizer (equality saturation via egg behind RewriteEngine; DCE/CSE; stage fusion; super-linear benchmark guard). Next: M5 (necessary-buffer column projection).",
+  "updated_at": "2026-06-05T01:30:00Z",
+  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (6 repos), M0.5, M1, M2, M3, M4, M5 DONE and CI-green. M5: necessary-buffer column projection (reporting typetracer + numpy field-touch tracking), over-touch protected. Next: M6 (graphed-debug).",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
     "cumulative_tokens_cap": null,
@@ -13,7 +13,7 @@
     "consecutive_pauses_cap": 2,
     "tripped": false
   },
-  "current_milestone": "M5",
+  "current_milestone": "M6",
   "phases": [
     "PENDING",
     "DECOMPOSE",
@@ -186,13 +186,14 @@
       "title": "Necessary-buffer (column) projection",
       "repos": [
         "graphed-awkward",
-        "graphed-numpy"
+        "graphed-numpy",
+        "graphed"
       ],
-      "status": "PENDING",
-      "phase": "PENDING",
+      "status": "DONE",
+      "phase": "DONE",
       "blocked_on": null,
       "iterations_cap": 10,
-      "note": "next: graphed-awkward column projection via a reporting typetracer; on-fail policy pass|warn|raise; + graphed-numpy trivial all-inputs"
+      "evidence": "Necessary-buffer (column) projection. graphed: Session.walk + Projection/OnFail/handle_opaque. graphed-awkward: reporting typetracer (metadata-only) -> touched form-keys -> columns; dimuon reads only the muon branches + MET.pt (5 of 20). graphed-numpy: NON-trivial projection via record sources + field-touch tracking (per user request). OVER-TOUCH PROTECTED in both (per user request): reading one column reads only that column; jets[jets.pt>30].eta reads exactly {Jet.pt,Jet.eta}, never siblings (the dask-awkward bug). Opaque map honors pass|warn|raise. Projection store-state independent (correct after M4 fusion). graphed 32, graphed-numpy 32, graphed-awkward 55 tests. CI green."
     },
     "M6": {
       "title": "graphed-debug: opt-level lowering, source-mapped tracebacks, viz",
@@ -201,10 +202,9 @@
       ],
       "status": "PENDING",
       "phase": "PENDING",
-      "blocked_on": [
-        "M5"
-      ],
-      "iterations_cap": 10
+      "blocked_on": null,
+      "iterations_cap": 10,
+      "note": "next: graphed-debug \u2014 opt-level lowering, source-mapped tracebacks (StageError picklable across a process boundary), visualization"
     },
     "M7": {
       "title": "Execution-layer contract + graphed-exec-local",
