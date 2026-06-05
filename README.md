@@ -46,7 +46,7 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | [graphed-project](https://github.com/graphed-org/graphed-project) | meta/superproject | — | meta |
 | [graphed](https://github.com/graphed-org/graphed) | M2/M3 frontend | `2402cd9` | ✅ submodule |
 | [graphed-awkward](https://github.com/graphed-org/graphed-awkward) | M3/M5 reference backend | `27c1555` | ✅ submodule |
-| [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `f54e57b` | ✅ submodule |
+| [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `c275d5c` | ✅ submodule |
 | [graphed-corpus](https://github.com/graphed-org/graphed-corpus) | M0.5 requirements + fixtures | `eebd14e` | ✅ submodule |
 | [graphed-debug](https://github.com/graphed-org/graphed-debug) | M6 debug/tracebacks | `bba6b77` | ✅ submodule |
 | [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M2 trivial backend | `66dab2a` | ✅ submodule |
