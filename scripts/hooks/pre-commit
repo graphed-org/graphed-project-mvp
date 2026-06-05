@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Defense-in-depth: refuse a meta-repo commit whose README.md has drifted from .graphed/state.json or
+# the (working-tree) submodule pins. Mirrors the readme-sync CI locally.
+#
+# Enable once per clone:   git config core.hooksPath scripts/hooks
+set -euo pipefail
+repo_root="$(git rev-parse --show-toplevel)"
+if ! python3 "$repo_root/scripts/gen_readme.py" --check; then
+    echo "pre-commit: README.md is out of sync. Run 'python scripts/bookkeep.py' and re-stage." >&2
+    exit 1
+fi

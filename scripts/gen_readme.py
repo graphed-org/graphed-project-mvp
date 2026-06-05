@@ -72,18 +72,21 @@ def load_state(path: Path = STATE_PATH) -> dict:
     return json.loads(path.read_text())
 
 
+_PIN_RE = re.compile(r"^[ +\-U]?([0-9a-f]{40})\s+(\S+)")
+
+
 def submodule_pins(root: Path = ROOT) -> dict[str, str]:
-    """Map submodule path -> committed gitlink SHA via `git ls-tree HEAD` (mode 160000). Reads the
-    committed pins, so it needs neither submodule checkout nor network."""
+    """Map submodule path -> SHA via `git submodule status`. This reports the working-tree pin (the
+    one a bookkeeping commit is about to record), so a combined submodule-advance + README commit is
+    self-consistent; in CI it equals the committed pin. Needs no submodule checkout or network."""
     out = subprocess.run(
-        ["git", "-C", str(root), "ls-tree", "HEAD"], capture_output=True, text=True, check=True
+        ["git", "-C", str(root), "submodule", "status"], capture_output=True, text=True, check=True
     ).stdout
     pins: dict[str, str] = {}
     for line in out.splitlines():
-        meta, _, path = line.partition("\t")
-        parts = meta.split()
-        if len(parts) >= 3 and parts[0] == "160000":
-            pins[path] = parts[2]
+        m = _PIN_RE.match(line)
+        if m:
+            pins[m.group(2)] = m.group(1)
     return pins
 
 
