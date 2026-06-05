@@ -19,3 +19,6 @@
 [submodule "graphed-debug"]
 	path = graphed-debug
 	url = git@github.com:graphed-org/graphed-debug.git
+[submodule "graphed-exec-local"]
+	path = graphed-exec-local
+	url = git@github.com:graphed-org/graphed-exec-local.git

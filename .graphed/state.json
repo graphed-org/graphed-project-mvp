@@ -4,8 +4,8 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "RUNNING",
-  "updated_at": "2026-06-05T17:31:51Z",
-  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (7 repos), M0.5, M1, M2, M3, M4, M5, M6 DONE and CI-green. M6: graphed-debug (opt-level lowering, picklable source-mapped tracebacks surfacing across a process boundary, visualization). Orchestrator hardened with a CI-confirmation gate (DONE requires the pinned commit's CI green; in_progress != green; transient gh failures retried). Next: M7 (graphed-exec-local + executor protocol). Complex-topology tests (diamond/star/nested, shared sub-DAGs) added across graphed-core (optimizer + interning), graphed (materialize evaluates a shared apex once), graphed-numpy/graphed-awkward (projection no over/under-touch through re-converging branches), and graphed-debug (lowering + error localization) \u2014 guarding the dask-optimizer failure modes (O(N^2), CSE blow-up, DCE on two-path nodes, shared-subgraph re-execution).",
+  "updated_at": "2026-06-05T19:36:01Z",
+  "note": "Project-level rollup. ORCH, M0 (8 repos), M0.5, M1, M2, M3, M4, M5, M6, M7 DONE and CI-green. M7: execution layer (graphed-core contract + graphed-exec-local with BOTH thread-pool and process-pool executors, deterministic straggler-tolerant tree reduction, open_once, adaptive reshaping, remote StageError via M6; AGC/MET bit-for-bit over partitions). Next: M8 (graphed-checkpoint \u2014 plan serialization + content-addressed checkpoint/resume).",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
     "cumulative_tokens_cap": null,
@@ -13,7 +13,7 @@
     "consecutive_pauses_cap": 2,
     "tripped": false
   },
-  "current_milestone": "M7",
+  "current_milestone": "M8",
   "phases": [
     "PENDING",
     "DECOMPOSE",
@@ -81,9 +81,9 @@
     },
     "graphed-exec-local": {
       "role": "M7 reference executor",
-      "created": false,
-      "visibility": null,
-      "is_submodule": false
+      "created": true,
+      "visibility": "public",
+      "is_submodule": true
     },
     "graphed-checkpoint": {
       "role": "M8 checkpoint/resume",
@@ -118,7 +118,8 @@
       "repos": [
         "graphed-orchestrator (DONE)",
         "graphed-corpus (DONE)",
-        "graphed-debug (DONE)"
+        "graphed-debug (DONE)",
+        "graphed-exec-local (DONE)"
       ],
       "status": "DONE",
       "phase": "DONE",
@@ -213,11 +214,11 @@
         "graphed-exec-local",
         "graphed-core"
       ],
-      "status": "PENDING",
-      "phase": "PENDING",
+      "status": "DONE",
+      "phase": "DONE",
       "blocked_on": null,
       "iterations_cap": 16,
-      "note": "next: graphed-exec-local (+ graphed-core Executor protocol) \u2014 AGC ttbar slice end-to-end bit-for-bit; thousands of tiny tasks no deadlock/stall/race (incl. 3.14t); tree reduction; remote StageError surfaces via M6"
+      "evidence": "Execution layer. graphed-core owns the contract (Executor/Plan/Task/Partition/StopCondition, data-only). graphed-exec-local: BOTH a ThreadExecutor and a ProcessExecutor (spawn) running a Plan to one result via a deterministic, straggler-tolerant tree reduction (fixed combine-tree by leaf key -> bit-for-bit; a slow leaf blocks only its own path). open_once file-locality (per worker), stopping conditions, adaptive reshaping (next_tasks + running fold), remote StageError surfaced intact via M6 (process mode). 33 frozen tests: tree reduction, both executors thread==process, thousands of tiny tasks no deadlock/stall/race (incl 3.14t), straggler doesn't block others, open_once once-per-worker, adaptive + target-events stop, remote StageError, and a real MET analysis over partitions through BOTH executors reproducing the single-pass histogram BIT-FOR-BIT invariant to partition count. graphed-core M7 contract: 8 tests. CI green on A.5 matrix incl. 3.14t."
     },
     "M8": {
       "title": "graphed-checkpoint: plan serialization + checkpoint/resume",
@@ -227,10 +228,9 @@
       ],
       "status": "PENDING",
       "phase": "PENDING",
-      "blocked_on": [
-        "M7"
-      ],
-      "iterations_cap": 12
+      "blocked_on": null,
+      "iterations_cap": 12,
+      "note": "next: graphed-checkpoint (+ graphed-core Plan serialization) \u2014 kill-and-resume bit-for-bit with less work; serialized plan runs with no source files; dead-letter/retry; byte-identical plan serialization"
     },
     "M9": {
       "title": "graphed-preserve: analysis preservation bundle",

@@ -17,12 +17,12 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 
 ## Milestone status
 
-**9 of 12 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **M7**.
+**10 of 12 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **M8**.
 
 | Milestone | Status | Repo(s) | What it delivered |
 |---|:--:|---|---|
 | **ORCH** | ✅ DONE | graphed-orchestrator | Deterministic orchestrator engine (Part B + B.8 faker suite) |
-| **M0** | ✅ DONE | graphed-orchestrator, graphed-corpus, graphed-debug | Repository spine (per repo) |
+| **M0** | ✅ DONE | graphed-orchestrator, graphed-corpus, graphed-debug, graphed-exec-local | Repository spine (per repo) |
 | **M0.5** | ✅ DONE | graphed-corpus | Reference corpus study & Required Operations Catalog |
 | **M1** | ✅ DONE | graphed-core | graphed-core thread-safe interned graph IR |
 | **M2** | ✅ DONE | graphed, graphed-numpy | frontend + backend protocol + graphed-numpy |
@@ -30,7 +30,7 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 | **M4** | ✅ DONE | graphed-core | graphed-core optimizer: DCE/CSE + equality-saturation stage fusion |
 | **M5** | ✅ DONE | graphed-awkward, graphed-numpy, graphed | Necessary-buffer (column) projection |
 | **M6** | ✅ DONE | graphed-debug | graphed-debug: opt-level lowering, source-mapped tracebacks, viz |
-| **M7** | ⬜ PENDING | graphed-exec-local, graphed-core | Execution-layer contract + graphed-exec-local |
+| **M7** | ✅ DONE | graphed-exec-local, graphed-core | Execution-layer contract + graphed-exec-local |
 | **M8** | ⬜ PENDING | graphed-checkpoint, graphed-core | graphed-checkpoint: plan serialization + checkpoint/resume |
 | **M9** | ⬜ PENDING | graphed-preserve | graphed-preserve: analysis preservation bundle |
 
@@ -46,13 +46,13 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | [graphed-project](https://github.com/graphed-org/graphed-project) | meta/superproject | — | meta |
 | [graphed](https://github.com/graphed-org/graphed) | M2/M3 frontend | `2402cd9` | ✅ submodule |
 | [graphed-awkward](https://github.com/graphed-org/graphed-awkward) | M3/M5 reference backend | `27c1555` | ✅ submodule |
-| [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `c275d5c` | ✅ submodule |
+| [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `1a389e0` | ✅ submodule |
 | [graphed-corpus](https://github.com/graphed-org/graphed-corpus) | M0.5 requirements + fixtures | `eebd14e` | ✅ submodule |
 | [graphed-debug](https://github.com/graphed-org/graphed-debug) | M6 debug/tracebacks | `bba6b77` | ✅ submodule |
+| [graphed-exec-local](https://github.com/graphed-org/graphed-exec-local) | M7 reference executor | `9e282c9` | ✅ submodule |
 | [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M2 trivial backend | `66dab2a` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `ed85a25` | ✅ submodule |
 | [graphed-checkpoint](https://github.com/graphed-org/graphed-checkpoint) | M8 checkpoint/resume | — | lazy |
-| [graphed-exec-local](https://github.com/graphed-org/graphed-exec-local) | M7 reference executor | — | lazy |
 | [graphed-preserve](https://github.com/graphed-org/graphed-preserve) | M9 preservation bundle | — | lazy |
 
 `lazy` repos are created when their milestone begins.
@@ -77,4 +77,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-05T17:31:51Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-05T19:36:01Z).</sub>
