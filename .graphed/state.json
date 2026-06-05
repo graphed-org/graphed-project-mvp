@@ -4,8 +4,8 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "RUNNING",
-  "updated_at": "2026-06-04T21:30:00Z",
-  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (6 repos), M0.5, M1, M2, M3 DONE and CI-green. Cross-repo Python/Rust style pass applied and revalidated: removed __import__/lazy imports (PLC0415), C416->dict(), zip->itertools.pairwise, Rust to_dot push_str(format!)->write! (byte-identical); added C4/RUF/PLC0415 to every ruff config. Next: M4 (graphed-core optimizer: DCE/CSE + equality-saturation stage fusion via egg).",
+  "updated_at": "2026-06-04T23:30:00Z",
+  "note": "Project-level rollup. Authoritative per-repo detail in each repo's .graphed/state.json (see SCHEMA.md). ORCH, M0 (6 repos), M0.5, M1, M2, M3, M4 DONE and CI-green. M4: graphed-core optimizer (equality saturation via egg behind RewriteEngine; DCE/CSE; stage fusion; super-linear benchmark guard). Next: M5 (necessary-buffer column projection).",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
     "cumulative_tokens_cap": null,
@@ -13,7 +13,7 @@
     "consecutive_pauses_cap": 2,
     "tripped": false
   },
-  "current_milestone": "M4",
+  "current_milestone": "M5",
   "phases": [
     "PENDING",
     "DECOMPOSE",
@@ -176,11 +176,11 @@
       "repos": [
         "graphed-core"
       ],
-      "status": "PENDING",
-      "phase": "PENDING",
+      "status": "DONE",
+      "phase": "DONE",
       "blocked_on": null,
       "iterations_cap": 16,
-      "note": "next: RewriteEngine trait (egg behind it), DCE/CSE outside engine, incremental reduction, super-linear-scaling CI benchmark. Hardest milestone."
+      "evidence": "RewriteEngine trait (egg-free boundary; no egg leak) + EggEngine genuine equality saturation with SOUND rules only (commutativity, +/* identities; mask-fusion/field-collapse excluded as unsound). DCE+CSE outside the engine; stage fusion never crosses a boundary. O(N) cost-quotient extraction (egg's Extractor is O(N^2) on deep chains \u2014 caught + guarded by the super-linear benchmark). 10k-node systematics graph reduces to O(stage) in <1s; reduction sub-linear across {1k,2k,4k,8k}; byte-stable. 13 Rust tests (toy-interpreter semantic equivalence) + 13 M4 Python tests; clippy/rustfmt/mypy/ruff/sphinx-W/loom clean. CI green on A.5 matrix."
     },
     "M5": {
       "title": "Necessary-buffer (column) projection",
@@ -190,10 +190,9 @@
       ],
       "status": "PENDING",
       "phase": "PENDING",
-      "blocked_on": [
-        "M4"
-      ],
-      "iterations_cap": 10
+      "blocked_on": null,
+      "iterations_cap": 10,
+      "note": "next: graphed-awkward column projection via a reporting typetracer; on-fail policy pass|warn|raise; + graphed-numpy trivial all-inputs"
     },
     "M6": {
       "title": "graphed-debug: opt-level lowering, source-mapped tracebacks, viz",
