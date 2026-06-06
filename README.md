@@ -32,7 +32,7 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 | **M6** | ✅ DONE | graphed-debug | graphed-debug: opt-level lowering, source-mapped tracebacks, viz |
 | **M7** | ✅ DONE | graphed-exec-local, graphed-core | Execution-layer contract + graphed-exec-local |
 | **M8** | ✅ DONE | graphed-checkpoint, graphed-core, graphed | graphed-checkpoint: plan serialization + checkpoint/resume |
-| **M9** | ✅ DONE | graphed-preserve, graphed-core, graphed | graphed-preserve: analysis preservation bundle |
+| **M9** | ✅ DONE | graphed-preserve, graphed-core, graphed, graphed-awkward | graphed-preserve: analysis preservation bundle |
 
 The development process is a **gated three-role pipeline** (test-author → implementer → reviewer)
 coordinated by the deterministic `graphed-orchestrator`. A milestone is `DONE` only when every
@@ -45,7 +45,7 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 |---|---|---|:--:|
 | [graphed-project](https://github.com/graphed-org/graphed-project) | meta/superproject | — | meta |
 | [graphed](https://github.com/graphed-org/graphed) | M2/M3 frontend | `f99bffb` | ✅ submodule |
-| [graphed-awkward](https://github.com/graphed-org/graphed-awkward) | M3/M5 reference backend | `27c1555` | ✅ submodule |
+| [graphed-awkward](https://github.com/graphed-org/graphed-awkward) | M3/M5 reference backend | `c2b05a7` | ✅ submodule |
 | [graphed-checkpoint](https://github.com/graphed-org/graphed-checkpoint) | M8 checkpoint/resume | `80d2dfa` | ✅ submodule |
 | [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `4c5590c` | ✅ submodule |
 | [graphed-corpus](https://github.com/graphed-org/graphed-corpus) | M0.5 requirements + fixtures | `eebd14e` | ✅ submodule |
@@ -53,7 +53,7 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | [graphed-exec-local](https://github.com/graphed-org/graphed-exec-local) | M7 reference executor | `af5913f` | ✅ submodule |
 | [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M2 trivial backend | `66dab2a` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `ed85a25` | ✅ submodule |
-| [graphed-preserve](https://github.com/graphed-org/graphed-preserve) | M9 preservation bundle | `ac6d447` | ✅ submodule |
+| [graphed-preserve](https://github.com/graphed-org/graphed-preserve) | M9 preservation bundle | `02b603a` | ✅ submodule |
 
 `lazy` repos are created when their milestone begins.
 
