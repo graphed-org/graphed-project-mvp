@@ -25,3 +25,6 @@
 [submodule "graphed-checkpoint"]
 	path = graphed-checkpoint
 	url = git@github.com:graphed-org/graphed-checkpoint.git
+[submodule "graphed-preserve"]
+	path = graphed-preserve
+	url = git@github.com:graphed-org/graphed-preserve.git
