@@ -56,7 +56,7 @@ def test_pinned_commit_is_short_sha() -> None:
 
 def test_repo_states() -> None:
     out = gen_readme.render(STATE, PINS)
-    assert "| [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4 core | `101cb8d` | ✅ submodule |" in out
+    assert "| [graphed-core-mvp](https://github.com/graphed-org/graphed-core-mvp) | M1/M4 core | `101cb8d` | ✅ submodule |" in out
     assert "lazy |" in out  # graphed-debug is not created yet
     assert "| — | meta |" in out  # the meta repo itself
 

@@ -22,17 +22,17 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 | Milestone | Status | Repo(s) | What it delivered |
 |---|:--:|---|---|
 | **ORCH** | ✅ DONE | graphed-orchestrator | Deterministic orchestrator engine (Part B + B.8 faker suite) |
-| **M0** | ✅ DONE | graphed-orchestrator, graphed-corpus, graphed-debug, graphed-exec-local, graphed-checkpoint, graphed-preserve | Repository spine (per repo) |
-| **M0.5** | ✅ DONE | graphed-corpus | Reference corpus study & Required Operations Catalog |
-| **M1** | ✅ DONE | graphed-core | graphed-core thread-safe interned graph IR |
-| **M2** | ✅ DONE | graphed, graphed-numpy | frontend + backend protocol + graphed-numpy |
-| **M3** | ✅ DONE | graphed-awkward, graphed | graphed-awkward typetracer forms + provenance |
-| **M4** | ✅ DONE | graphed-core | graphed-core optimizer: DCE/CSE + equality-saturation stage fusion |
-| **M5** | ✅ DONE | graphed-awkward, graphed-numpy, graphed | Necessary-buffer (column) projection |
-| **M6** | ✅ DONE | graphed-debug | graphed-debug: opt-level lowering, source-mapped tracebacks, viz |
-| **M7** | ✅ DONE | graphed-exec-local, graphed-core | Execution-layer contract + graphed-exec-local |
-| **M8** | ✅ DONE | graphed-checkpoint, graphed-core, graphed | graphed-checkpoint: plan serialization + checkpoint/resume |
-| **M9** | ✅ DONE | graphed-preserve, graphed-core, graphed, graphed-awkward | graphed-preserve: analysis preservation bundle |
+| **M0** | ✅ DONE | graphed-orchestrator, graphed-corpus-mvp, graphed-debug-mvp, graphed-exec-local-mvp, graphed-checkpoint-mvp, graphed-preserve-mvp | Repository spine (per repo) |
+| **M0.5** | ✅ DONE | graphed-corpus-mvp | Reference corpus study & Required Operations Catalog |
+| **M1** | ✅ DONE | graphed-core-mvp | graphed-core thread-safe interned graph IR |
+| **M2** | ✅ DONE | graphed-mvp, graphed-numpy-mvp | frontend + backend protocol + graphed-numpy |
+| **M3** | ✅ DONE | graphed-awkward-mvp, graphed-mvp | graphed-awkward typetracer forms + provenance |
+| **M4** | ✅ DONE | graphed-core-mvp | graphed-core optimizer: DCE/CSE + equality-saturation stage fusion |
+| **M5** | ✅ DONE | graphed-awkward-mvp, graphed-numpy-mvp, graphed-mvp | Necessary-buffer (column) projection |
+| **M6** | ✅ DONE | graphed-debug-mvp | graphed-debug: opt-level lowering, source-mapped tracebacks, viz |
+| **M7** | ✅ DONE | graphed-exec-local-mvp, graphed-core-mvp | Execution-layer contract + graphed-exec-local |
+| **M8** | ✅ DONE | graphed-checkpoint-mvp, graphed-core-mvp, graphed-mvp | graphed-checkpoint: plan serialization + checkpoint/resume |
+| **M9** | ✅ DONE | graphed-preserve-mvp, graphed-core-mvp, graphed-mvp, graphed-awkward-mvp | graphed-preserve: analysis preservation bundle |
 
 The development process is a **gated three-role pipeline** (test-author → implementer → reviewer)
 coordinated by the deterministic `graphed-orchestrator`. A milestone is `DONE` only when every
@@ -43,17 +43,17 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 
 | Repo | Role | Pinned commit | State |
 |---|---|---|:--:|
-| [graphed-project](https://github.com/graphed-org/graphed-project) | meta/superproject | — | meta |
-| [graphed](https://github.com/graphed-org/graphed) | M2/M3 frontend | `f99bffb` | ✅ submodule |
-| [graphed-awkward](https://github.com/graphed-org/graphed-awkward) | M3/M5 reference backend | `c2b05a7` | ✅ submodule |
-| [graphed-checkpoint](https://github.com/graphed-org/graphed-checkpoint) | M8 checkpoint/resume | `80d2dfa` | ✅ submodule |
-| [graphed-core](https://github.com/graphed-org/graphed-core) | M1/M4/M7-contract/M8-plan | `4c5590c` | ✅ submodule |
-| [graphed-corpus](https://github.com/graphed-org/graphed-corpus) | M0.5 requirements + fixtures | `eebd14e` | ✅ submodule |
-| [graphed-debug](https://github.com/graphed-org/graphed-debug) | M6 debug/tracebacks | `bba6b77` | ✅ submodule |
-| [graphed-exec-local](https://github.com/graphed-org/graphed-exec-local) | M7 reference executor | `af5913f` | ✅ submodule |
-| [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M2 trivial backend | `66dab2a` | ✅ submodule |
+| [graphed-project-mvp](https://github.com/graphed-org/graphed-project-mvp) | meta/superproject | — | meta |
+| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `f99bffb` | ✅ submodule |
+| [graphed-awkward-mvp](https://github.com/graphed-org/graphed-awkward-mvp) | M3/M5 reference backend | `c2b05a7` | ✅ submodule |
+| [graphed-checkpoint-mvp](https://github.com/graphed-org/graphed-checkpoint-mvp) | M8 checkpoint/resume | `80d2dfa` | ✅ submodule |
+| [graphed-core-mvp](https://github.com/graphed-org/graphed-core-mvp) | M1/M4/M7-contract/M8-plan | `4c5590c` | ✅ submodule |
+| [graphed-corpus-mvp](https://github.com/graphed-org/graphed-corpus-mvp) | M0.5 requirements + fixtures | `eebd14e` | ✅ submodule |
+| [graphed-debug-mvp](https://github.com/graphed-org/graphed-debug-mvp) | M6 debug/tracebacks | `bba6b77` | ✅ submodule |
+| [graphed-exec-local-mvp](https://github.com/graphed-org/graphed-exec-local-mvp) | M7 reference executor | `af5913f` | ✅ submodule |
+| [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `66dab2a` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `ed85a25` | ✅ submodule |
-| [graphed-preserve](https://github.com/graphed-org/graphed-preserve) | M9 preservation bundle | `5e7c480` | ✅ submodule |
+| [graphed-preserve-mvp](https://github.com/graphed-org/graphed-preserve-mvp) | M9 preservation bundle | `5e7c480` | ✅ submodule |
 
 `lazy` repos are created when their milestone begins.
 
@@ -61,7 +61,7 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 
 ```bash
 # clone the whole project
-git clone --recurse-submodules git@github.com:graphed-org/graphed-project.git
+git clone --recurse-submodules git@github.com:graphed-org/graphed-project-mvp.git
 # or, after a plain clone:
 git submodule update --init --recursive
 # pull latest of everything

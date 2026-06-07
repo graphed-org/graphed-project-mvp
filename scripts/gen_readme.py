@@ -25,6 +25,15 @@ README_PATH = ROOT / "README.md"
 
 STATUS_BADGE = {"DONE": "✅ DONE", "PENDING": "⬜ PENDING"}
 
+# The GitHub repositories carry an `-mvp` suffix; the orchestrator is the sole exception. Local
+# submodule paths and the logical names in `.graphed/state.json` are unsuffixed, so this maps a
+# logical name to its actual GitHub repository name.
+_NO_MVP_SUFFIX = {"graphed-orchestrator"}
+
+
+def _gh(name: str) -> str:
+    return name if name in _NO_MVP_SUFFIX else f"{name}-mvp"
+
 _INTRO = """# graphed-project
 
 Meta / superproject for **graphed** — a schedulable, serializable, debuggable HEP task-graph system
@@ -51,7 +60,7 @@ _SUBMODULES = """## Working with the submodules
 
 ```bash
 # clone the whole project
-git clone --recurse-submodules git@github.com:graphed-org/graphed-project.git
+git clone --recurse-submodules git@github.com:graphed-org/graphed-project-mvp.git
 # or, after a plain clone:
 git submodule update --init --recursive
 # pull latest of everything
@@ -115,13 +124,13 @@ def render(state: dict, pins: dict[str, str]) -> str:
     lines += ["", "| Milestone | Status | Repo(s) | What it delivered |", "|---|:--:|---|---|"]
     for mid, m in milestones.items():
         badge = STATUS_BADGE.get(m["status"], m["status"])
-        repo_cell = ", ".join(_clean_repos(m["repos"])) or "—"
+        repo_cell = ", ".join(_gh(r) for r in _clean_repos(m["repos"])) or "—"
         lines.append(f"| **{mid}** | {badge} | {repo_cell} | {m['title']} |")
     lines += ["", _PIPELINE, "", "## Repositories", ""]
     lines += ["| Repo | Role | Pinned commit | State |", "|---|---|---|:--:|"]
     for name in sorted(repos, key=lambda n: _repo_order(n, repos[n], meta_repo)):
         info = repos[name]
-        link = f"[{name}](https://github.com/{org}/{name})"
+        link = f"[{_gh(name)}](https://github.com/{org}/{_gh(name)})"
         if name == meta_repo:
             pin, state_cell = "—", "meta"
         elif info.get("is_submodule") and name in pins:

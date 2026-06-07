@@ -62,7 +62,7 @@ All repos default to **private**; flip to public deliberately when a package is 
 
 ```bash
 # clone the whole project
-git clone --recurse-submodules git@github.com:graphed-org/graphed-project.git
+git clone --recurse-submodules git@github.com:graphed-org/graphed-project-mvp.git
 # or, after a plain clone:
 git submodule update --init --recursive
 # pull latest of everything

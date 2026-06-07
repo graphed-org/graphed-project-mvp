@@ -3,28 +3,28 @@
 	url = git@github.com:graphed-org/graphed-orchestrator.git
 [submodule "graphed-corpus"]
 	path = graphed-corpus
-	url = git@github.com:graphed-org/graphed-corpus.git
+	url = git@github.com:graphed-org/graphed-corpus-mvp.git
 [submodule "graphed-core"]
 	path = graphed-core
-	url = git@github.com:graphed-org/graphed-core.git
+	url = git@github.com:graphed-org/graphed-core-mvp.git
 [submodule "graphed"]
 	path = graphed
-	url = git@github.com:graphed-org/graphed.git
+	url = git@github.com:graphed-org/graphed-mvp.git
 [submodule "graphed-numpy"]
 	path = graphed-numpy
-	url = git@github.com:graphed-org/graphed-numpy.git
+	url = git@github.com:graphed-org/graphed-numpy-mvp.git
 [submodule "graphed-awkward"]
 	path = graphed-awkward
-	url = git@github.com:graphed-org/graphed-awkward.git
+	url = git@github.com:graphed-org/graphed-awkward-mvp.git
 [submodule "graphed-debug"]
 	path = graphed-debug
-	url = git@github.com:graphed-org/graphed-debug.git
+	url = git@github.com:graphed-org/graphed-debug-mvp.git
 [submodule "graphed-exec-local"]
 	path = graphed-exec-local
-	url = git@github.com:graphed-org/graphed-exec-local.git
+	url = git@github.com:graphed-org/graphed-exec-local-mvp.git
 [submodule "graphed-checkpoint"]
 	path = graphed-checkpoint
-	url = git@github.com:graphed-org/graphed-checkpoint.git
+	url = git@github.com:graphed-org/graphed-checkpoint-mvp.git
 [submodule "graphed-preserve"]
 	path = graphed-preserve
-	url = git@github.com:graphed-org/graphed-preserve.git
+	url = git@github.com:graphed-org/graphed-preserve-mvp.git
