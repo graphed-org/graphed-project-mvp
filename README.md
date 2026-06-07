@@ -53,7 +53,7 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | [graphed-exec-local](https://github.com/graphed-org/graphed-exec-local) | M7 reference executor | `af5913f` | ✅ submodule |
 | [graphed-numpy](https://github.com/graphed-org/graphed-numpy) | M2 trivial backend | `66dab2a` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `ed85a25` | ✅ submodule |
-| [graphed-preserve](https://github.com/graphed-org/graphed-preserve) | M9 preservation bundle | `02b603a` | ✅ submodule |
+| [graphed-preserve](https://github.com/graphed-org/graphed-preserve) | M9 preservation bundle | `072f939` | ✅ submodule |
 
 `lazy` repos are created when their milestone begins.
 
