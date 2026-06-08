@@ -93,11 +93,14 @@ code being shipped.
 
 Synthetic in-memory arrays are enough to prove the graph machinery, but they cannot prove that the
 system is usable. `graphed`'s value only appears when it reads **real physics files** along the path a
-physicist would actually take. The community already has an established columnar reader for ROOT files
-that exposes a deferred/lazy array backend (its `dask`-backed entry point). The lowest-friction way to
-put `graphed` in physicists' hands is therefore to surface it **the same way that reader already
-surfaces its existing lazy backend** — a parallel entry point with the same call shape — so adoption
-requires no new vocabulary and the new backend is judged against a familiar baseline.
+physicist would actually take. The community's established columnar reader for ROOT files is
+**`uproot`**, which exposes a deferred/lazy array backend (its `dask`-backed entry point). The
+lowest-friction way to put `graphed` in physicists' hands is therefore to surface it **the same way
+`uproot` already surfaces its existing lazy backend** — a parallel entry point with the same call shape
+— so adoption requires no new vocabulary and the new backend is judged against a familiar baseline.
+ROOT files store columnar event data in two on-disk container formats — the long-established **TTree**
+and its successor **RNTuple** — and a physicist's files may use either; an integration that handled only
+one would not be usable, so both must be covered.
 
 This integration is also the project's strongest regression test. Wiring `graphed` into the reader
 means editing that library's public surface (its package entry points and writer). Testing `graphed`
@@ -415,15 +418,20 @@ in-process), which would give a false appearance of parity without testing what 
 
 ## R15 — Integration with an established file reader (real-reader integration and regression)
 
-- **R15.1 (Surface `graphed` through an established reader.)** `graphed` MUST be wired into the
-  community's established columnar HEP file-reading library and surfaced as a **deferred backend
-  alongside that library's existing lazy backend**, mirroring its call shape: a deferred **read** entry
-  point and a deferred **write** entry point that parallel the library's existing lazy
-  (`dask`-backed) ones. The integration MUST reuse the host library's own internals — file/path
-  regularization, key filtering, and metadata/form inference — and MUST NOT reimplement them.
+- **R15.1 (Surface `graphed` through `uproot`.)** `graphed` MUST be wired into **`uproot`**, the
+  community's established columnar ROOT-file reader, and surfaced as a **deferred backend alongside
+  `uproot`'s existing lazy backend**, mirroring its call shape: a deferred **read** entry point and a
+  deferred **write** entry point that parallel `uproot`'s existing lazy (`dask`-backed) ones. The
+  integration MUST reuse `uproot`'s own internals — file/path regularization, key filtering, and
+  metadata/form inference — and MUST NOT reimplement them.
+- **R15.1.1 (Both on-disk formats.)** Deferred reading MUST cover **both** ROOT columnar container
+  formats — **`TTree` and `RNTuple`** — through the same `graphed` entry point, using the form/key
+  inference appropriate to each (the integration MUST detect the container kind and route to the
+  correct `uproot` machinery rather than assuming `TTree`). The acceptance suite MUST exercise reading
+  from each format, including necessary-buffer projection (R5) on each.
 - **R15.2 (Isolation; not an upstream contribution.)** The integration MUST live on an **isolated
   branch of a fork**; it is an MVP demonstration and MUST NOT be proposed upstream (no pull request to
-  the host project). It MUST be gated through the same orchestrator pipeline (R0) as every other
+  the `uproot` project). It MUST be gated through the same orchestrator pipeline (R0) as every other
   milestone, with its own frozen acceptance suite.
 - **R15.3 (Deferred reading.)** The read entry point MUST return a **deferred `graphed` array built
   from metadata/form alone** — no event data read at construction. Partitioning MUST support an
@@ -441,20 +449,21 @@ in-process), which would give a false appearance of parity without testing what 
   materialize shortcut, so the path under test is the path that ships. Error-harvesting/report-style
   behavior and resume MUST be expressed with the **native checkpoint machinery (R8)** and its
   semantics (content-addressed dead-letter set, resume that skips completed work, error budget) — they
-  MUST NOT emulate the host reader's own report semantics.
+  MUST NOT emulate `uproot`'s own report semantics.
 - **R15.6 (Compile once, run on alternate inputs — demonstrated here.)** The compile-once/run-on-many
   capability (R13.5) MUST be demonstrated through this integration: a plan recorded against one input
   MUST run **unchanged** against a **different file location** and a **different partition count**, with
   the IR proven identical across the re-targetings and the result proven equal to a single-pass
   reference.
-- **R15.7 (Regression coverage — the host suite runs too.)** CI for the integration branch MUST run
-  the **host library's full existing test suite together with** the `graphed` integration tests, so a
-  regression introduced by the integration's edits to the host library's public surface is caught — not
-  only the `graphed` tests in isolation. The integration tests MUST follow the host library's own test
-  conventions (its fixtures, data-fetching helpers, markers, and dependency groups) and MUST use the
-  library's **real data fixtures** where provided. Tests requiring an external service the lightweight
-  CI job does not provision (for example a remote-storage protocol server) MAY be **deselected** by
-  marker, but MUST NOT be deleted, skipped in source, or otherwise weakened (R0.6).
+- **R15.7 (Regression coverage — the `uproot` suite runs too.)** CI for the integration branch MUST run
+  **`uproot`'s full existing test suite together with** the `graphed` integration tests, so a
+  regression introduced by the integration's edits to `uproot`'s public surface is caught — not only the
+  `graphed` tests in isolation. The integration tests MUST follow `uproot`'s own test conventions (its
+  fixtures, data-fetching helpers, markers, and dependency groups) and MUST use `uproot`'s **real data
+  fixtures** where provided, including fixtures for both `TTree` and `RNTuple`. Tests requiring an
+  external service the lightweight CI job does not provision (for example a remote-storage protocol
+  server) MAY be **deselected** by marker, but MUST NOT be deleted, skipped in source, or otherwise
+  weakened (R0.6).
 
 ## Out of scope (later phases — MUST NOT be built initially)
 
@@ -462,7 +471,7 @@ Distributed-scheduler executors for specific batch systems; treating systematic 
 axis; advanced adaptive reshaping; predicate pushdown; interactive debugging or time-travel; export to
 external analysis-preservation portals; swapping the optimizer engine for a more capable one behind the
 engine interface; distributed (non-local) checkpoint stores; self-hosting preservation bundles that
-embed and launch a model-inference server; and **upstreaming or production-hardening the host-reader
+embed and launch a model-inference server; and **upstreaming or production-hardening the `uproot`
 integration** (it remains an isolated MVP demonstration branch — see R15.2).
 
 ---
@@ -513,9 +522,11 @@ integration** (it remains an isolated MVP demonstration branch — see R15.2).
   interface, and serialization of statistical models.
 - **Dead-letter record.** An append-only log of work that failed, with a reproducible descriptor, so a
   poison input is recorded rather than lost.
-- **Host reader / deferred backend of a reader.** The community's established columnar HEP file-reading
-  library that `graphed` is integrated into, and the lazy/deferred array entry point it already exposes
-  (its `dask`-backed interface) that the `graphed` integration parallels.
+- **`uproot` / deferred backend of a reader.** `uproot` is the community's established columnar
+  ROOT-file reader that `graphed` is integrated into; its lazy/deferred array entry point (the
+  `dask`-backed interface) is what the `graphed` integration parallels.
+- **`TTree` / `RNTuple`.** The two on-disk columnar container formats a ROOT file may use to store event
+  data: the long-established `TTree` and its successor `RNTuple`. The integration must read both.
 - **Blind partitioning.** A partitioning mode whose partitions describe their entry range symbolically
   and defer resolving it (opening the file to learn the entry count) until read time, so no files are
   opened when the partitions are formed.
