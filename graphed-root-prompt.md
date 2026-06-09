@@ -89,6 +89,15 @@ revision* being green on the *full* platform matrix, not to a local test run or 
 because otherwise a milestone can be declared complete against results that do not correspond to the
 code being shipped.
 
+A second, subtler failure mode was observed in practice and motivates R0.10: the **semantic stub**.
+An "incremental reduce" was once shipped as a one-line alias for the full reduce — it passed its test
+because the test asserted only *equivalence of results*, a property an alias satisfies by
+construction. No body-scanning detector catches this, and a reviewer missed it. The defense is in the
+tests themselves: when a requirement names a property of *how* something is computed (incrementality,
+fusion actually driving execution, work proportional to a delta), the acceptance suite must pin a
+**witness** that only the genuine mechanism can produce — a work counter, a dispatch count, an
+off-thread observation — not merely the input/output behavior.
+
 ## 6. Why integrate with an established file reader
 
 Synthetic in-memory arrays are enough to prove the graph machinery, but they cannot prove that the
@@ -146,6 +155,9 @@ in-process), which would give a false appearance of parity without testing what 
   threshold or relax a CI gate; stub, mock, or hard-code the specific thing a test verifies; leave a
   named implementation target as a bare not-implemented placeholder while reporting its test green; or
   blanket-apply type-checker suppressions, swallow-all exception handlers, or unjustified unsafe code.
+  The automated integrity scan MUST detect placeholder **bodies**, not only raise-statements: a named
+  implementation target whose entire body is a bare `pass`/ellipsis is a violation, while a bare body
+  in un-named helper, protocol, or exception code is legitimate and MUST NOT be flagged.
 - **R0.7** If a frozen test appears wrong, the implementer MUST NOT route around it; it MUST file a
   written **dispute** (recording the test, the requirement it contradicts, and a proposed correction)
   and stop. Honest incompleteness is preferable to a green gate obtained by cheating.
@@ -153,6 +165,13 @@ in-process), which would give a false appearance of parity without testing what 
   reviewer's approval MUST be recorded. Stalls MUST escalate through the orchestrator's bounded-retry
   and escalation logic.
 - **R0.9** Milestones MUST be built strictly in order; the next MUST NOT start until the current is done.
+- **R0.10 (Witness tests against semantic stubs).** When a requirement names a property of *how*
+  something is computed — incrementality, fused execution, work bounded by a delta — the frozen suite
+  MUST pin a **mechanism witness** that a pass-through alias or re-derivation cannot satisfy (for
+  example: a cumulative work counter equal to the node count regardless of how many steps fed it; a
+  backend dispatch count equal to the *reduced* operation count; a combine observed off the driver
+  thread). Asserting only input/output equivalence for such a requirement is a test-sanity failure:
+  an alias for the non-incremental path satisfies equivalence by construction (see Part I §5).
 
 ## R1 — System architecture and repository layout
 
@@ -185,8 +204,16 @@ in-process), which would give a false appearance of parity without testing what 
   library, and **no engine-specific types may leak past the interface**. Replacing the engine with a
   more capable one (for example a Datalog-style e-graph engine) is a later-phase option and MUST NOT be
   built initially.
-- **R2.2** Only **sound** rewrite rules may be enabled (for example commutativity and additive/
-  multiplicative identities). Domain-dependent or potentially unsound rewrites MUST be excluded.
+- **R2.2** Only **sound** rewrite rules may be enabled. Domain-dependent or potentially unsound
+  rewrites MUST be excluded. Within that constraint the rule set MUST NOT stop at a token pair of
+  arithmetic operators: commutativity MUST cover **every symmetric operator in the frontend's
+  recorded vocabulary** (addition, multiplication, the boolean conjunction/disjunction, equality and
+  inequality, elementwise minimum/maximum, …), plus the additive/multiplicative identities — a rule
+  set that fires on nothing a real analysis records optimizes nothing. The symmetric-operator list
+  and the identity rules MUST be defined in **one shared constant** consumed by every reduction path
+  (the saturation engine and any incremental canonicalizer), so the paths provably agree
+  node-for-node. Asymmetric operators (subtraction, division, ordering comparisons) MUST be tested to
+  NOT merge under commutation.
 - **R2.3** **Dead-code elimination and common-subexpression elimination MUST live outside the rewrite
   engine.** Dead-code elimination is reachability from the graph's outputs. Common-subexpression
   elimination MUST follow from hash-consing at construction; it MUST be asserted, not re-derived.
@@ -194,7 +221,11 @@ in-process), which would give a false appearance of parity without testing what 
   share one identifier, and repeated sub-expressions add zero new nodes. Floating-point values in node
   keys MUST hash with a total order and a canonical bit pattern (every NaN interns to a single value;
   positive and negative zero remain distinct at the IR level; numeric canonicalization is the
-  optimizer's job, not the IR's).
+  optimizer's job, not the IR's). Any **string encoding derived from a node's identity** — operator
+  tokens fed to the rewrite engine, parameter encodings — MUST be genuinely **injective and losslessly
+  invertible**, with separator characters escaped: two distinct parameter maps colliding onto one
+  token can silently rebuild a node with the wrong parameters. Injectivity MUST be tested with
+  hostile inputs (string parameter values containing the separator characters).
 - **R2.5** Type and shape inference MUST **reuse the ragged-array library's abstract (metadata-only)
   evaluation**, which infers forms and shapes without reading event data. It MUST NOT be reimplemented.
 - **R2.6** Optimization MUST follow the **logical-vs-physical, cost-based** framing. Fusion,
@@ -218,7 +249,22 @@ in-process), which would give a false appearance of parity without testing what 
 ## R4 — Incremental optimizer and the anti-quadratic guard
 
 - **R4.1** Reduction MUST run incrementally as the graph is built and MUST be deterministic
-  (byte-stable output).
+  (byte-stable output). **Incrementality MUST be genuine, not an alias for the one-shot reduce**
+  (the alias was actually shipped once and passed an equivalence-only test — see Part I §5 / R0.10):
+  - **R4.1.1** The builder MUST maintain a canonical (identity-eliminated, commutativity-deduped,
+    hash-consed) view of the graph **as nodes are recorded**, applying the SAME shared rule set as
+    the saturation engine (R2.2) constructor-locally, so each new node's canonical form depends only
+    on its inputs' already-canonical forms.
+  - **R4.1.2 (Witness — required by R0.10.)** Per-step work MUST be proportional to the **delta**
+    (the nodes recorded since the previous step), never to the history; a cumulative work counter
+    MUST be exposed and the frozen suite MUST assert it equals the total node count regardless of how
+    many steps fed it.
+  - **R4.1.3** Finishing the reduction from the maintained view MUST cost one linear pass over the
+    canonical form and MUST produce output **byte-identical** to the one-shot reduce of the same
+    recording.
+  - **R4.1.4** The incremental mode MAY be opt-in at the session level, but the compile path of an
+    incremental session MUST actually consume the maintained view (no silent fallback to a
+    whole-history optimization at the end).
 - **R4.2** A representative graph with on the order of ten thousand nodes (such as one produced by many
   systematic variations) MUST reduce to a number of nodes on the order of the number of stages in under
   one second.
@@ -230,6 +276,18 @@ in-process), which would give a false appearance of parity without testing what 
 - **R4.4** Semantic equivalence of the reduced and un-reduced graphs MUST be proven (for example by a
   small reference interpreter in the core's test suite). Full equivalence against a real backend
   executor is proven at the execution milestone.
+- **R4.5 (Fusion maximality.)** Single-use fusion (an operation fuses only into its sole consumer) is
+  an acceptable, conservative default, but a **maximal** fusion mode MUST also be provided: a fan-out
+  operation fuses when **all** of its consumers are operations landing in one stage, so a diamond
+  inside an operation region becomes ONE stage with the apex as a shared member (computed once, never
+  duplicated). Neither mode may ever fuse across a boundary; both MUST be deterministic and MUST
+  evaluate to identical results. If the default is pinned by a frozen suite, the maximal mode MUST be
+  opt-in rather than a silent behavior change.
+- **R4.6 (Fused stages MUST be executable.)** The reduced graph's introspection surface MUST expose
+  each fused stage's member operations as decoded, executable records — operation name, typed
+  parameters, and resolved member/input references — and these MUST survive the durable codec (R8.1)
+  round trip. A stage that can only report its member *count* cannot be executed from the IR, which
+  silently forces executors back onto the un-reduced recording (the failure R7.8 exists to prevent).
 
 ## R5 — Necessary-buffer (column) projection
 
@@ -240,7 +298,25 @@ in-process), which would give a false appearance of parity without testing what 
   more buffers than the computation needs): reading one column reads only that column; a selection such
   as "the eta of jets with pt > 30" reads exactly the jet pt and jet eta buffers and never a sibling
   column. Projection MUST be correct whether or not the graph has been reduced.
-- **R5.3** Predicate pushdown is out of scope for the initial system.
+- **R5.3 (Buffer granularity, not only column granularity.)** Projection MUST also be available at the
+  granularity of the buffers that compose a ragged array, distinguishing a **data** need (the leaf
+  values are read) from a **structure-only** need (only the list offsets / index / option masks are
+  needed — a multiplicity, a mask). The abstract-evaluation report already carries this distinction
+  (touched-data versus touched-shape, per structural node); the projection MUST NOT discard the
+  shape half or the non-leaf nodes.
+  - **R5.3.1 (The count-only case is the acceptance pin.)** A count-only analysis (for example "the
+    number of electrons per event") MUST project to a **non-empty structure-only need** on the
+    counted collection. At column granularity this case necessarily collapses to the empty set —
+    which is not merely inefficient but **wrong** if fed to a reader (zero buffers read, garbage
+    result); the buffer view exists to make that case truthful.
+  - **R5.3.2 (Consistency.)** Collapsing the buffer-level view to columns (keep the data-bearing
+    entries) MUST reproduce the column-level projection exactly, pinned by a test over a shared
+    expression corpus, so the two granularities can never drift apart. A data need subsumes its own
+    structure; a redundant structure-only entry for a column whose data is read MUST NOT be emitted.
+  - **R5.3.3** A reader integration MUST be able to **serve** a structure-only need more cheaply than
+    a full column read where the format allows it (a TTree jagged branch's counter branch; an RNTuple
+    index column) — see R15.8.
+- **R5.4** Predicate pushdown is out of scope for the initial system.
 
 ## R6 — Debugging, lowering, and source-mapped errors
 
@@ -262,7 +338,12 @@ in-process), which would give a false appearance of parity without testing what 
   and a process-pool executor** behind one contract.
 - **R7.3** A plan MUST reduce to a single result via a **deterministic, straggler-tolerant tree
   reduction**: a fixed combine-tree keyed by leaf order yields bit-for-bit results regardless of
-  completion order, and one slow leaf blocks only its own path.
+  completion order, and one slow leaf blocks only its own path. Combines MUST be schedulable onto the
+  **same worker pool as the leaves** (at least as an option): with combines pinned to the driver
+  thread, the driver becomes a serial bottleneck for heavy partials. The pooled mode MUST use the same
+  fixed combine-tree (bit-identical results, pinned by a tree-shape-capturing combine) and the frozen
+  suite MUST observe a combine executing off the driver (R0.10 witness: a thread identifier or worker
+  process id collected through the combine itself).
 - **R7.4** Work MAY be a fixed task set or be pulled adaptively from a generator with **stopping
   conditions** (target events, wall-clock time, target precision, or an error budget). Adaptive
   reshaping (resizing work units based on observed behavior) MUST be supported.
@@ -271,6 +352,24 @@ in-process), which would give a false appearance of parity without testing what 
 - **R7.6** Under thousands of tiny tasks there MUST be no deadlock, stall, or race, verified including
   under free-threaded Python. A failure on a remote worker MUST surface to the driver via R6.2.
 - **R7.7** Concurrency safety MUST be tested with real concurrency (threads and processes), not mocked.
+- **R7.8 (The reduced serialized IR is what executes — the central anti-dask requirement at run
+  time.)** A **compile** step MUST reduce the recorded graph once and produce a self-contained,
+  serializable, picklable compiled artifact (the canonical IR bytes plus the source names it reads).
+  Workers MUST evaluate that artifact directly: deserialize once per worker, then **one backend
+  dispatch per *reduced* node** (fused stage members evaluated inline via R4.6) — **no per-partition
+  re-recording, no build-session in the worker, no form re-inference**. Re-recording the analysis per
+  partition re-introduces failures 2/6/7 of §2 on exactly the path that ships. Sources MUST bind by
+  name (to data or a zero-argument loader); opaque external payloads are not embedded in the IR and
+  MUST resolve through an explicit mapping keyed by payload content hash, failing loudly when one is
+  missing. The frozen suite MUST pin (R0.10): evaluation from the compiled bytes alone with no
+  recording in scope; the dispatch count equal to the reduced — not the recorded — operation count;
+  and retargeting the same artifact at different inputs without recompiling.
+- **R7.9 (Blind partitions are first-class.)** A partition whose entry range is deliberately unknown
+  until read time MUST be representable **explicitly** on the partition type — carrying its step
+  index and step count, resolvable against the file's actual entry count such that every entry is
+  read exactly once across a file's steps — and MUST survive pickling and the durable plan codec.
+  Encoding "blind" by smuggling a sentinel through an unrelated field (for example a negative entry
+  stop) is FORBIDDEN: any consumer unaware of the convention silently misreads the range.
 
 ## R8 — Checkpoint, resume, and error harvesting
 
@@ -356,9 +455,28 @@ in-process), which would give a false appearance of parity without testing what 
   release workflow, a documentation build that **passes with warnings treated as errors** and includes
   class-inheritance diagrams and a tracked "improvements/known-limitations" page, and a contributor
   guide that encodes the integrity rules and the local gate commands.
+  - **R11.2.1 (Wheels are built BY ordinary CI, published only by a human act.)** Wheel/sdist
+    artifacts MUST be **built and validated on every push** for every matrix target (the Rust core:
+    per-interpreter wheels on each OS/arch including the dedicated free-threaded wheel, each
+    smoke-imported after install) and uploaded as CI artifacts. **Nothing triggered by a branch push
+    or pull request may publish to any package index**; publishing MAY exist only behind an explicit
+    human release act (a version tag to a staging index, a published release to the real index),
+    behind protected environments. Where a hosted architecture runner does not exist, a fat/universal
+    or cross-compiled wheel satisfies the target; an uncoverable target MUST be recorded as a known
+    limitation, never silently dropped.
+  - **R11.2.2 (Workflow drift guard.)** The superproject MUST carry an automated check, run in its own
+    CI over the pinned package revisions, asserting that every package's workflows still cover the
+    R11.1 matrix, still build wheel artifacts, and contain **no publish step reachable from push/PR
+    CI**. A package weakening its own matrix must fail the *superproject's* build even while its own
+    CI stays green.
 - **R11.3** Code MUST be highly readable — descriptive names and expository comments — and MUST conform
   to standard Python and Rust style and lint rules, modeled on well-regarded open-source codebases. CI
   MUST enforce style.
+- **R11.4 (The coverage gate must reach the non-Python core.)** The ≥ 90 % coverage gate (R0.4)
+  measured by the Python tooling sees only the thin re-export of a Rust-backed package; the Rust code
+  itself MUST carry its own line-coverage gate in CI (with an explicit threshold). A binding layer
+  that the Python frozen suites exercise end-to-end in the same workflow MAY be excluded from the
+  Rust-side measurement, with that justification stated next to the exclusion.
 
 ## R12 — Determinism and reproducibility gates (cross-cutting)
 
@@ -436,9 +554,12 @@ in-process), which would give a false appearance of parity without testing what 
 - **R15.3 (Deferred reading.)** The read entry point MUST return a **deferred `graphed` array built
   from metadata/form alone** — no event data read at construction. Partitioning MUST support an
   explicit per-file step size, a steps-per-file count, and a **blind** mode that defers entry-range
-  resolution to read time (partitions describe their range symbolically without opening files up
-  front; the range is resolved when the partition is read). Necessary-buffer projection (R5) MUST
-  report exactly the minimal columns the recorded graph requires.
+  resolution to read time, represented with the **first-class blind partition of R7.9** (no sentinel
+  encodings; a reader MAY additionally honor a legacy sentinel found in previously serialized plans).
+  Necessary-buffer projection (R5) MUST report exactly the minimal columns the recorded graph
+  requires, and the per-partition read list MUST be **wired from the projection**, not maintained by
+  hand — a test MUST pin that the executor's read set and the recorded graph's projection cannot
+  drift apart.
 - **R15.4 (Deferred writing.)** The write entry point, with compute **disabled**, MUST return a
   **task graph of write tasks** — each returning nothing and writing its own output partition — **not**
   an array. With compute **enabled** it MUST execute that task graph through a real reference executor
@@ -446,10 +567,13 @@ in-process), which would give a false appearance of parity without testing what 
   modes MUST be consistent (the disabled mode's graph, when run, produces the enabled mode's outputs).
 - **R15.5 (Exercise the real deployable path.)** Integration analyses MUST be executed through the
   **reference executors of R7 (the process-pool executor)**, not through a direct in-process
-  materialize shortcut, so the path under test is the path that ships. Error-harvesting/report-style
-  behavior and resume MUST be expressed with the **native checkpoint machinery (R8)** and its
-  semantics (content-addressed dead-letter set, resume that skips completed work, error budget) — they
-  MUST NOT emulate `uproot`'s own report semantics.
+  materialize shortcut, so the path under test is the path that ships. The per-partition work MUST be
+  the **compiled-IR evaluation of R7.8** — the analysis compiled (reduced + serialized) at most once
+  per worker and evaluated against each chunk — NOT a fresh build-session re-recording the analysis on
+  every partition, which only *looks* like graph execution while re-introducing the interpreter-bound
+  behavior of §2. Error-harvesting/report-style behavior and resume MUST be expressed with the
+  **native checkpoint machinery (R8)** and its semantics (content-addressed dead-letter set, resume
+  that skips completed work, error budget) — they MUST NOT emulate `uproot`'s own report semantics.
 - **R15.6 (Compile once, run on alternate inputs — demonstrated here.)** The compile-once/run-on-many
   capability (R13.5) MUST be demonstrated through this integration: a plan recorded against one input
   MUST run **unchanged** against a **different file location** and a **different partition count**, with
@@ -464,6 +588,22 @@ in-process), which would give a false appearance of parity without testing what 
   external service the lightweight CI job does not provision (for example a remote-storage protocol
   server) MAY be **deselected** by marker, but MUST NOT be deleted, skipped in source, or otherwise
   weakened (R0.6).
+- **R15.8 (Buffer-level projection reaches the reader.)** The integration MUST expose the
+  buffer-granular projection of R5.3 alongside the column view, and MUST translate a structure-only
+  need into the cheapest read the format offers: for a `TTree` jagged branch, the **counter branch**
+  (the list lengths without the payload baskets), proven equal to counting the fully-read branch;
+  where no counter exists, or where the host API does not expose an `RNTuple` index column
+  independently, the fallback is the branch itself and the limitation MUST be recorded, not silently
+  papered over. A count-only analysis MUST therefore have a truthful, non-empty read specification
+  end-to-end (R5.3.1).
+- **R15.9 (Host-integration hygiene.)** The integration MUST consume only **public** frontend/host
+  surfaces (no reaching into another package's private internals — required accessors are added to the
+  frontend instead). The write entry point MUST reject an array recorded over more than one reader
+  source with a clear error rather than silently picking one; MUST write only the array's **projected**
+  branches (a bare source read projects to every branch, reproducing whole-source writes); and MUST
+  keep per-task static data bounded by the number of *files*, not the number of *partitions* — a
+  worker derives its own output-part index from its partition plus a per-file base table, instead of
+  every task pickling a full partition-to-path map.
 
 ## Out of scope (later phases — MUST NOT be built initially)
 
@@ -529,4 +669,20 @@ integration** (it remains an isolated MVP demonstration branch — see R15.2).
   data: the long-established `TTree` and its successor `RNTuple`. The integration must read both.
 - **Blind partitioning.** A partitioning mode whose partitions describe their entry range symbolically
   and defer resolving it (opening the file to learn the entry count) until read time, so no files are
-  opened when the partitions are formed.
+  opened when the partitions are formed. Blind partitions are first-class on the partition type
+  (explicit step index + step count, R7.9) — never a sentinel smuggled through another field.
+- **Buffer need (data vs. structure-only).** The two granularities of "this analysis reads that
+  column": a **data** need reads the leaf values (and brings their structure along); a
+  **structure-only** need reads just the list offsets / index / option masks — a multiplicity or a
+  mask — servable from a counter branch or index column without the payload (R5.3).
+- **Compiled artifact.** The product of the compile step (R7.8): the reduced, canonical, serialized
+  IR plus the source names it reads — self-contained, picklable, evaluable on a worker with no
+  build-session and no user code, and retargetable at new inputs without recompiling.
+- **Witness test.** A frozen test that pins the *mechanism* a requirement names, via an observable
+  only the genuine mechanism produces (a work counter, a dispatch count, an off-driver thread id) —
+  the defense against semantic stubs, which satisfy input/output equivalence by construction (R0.10).
+- **Semantic stub.** An implementation that satisfies a requirement's tests without implementing the
+  requirement's mechanism — the canonical example being an "incremental" reduce aliased to the
+  one-shot reduce, green under an equivalence-only test.
+- **Counter branch.** In a `TTree`, the small branch holding a jagged branch's per-entry list lengths;
+  reading it alone yields multiplicities without decompressing the payload baskets (R15.8).
