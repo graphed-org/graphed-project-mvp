@@ -664,6 +664,64 @@ reductions/creation → manipulation/indexing → escape hatches), each with its
   linalg/FFT, map_overlap, `__setitem__`, masked arrays, persist, backend dispatch to GPU array
   libraries (the plan's P4) — are **Phase 2 by user decision** and MUST NOT be built in the MVP.
 
+## R17 — Ragged-array-library user-facing parity (the awkward backend grows to a usable library)
+
+The reference ragged-array backend MUST reach user-facing parity with the established distributed
+ragged-array library's core surface, under the R16.1 factorization (its idiom is FUNCTIONS over
+arrays — the function namespace IS the user surface; no proxy, no member functions). Built as
+gated milestones in the user-directed order: partitioned I/O FIRST, then foundation → structure →
+behaviors → conveniences.
+
+- **R17.1 (Partitioned parquet I/O on a COMMON base.)** Parquet reading/writing MUST share one
+  backend-agnostic base in the frontend package (discovery — directories/globs sorted, explicit
+  lists order-preserving; metadata-only row counts and schema; blind/eager partitioning on the
+  first-class blind Partition of R7.9, blind opening NO file — witnessed against nonexistent
+  paths; lazy deferred sources whose identity carries the file list; the deferred write plan
+  whose compute-disabled task graph, when run, IS the compute-enabled mode per R15.4, with a
+  dependency-free key-ordered sequential reference runner and any R7 executor pluggable; writer
+  part indices derived from the partition alone per R15.9), specialized per backend with ONLY the
+  schema→form translation and the per-partition array codec. The arrow/parquet library is an
+  OPTIONAL extra. Write tasks evaluate the COMPILED IR (R7.8), never a re-recorded session.
+- **R17.1.1 (The read list comes from the BUFFER projection.)** The ragged specialization's write
+  path MUST wire its per-task read list from the buffer-granular projection (R5.3): a
+  structure-only need (a multiplicity) reads its CHEAPEST CARRIER — one leaf at-or-under the
+  path, since parquet has no standalone counter column — the parquet analogue of R15.8. The
+  column view alone under-specifies this and MUST NOT be the wiring.
+- **R17.1.2 (The rectilinear specialization refuses ragged data.)** The numpy backend's parquet
+  surface accepts ONLY fixed-width primitive columns; a jagged/nested column is refused at
+  construction with an error naming the column and pointing at the ragged backend. (This amends
+  R16.7 by user decision 2026-06-10: parquet I/O alone enters the numpy MVP; zarr/store and the
+  rest of P3.9/P4 stay Phase 2.)
+- **R17.2 (Foundation.)** The ragged backend MUST implement the FULL R16.2 canonical ufunc tier
+  (the host library takes numpy ufuncs; the typetracer infers every form) and every reducer the
+  established library offers (incl. mean/std/var(ddof)/min/max/prod/count_nonzero/ptp/moment/
+  softmax and the two-array corr/covar/linear_fit), each under the R16.3 STRUCTURAL RULE mapped
+  to ragged semantics: axis None/0 (the event axis) records a boundary reduction node, inner
+  (per-event) axes record fusible ops — witnessed in BOTH directions per kind; name-based
+  boundary classification of reducers is forbidden. Typetracer shims MUST stay inside the host
+  library's own inference (mask_identity-style flags, composition of its kernels) — never
+  hand-rolled (§A.2).
+- **R17.3 (Structure tier.)** The structure functions of the established library's surface
+  (sort, mask, pad_none, is_none, singletons, unflatten, regular conversions, full_like,
+  nan_to_num, isclose, arg-variants, run_lengths, without_field, multi-output broadcast_arrays/
+  unzip as tuples of recorded nodes, eager to_list sugar) recorded through ONE dispatch shared by
+  inference and evaluation, all partition-local fusible, all projectable. A list of field names
+  on the COMMON proxy records one fusible record-subset op (order significant, interning).
+- **R17.4 (Behaviors.)** A behavior dict registered on the backend MUST make behavior PROPERTIES
+  (the four-vector pattern) work through plain attribute access: the record-naming op rewraps
+  with the behavior on both the typetracer and real paths; field access falls back from record
+  fields to attribute lookup; properties record with typetracer forms, evaluate exactly, and
+  remain PROJECTABLE down to exactly the leaves they read. Unknown attributes without a behavior
+  fail at record time. Parameters (with/without) ride along; high-level attrs do not (Phase 2).
+- **R17.5 (Conveniences.)** Introspection (fields/type/backend) answers from the recorded form
+  and session, recording NOTHING (node-count witnessed); head/sample are eager peeking sugar over
+  the common slice op. The common slice/index ops MUST evaluate on every backend that ships them.
+- **R17.6 (Scope guard.)** Phase 2 by user decision: the host library's function-dispatch
+  protocol (`ak.f(deferred)` routing — "this is an MVP and dispatch is largely syntactic sugar");
+  repartition/divisions; persist; Scalar/Record collection classes; setitem/delitem sugar; the
+  string accessor; dataframe/dask interop; tuple getitem; enforce_type/to_packed; text I/O;
+  row-group-exact parquet range reads; recorded attrs.
+
 ## Out of scope (later phases — MUST NOT be built initially)
 
 Distributed-scheduler executors for specific batch systems; treating systematic variations as a graph
@@ -671,9 +729,12 @@ axis; advanced adaptive reshaping; predicate pushdown; interactive debugging or 
 external analysis-preservation portals; swapping the optimizer engine for a more capable one behind the
 engine interface; distributed (non-local) checkpoint stores; self-hosting preservation bundles that
 embed and launch a model-inference server; **upstreaming or production-hardening the `uproot`
-integration** (it remains an isolated MVP demonstration branch — see R15.2); and the **N-D-chunking
-parity tier** (R16.7: storage I/O, linear algebra, rechunk/reshape-across-chunks, overlap halos,
-mutation, masked arrays, GPU-array dispatch).
+integration** (it remains an isolated MVP demonstration branch — see R15.2); the **N-D-chunking
+parity tier** (R16.7 — storage I/O *except parquet, which R17.1.2 pulled into the MVP by user
+decision*, linear algebra, rechunk/reshape-across-chunks, overlap halos, mutation, masked arrays,
+GPU-array dispatch); and the **ragged-parity Phase-2 set** (R17.6: dispatch-protocol routing,
+repartition/divisions, persist, collection classes, setitem sugar, string accessor, dataframe
+interop, recorded attrs).
 
 ---
 
@@ -760,3 +821,11 @@ mutation, masked arrays, GPU-array dispatch).
   partition-local and fusible.
 - **gufunc signature.** The "(i),(i)->()" core-dimension notation that makes an opaque callable
   typable at record time and is preserved as the External node's `io_schema` (R16.6).
+- **Behavior (ragged records).** The host ragged library's mechanism attaching methods/properties
+  to named record types (the four-vector pattern); registered on the backend, carried through the
+  typetracer, resolved by attribute-access fallback, and projectable to the leaves a property
+  actually reads (R17.4).
+- **Cheapest carrier.** The single leaf column read to satisfy a structure-only (offsets) need in
+  a format with no standalone counter column — parquet's analogue of the counter branch (R17.1.1).
+- **Blind partitioning (parquet).** The R7.9 blind partition applied to parquet datasets: no file
+  is opened at partition time; ranges resolve against metadata row counts at read time (R17.1).

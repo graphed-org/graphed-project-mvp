@@ -17,7 +17,7 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 
 ## Milestone status
 
-**16 of 16 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **DONE**.
+**21 of 21 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **DONE**.
 
 | Milestone | Status | Repo(s) | What it delivered |
 |---|:--:|---|---|
@@ -37,6 +37,11 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 | **M12** | ✅ DONE | graphed-mvp, graphed-numpy-mvp | dask.array parity P1: axis-aware reductions/scans (boundary vs fusible structural rule), creation routines, deterministic random, tree-reducible monoids |
 | **M13** | ✅ DONE | graphed-mvp, graphed-numpy-mvp | dask.array parity P2: indexing (slices/ints common; tuple subscripts numpy-side) + manipulation with axis-0 geometry rules + concatenate/unique/bincount/histogram* |
 | **M14** | ✅ DONE | graphed-mvp, graphed-numpy-mvp | dask.array parity P3.8: graphed.apply multi-input blockwise externals + signature-aware apply_gufunc (P3.9 + P4 deferred to Phase 2 by user decision) |
+| **M15** | ✅ DONE | graphed-mvp, graphed-awkward-mvp, graphed-numpy-mvp | Partitioned parquet I/O: backend-agnostic base in graphed (blind partitions, deferred write plans) + awkward specialization (schema-only forms, buffer-projection-wired writes) + numpy rectilinear specialization (R16.7 amended by user decision: parquet alone enters the numpy MVP) |
+| **M16** | ✅ DONE | graphed-awkward-mvp | dask-awkward parity P0: full canonical ufunc tier on the awkward backend, the structural reduction rule on every reducer (name-based boundary classification retired), 13 new reducers |
+| **M17** | ✅ DONE | graphed-mvp, graphed-awkward-mvp | dask-awkward parity P1: ~20 structure functions through the single apply dispatch + the common record-subset getitem (a[[fields]]) |
+| **M18** | ✅ DONE | graphed-awkward-mvp | dask-awkward parity P2: behaviors — with_name + backend behavior registration; vector four-vectors record, evaluate, and project to exactly the leaves they read |
+| **M19** | ✅ DONE | graphed-awkward-mvp | dask-awkward parity P3.8: fields/type_of/backend_of introspection (recording nothing), head/sample peeking, common slice/index ops on the awkward backend; __awkward_function__ dispatch and the rest stay Phase 2 by user decision |
 
 The development process is a **gated three-role pipeline** (test-author → implementer → reviewer)
 coordinated by the deterministic `graphed-orchestrator`. A milestone is `DONE` only when every
@@ -48,14 +53,14 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | Repo | Role | Pinned commit | State |
 |---|---|---|:--:|
 | [graphed-project-mvp](https://github.com/graphed-org/graphed-project-mvp) | meta/superproject | — | meta |
-| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `e2cd371` | ✅ submodule |
-| [graphed-awkward-mvp](https://github.com/graphed-org/graphed-awkward-mvp) | M3/M5 reference backend | `eadbdba` | ✅ submodule |
+| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `99bc1a8` | ✅ submodule |
+| [graphed-awkward-mvp](https://github.com/graphed-org/graphed-awkward-mvp) | M3/M5 reference backend | `1761c61` | ✅ submodule |
 | [graphed-checkpoint-mvp](https://github.com/graphed-org/graphed-checkpoint-mvp) | M8 checkpoint/resume | `d3bb4ab` | ✅ submodule |
 | [graphed-core-mvp](https://github.com/graphed-org/graphed-core-mvp) | M1/M4/M7-contract/M8-plan | `5312a9c` | ✅ submodule |
 | [graphed-corpus-mvp](https://github.com/graphed-org/graphed-corpus-mvp) | M0.5 requirements + fixtures | `e53f38a` | ✅ submodule |
 | [graphed-debug-mvp](https://github.com/graphed-org/graphed-debug-mvp) | M6 debug/tracebacks | `118ffb7` | ✅ submodule |
 | [graphed-exec-local-mvp](https://github.com/graphed-org/graphed-exec-local-mvp) | M7 reference executor | `d2dff5a` | ✅ submodule |
-| [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `41319ce` | ✅ submodule |
+| [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `192a3b2` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `a5adff1` | ✅ submodule |
 | [graphed-preserve-mvp](https://github.com/graphed-org/graphed-preserve-mvp) | M9 preservation bundle | `20aa028` | ✅ submodule |
 
@@ -81,4 +86,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-10T15:31:34Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-10T18:28:29Z).</sub>
