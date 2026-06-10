@@ -48,14 +48,14 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | Repo | Role | Pinned commit | State |
 |---|---|---|:--:|
 | [graphed-project-mvp](https://github.com/graphed-org/graphed-project-mvp) | meta/superproject | — | meta |
-| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `28d48ed` | ✅ submodule |
+| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `e2cd371` | ✅ submodule |
 | [graphed-awkward-mvp](https://github.com/graphed-org/graphed-awkward-mvp) | M3/M5 reference backend | `eadbdba` | ✅ submodule |
 | [graphed-checkpoint-mvp](https://github.com/graphed-org/graphed-checkpoint-mvp) | M8 checkpoint/resume | `d3bb4ab` | ✅ submodule |
 | [graphed-core-mvp](https://github.com/graphed-org/graphed-core-mvp) | M1/M4/M7-contract/M8-plan | `5312a9c` | ✅ submodule |
 | [graphed-corpus-mvp](https://github.com/graphed-org/graphed-corpus-mvp) | M0.5 requirements + fixtures | `e53f38a` | ✅ submodule |
 | [graphed-debug-mvp](https://github.com/graphed-org/graphed-debug-mvp) | M6 debug/tracebacks | `118ffb7` | ✅ submodule |
 | [graphed-exec-local-mvp](https://github.com/graphed-org/graphed-exec-local-mvp) | M7 reference executor | `d2dff5a` | ✅ submodule |
-| [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `fe115a3` | ✅ submodule |
+| [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `41319ce` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `fc97248` | ✅ submodule |
 | [graphed-preserve-mvp](https://github.com/graphed-org/graphed-preserve-mvp) | M9 preservation bundle | `20aa028` | ✅ submodule |
 
@@ -81,4 +81,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-10T14:55:19Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-10T15:10:26Z).</sub>
