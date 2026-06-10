@@ -605,14 +605,75 @@ in-process), which would give a false appearance of parity without testing what 
   worker derives its own output-part index from its partition plus a per-file base table, instead of
   every task pickling a full partition-to-path map.
 
+## R16 — Array-library user-facing parity (the numpy backend grows to a usable array library)
+
+The trivial seam-prover backend MUST be grown into a genuinely usable deferred array library with
+user-facing parity to the established chunked-array library's core surface, WITHOUT compromising the
+frontend's backend-agnosticism. Built as gated milestones in plan-priority order (foundation →
+reductions/creation → manipulation/indexing → escape hatches), each with its own frozen suite.
+
+- **R16.1 (Backend-idiom factorization — THE design rule.)** The shared frontend array proxy MUST
+  stay **backend-idiom-neutral**: it carries only what every backend idiom shares — operators/dunders,
+  the ufunc-dispatch hook, field access, and *protected infrastructure* (form-metadata lookup, the
+  axis-normalizing reduction/scan recorders, slice/int indexing). Idiomatic user surfaces are
+  backend-owned: a backend hands its own proxy subclass to the build session through an
+  **`array_type` factory** (every session builder returns it), and the numpy backend's subclass
+  completes the method/property idiom (`.shape/.dtype/.ndim`, `.sum()/.std()/...`, the numpy
+  API-function protocol), while the ragged-array backend deliberately supplies NO proxy — its idiom
+  is **functions over arrays** (its function namespace), never member functions. A frozen test MUST
+  pin that no numpy-idiomatic member appears on the shared proxy class.
+- **R16.2 (Full elementwise tier; the host library does the inference.)** Every single-output ufunc
+  the host array library offers MUST record one canonical backend-agnostic op (aliases canonicalized
+  so they intern); the frontend dispatches by ufunc NAME and never imports the host library. The
+  numpy backend MUST infer result forms at record time by evaluating each op on **zero-length meta
+  arrays** (length-one unit metas where reductions reject empties), so dtype promotion,
+  broadcasting, and type errors are the host library's own — never hand-rolled — and ill-typed
+  programs fail at record time with a provenance-located error. Evaluation and inference MUST share
+  one op table so they cannot drift.
+- **R16.3 (The structural reduction rule.)** A reduction over the partitioned axis (axis None or 0)
+  MUST record a **boundary reduction node** (executed by the tree reduction of R7); a reduction over
+  an inner axis is partition-local and MUST record a **fusible op**; cumulative scans are always
+  fusible (partition-local semantics, documented). Negative axes resolve against the form's rank and
+  are refused without one; non-default `keepdims`/`ddof` are recorded present-only so defaults
+  intern. The same boundary logic applies to axis-0 slicing/integer indexing/gather/concatenation
+  and to whole-axis analytics (unique/bincount/histograms); inner-axis variants stay fusible.
+- **R16.4 (Creation, random, and tree-reducible monoids.)** Concrete creators (zeros/ones/full/
+  empty/arange/linspace) record **deterministically named sources** so identical creations intern to
+  one node; `*_like` creators are fusible ops; `empty` IS zeros (uninitialized memory would break
+  byte-identity, R12). Random sources MUST be seeded AND named by (seed, draw index): same seed ⇒
+  identical values and identical serialized IR. Reduction monoids (chunk/combine/empty/finalize —
+  the process/combine/empty quadruple of R7) MUST agree with the whole-array reference over ANY
+  chunking and ANY combine-tree shape, with `empty()` a true identity; kinds that are not
+  tree-reducible (median) MUST be refused, not approximated.
+- **R16.5 (Axis-0 geometry rules.)** In the axis-0-partitioned MVP the partitioned axis can never be
+  moved, squeezed, displaced, or given a concrete length at record time: reshape requires a leading
+  -1; transpose/swapaxes/expand_dims touching axis 0, squeeze without an explicit inner axis, tuple
+  subscripts indexing axis 0, and stack/vstack (which create an inner unknown-length dim) MUST be
+  refused at record time with clear errors. These are Phase-2 (N-D chunking) capabilities, not bugs.
+  Deferred arrays MUST NOT be iterable (the legacy iteration protocol over int indexing would record
+  forever).
+- **R16.6 (Opaque escape hatches stay typed and preserved.)** A multi-input blockwise `apply` MUST
+  record ONE External node over N inputs (single-input interns with the M2 map), carrying the
+  backend's payload descriptor. The numpy backend MUST offer a **gufunc-signature** form whose
+  signature makes the opaque callable typable at record time (core dims bound against operand
+  forms; mismatches/unbound outputs fail before any data; declared output dtype) and whose
+  descriptor carries the signature as its `io_schema`. The column-projection on-fail policy (R5)
+  applies through these nodes unchanged.
+- **R16.7 (Scope guard.)** Chunk-aware storage I/O and in-partition linear algebra (the plan's
+  P3.9), and everything needing N-D chunk geometry — rechunk, cross-chunk reshape, distributed
+  linalg/FFT, map_overlap, `__setitem__`, masked arrays, persist, backend dispatch to GPU array
+  libraries (the plan's P4) — are **Phase 2 by user decision** and MUST NOT be built in the MVP.
+
 ## Out of scope (later phases — MUST NOT be built initially)
 
 Distributed-scheduler executors for specific batch systems; treating systematic variations as a graph
 axis; advanced adaptive reshaping; predicate pushdown; interactive debugging or time-travel; export to
 external analysis-preservation portals; swapping the optimizer engine for a more capable one behind the
 engine interface; distributed (non-local) checkpoint stores; self-hosting preservation bundles that
-embed and launch a model-inference server; and **upstreaming or production-hardening the `uproot`
-integration** (it remains an isolated MVP demonstration branch — see R15.2).
+embed and launch a model-inference server; **upstreaming or production-hardening the `uproot`
+integration** (it remains an isolated MVP demonstration branch — see R15.2); and the **N-D-chunking
+parity tier** (R16.7: storage I/O, linear algebra, rechunk/reshape-across-chunks, overlap halos,
+mutation, masked arrays, GPU-array dispatch).
 
 ---
 
@@ -686,3 +747,16 @@ integration** (it remains an isolated MVP demonstration branch — see R15.2).
   one-shot reduce, green under an equivalence-only test.
 - **Counter branch.** In a `TTree`, the small branch holding a jagged branch's per-entry list lengths;
   reading it alone yields multiplicities without decompressing the payload baskets (R15.8).
+- **Backend-idiom factorization.** The design rule (R16.1) that the shared frontend proxy carries
+  only what every backend idiom shares, while each backend completes its own user surface — the
+  numpy backend through a proxy subclass supplied via the `array_type` factory (methods,
+  properties, numpy API dispatch), the ragged-array backend through a function namespace (its
+  arrays never grow member functions).
+- **Meta array (zero-length stand-in).** A length-zero (or, for reductions, length-one) array
+  carrying a form's dtype and trailing shape, on which an op is evaluated at record time so the
+  host library itself performs promotion/broadcasting/type checking (R16.2).
+- **Structural reduction rule.** The recording rule (R16.3) that consuming or restructuring the
+  partitioned axis makes a node a stage boundary (tree-reduced), while inner-axis work stays
+  partition-local and fusible.
+- **gufunc signature.** The "(i),(i)->()" core-dimension notation that makes an opaque callable
+  typable at record time and is preserved as the External node's `io_schema` (R16.6).

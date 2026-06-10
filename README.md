@@ -17,7 +17,7 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 
 ## Milestone status
 
-**12 of 12 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **DONE**.
+**16 of 16 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **DONE**.
 
 | Milestone | Status | Repo(s) | What it delivered |
 |---|:--:|---|---|
@@ -33,6 +33,10 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 | **M7** | ✅ DONE | graphed-exec-local-mvp, graphed-core-mvp | Execution-layer contract + graphed-exec-local |
 | **M8** | ✅ DONE | graphed-checkpoint-mvp, graphed-core-mvp, graphed-mvp | graphed-checkpoint: plan serialization + checkpoint/resume |
 | **M9** | ✅ DONE | graphed-preserve-mvp, graphed-core-mvp, graphed-mvp, graphed-awkward-mvp | graphed-preserve: analysis preservation bundle |
+| **M11** | ✅ DONE | graphed-mvp, graphed-numpy-mvp, graphed-awkward-mvp | dask.array parity P0: full ufunc tier + backend-idiom factorization (array_type; NumpyArray proxy; awkward stays functions-only) |
+| **M12** | ✅ DONE | graphed-mvp, graphed-numpy-mvp | dask.array parity P1: axis-aware reductions/scans (boundary vs fusible structural rule), creation routines, deterministic random, tree-reducible monoids |
+| **M13** | ✅ DONE | graphed-mvp, graphed-numpy-mvp | dask.array parity P2: indexing (slices/ints common; tuple subscripts numpy-side) + manipulation with axis-0 geometry rules + concatenate/unique/bincount/histogram* |
+| **M14** | ✅ DONE | graphed-mvp, graphed-numpy-mvp | dask.array parity P3.8: graphed.apply multi-input blockwise externals + signature-aware apply_gufunc (P3.9 + P4 deferred to Phase 2 by user decision) |
 
 The development process is a **gated three-role pipeline** (test-author → implementer → reviewer)
 coordinated by the deterministic `graphed-orchestrator`. A milestone is `DONE` only when every
@@ -44,14 +48,14 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | Repo | Role | Pinned commit | State |
 |---|---|---|:--:|
 | [graphed-project-mvp](https://github.com/graphed-org/graphed-project-mvp) | meta/superproject | — | meta |
-| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `6b12ab5` | ✅ submodule |
-| [graphed-awkward-mvp](https://github.com/graphed-org/graphed-awkward-mvp) | M3/M5 reference backend | `9ae0c13` | ✅ submodule |
+| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `28d48ed` | ✅ submodule |
+| [graphed-awkward-mvp](https://github.com/graphed-org/graphed-awkward-mvp) | M3/M5 reference backend | `eadbdba` | ✅ submodule |
 | [graphed-checkpoint-mvp](https://github.com/graphed-org/graphed-checkpoint-mvp) | M8 checkpoint/resume | `d3bb4ab` | ✅ submodule |
 | [graphed-core-mvp](https://github.com/graphed-org/graphed-core-mvp) | M1/M4/M7-contract/M8-plan | `5312a9c` | ✅ submodule |
 | [graphed-corpus-mvp](https://github.com/graphed-org/graphed-corpus-mvp) | M0.5 requirements + fixtures | `e53f38a` | ✅ submodule |
 | [graphed-debug-mvp](https://github.com/graphed-org/graphed-debug-mvp) | M6 debug/tracebacks | `118ffb7` | ✅ submodule |
 | [graphed-exec-local-mvp](https://github.com/graphed-org/graphed-exec-local-mvp) | M7 reference executor | `d2dff5a` | ✅ submodule |
-| [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `1458e66` | ✅ submodule |
+| [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `fe115a3` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `fc97248` | ✅ submodule |
 | [graphed-preserve-mvp](https://github.com/graphed-org/graphed-preserve-mvp) | M9 preservation bundle | `20aa028` | ✅ submodule |
 
@@ -77,4 +81,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-09T22:39:24Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-10T14:55:19Z).</sub>

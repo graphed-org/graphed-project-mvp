@@ -4,7 +4,7 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "DONE",
-  "updated_at": "2026-06-09T22:39:24Z",
+  "updated_at": "2026-06-10T14:55:19Z",
   "note": "Project-level rollup. MVP COMPLETE: ORCH, M0 (10 repos), M0.5, M1\u2013M9 all DONE and CI-green on the A.5 matrix. M9: new graphed-preserve repo \u2014 the analysis preservation bundle. build_bundle captures the canonical IR (M8, opt_level=0) + M6 provenance/sourcemap + every External payload (real correctionlib JSON + ONNX model) by content hash in the M8 Store + input datasets + environment + config + seed into a manifest whose hash is the bundle fingerprint; reproduce interprets the IR (awkward backend + payload-backed evaluators) bit-for-bit on a clean machine with no originals (raising UnresolvedPayload on any missing reference); inspect renders IR + provenance + payload inventory + opaque-node risk flags without executing (faithful to reproduce). Self-fingerprinting (changes iff a content/result input changes). graphed-core gained GraphStore.nodes() IR introspection; graphed gained Session.sourcemap(). All 10 package repos public. M10 REMEDIATION (2026-06-09): the mvp-shortcomings.md findings fixed across the repos \u2014 genuine IncrementalReducer + Session(incremental=True) (A.1); IR-driven execution via compile_ir/evaluate_ir, one dispatch per REDUCED node, fork executor glue rewired (A.2); buffer-level projection project_buffers/necessary_buffers, count-only -> {col: OFFSETS} served from TTree counter branches (A.3); full A.5 CI matrices + build-only wheels (NO PyPI publish) + cargo llvm-cov gate, guarded by scripts/test_workflows.py (B.4/B.5); opt-in maximal stage fusion + full symmetric commute rule set + ParamMap token-injectivity fix (C.6/C.7); opt-in pooled combines (C.8); first-class Partition.blind, fork sentinel retired under freeze-UPROOT-1, graphed_write hardening (C.9); integrity scan catches bare-pass targets (C.10). Every fix has a NEW frozen suite (tests/frozen/m10); no pre-existing frozen test modified except the recorded freeze-UPROOT-1 encoding amendment.",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
@@ -250,6 +250,52 @@
       "iterations_cap": 14,
       "externals_plugin_refactor": "Externals generalized into a validated plugin system (no longer hardwired to onnx/correctionlib). An ExternalPlugin gives a kind a deterministic content-based content_hash (ONNX -> hash of weights + graph structure; correctionlib -> hash of canonical contents; sha256_bytes -> raw bytes), an evaluate, and >=2 sample payloads. register_plugin VALIDATES the hash before trusting it: cross-process determinism (runs the hash under two PYTHONHASHSEEDs via a cloudpickle-by-value subprocess, rejecting any hash built from hash()/id()/time/randomness) and non-vacuity (distinct payloads must not collide -> rejects a constant/trivial hash). record_external(session, plugin, payload, inputs) records a preservable External via graphed-awkward's new generic 'external' op; the same plugin.evaluate runs at build-time materialize and at reproduce -> bit-for-bit. build_bundle verifies each stored payload hashes to its recorded id (cache-poisoning-safe). onnx + correctionlib ship as plugins and double as templates; a user-defined plugin is tested end-to-end (record -> preserve -> reproduce bit-for-bit, fingerprint tracks the payload). graphed-awkward gained op='external' (additive; correction/onnx/map unchanged, M3 frozen intact). The plugin API was stress-tested against real ML frameworks (PyTorch TorchScript w/ weights-hash + multi-input, XGBoost booster bytes, and the NVIDIA Triton remote-inference pattern) \u2014 optional [mltest] extra, importorskip so CI skips them; the shape held. Findings then addressed: a per-worker ResourceCache (load(payload,params)->resource + close) so a model/connection is materialized once (open_once for Externals), and the remote/connection hook makes Triton first-class. A dedicated CI 'triton' job starts a real nvcr.io/nvidia/tritonserver container serving tests/samples/triton_models and reproduces a bundle through it over BOTH gRPC and HTTP, bit-for-bit vs a numpy reference (env-gated; skipped locally). torch+xgboost vendor clashing OpenMP runtimes (env capture matters).",
       "evidence": "graphed-preserve (new repo, the final milestone). build_bundle(root, *, session, value, weight, datasets, payloads, histogram, config, seed) captures: the canonical serialized IR (M8, opt_level=0 so it is auditable + 1:1 with user ops); the M6 provenance/sourcemap (basenames -> build-location independent); every External PayloadDescriptor + the real correctionlib JSON + ONNX model bytes (in the M8 content-addressed Store); input datasets by content hash; environment (python + pinned versions, optional container digest); config + seed; into a canonical manifest whose SHA-256 is the bundle fingerprint. reproduce(bundle) interprets the IR (op/reduction via the awkward backend; External via payload-backed correctionlib/onnx evaluators that are the SAME code as build-time -> bit-for-bit; sources from the Store) and raises UnresolvedPayload('... <hash>') on any missing reference (never a silent wrong result). inspect(bundle) renders IR + provenance + payload inventory + opaque-node risk flags WITHOUT executing, faithful to reproduce (same GraphStore.nodes() IR). Self-fingerprinting: the fingerprint changes iff a content/result input changes (correctionlib JSON, ONNX weights, dataset, config, seed, env) and NOT on irrelevant ones (no timestamps/abs-paths; provenance basenames). AGC-ttbar fixture: reduced ttbar slice recorded through graphed/graphed-awkward with a real correctionlib v2 SF (weight systematic), a real ONNX model (per-event inference), and JES (kinematic) + correctionlib (weight) systematics. 21 frozen tests incl. a machine-B scrubbed-subprocess reproduce (originals deleted, agc unimportable) matching bit-for-bit; 95% cov. graphed-core gained GraphStore.nodes() IR introspection (5 tests); graphed gained Session.sourcemap() (1 test). ruff + mypy --strict + sphinx -W clean; CI green on the full A.5 matrix (3 OS x py3.11-3.13 + 3.14/3.14t experimental). Resolved M9 design choices: all payloads referenced by hash from the Store (never inlined); environment captured (not enforced -> container is Phase-2); opt_level=0 IR; one systematic variation per bundle (systematics-as-axis is Phase-2)."
+    },
+    "M11": {
+      "title": "dask.array parity P0: full ufunc tier + backend-idiom factorization (array_type; NumpyArray proxy; awkward stays functions-only)",
+      "repos": [
+        "graphed",
+        "graphed-numpy",
+        "graphed-awkward"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14,
+      "note": "Re-frozen as freeze-M11-1 after a human-directed design review: graphed.Array stays backend-idiom-neutral; the original numpy-flavored freeze-M11-0 commits were backed out to backup/m11-m12-numpy-flavored before any push."
+    },
+    "M12": {
+      "title": "dask.array parity P1: axis-aware reductions/scans (boundary vs fusible structural rule), creation routines, deterministic random, tree-reducible monoids",
+      "repos": [
+        "graphed",
+        "graphed-numpy"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M13": {
+      "title": "dask.array parity P2: indexing (slices/ints common; tuple subscripts numpy-side) + manipulation with axis-0 geometry rules + concatenate/unique/bincount/histogram*",
+      "repos": [
+        "graphed",
+        "graphed-numpy"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M14": {
+      "title": "dask.array parity P3.8: graphed.apply multi-input blockwise externals + signature-aware apply_gufunc (P3.9 + P4 deferred to Phase 2 by user decision)",
+      "repos": [
+        "graphed",
+        "graphed-numpy"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
     }
   },
   "infrastructure_done": [
