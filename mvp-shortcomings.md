@@ -197,8 +197,10 @@ worth fixing now (details in `.graphed/tracking/torch-jit-deprecation.md`):
   Action trigger: torch announcing removal of `torch.jit` (or the matrix turning these into
   errors) → a recorded freeze amendment swaps the fixture to `torch.export` — a contained,
   one-file change whose content hashes change with the artifact format.
-- **compile_ir output accumulation (found 2026-06-10, P3.6 revision):** graph outputs accumulate
-  per session, so compiling two DIFFERENT expressions from one session yields a multi-output IR
-  and single-output consumers (`to_parquet`'s unpack) break. Workaround: one session per compiled
-  expression (pinned in graphed-awkward's m21 suite). A real fix needs output isolation in
-  compile_ir/GraphStore — future work, out of the P3.6 scope.
+- **compile_ir output accumulation — FIXED 2026-06-10 (M22, same day as found):** outputs are
+  now a property of the COMPILE REQUEST (`reduce`/`serialize`/`finalize` take `outputs=`;
+  `serialized_ir`/`compile_ir` pass them explicitly), so compiles from one session are
+  independent and byte-identical to fresh-session compiles. Frozen m22 suites in graphed-core
+  and graphed pin it. The m21 one-session-per-compile note remains as historical record (still
+  a valid pattern). Residue: the legacy `mark_output` side effect is retained for the frozen m8
+  pin but is never read by the compile path.

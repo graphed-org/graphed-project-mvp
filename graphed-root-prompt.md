@@ -390,6 +390,13 @@ in-process), which would give a false appearance of parity without testing what 
   retry-elsewhere, and quarantine — with an **error budget** as a stopping condition. Retry-with-a-
   smaller-chunk MUST succeed where a whole-chunk attempt exhausted memory (which may be simulated).
 - **R8.5** A serialized plan MUST run on a machine with **no user source files present** (proven by test).
+- **R8.6 (Outputs are a property of the COMPILE REQUEST.)** Compiling/serializing an analysis
+  MUST scope the artifact to exactly the outputs of THAT request — never to accumulated
+  session/store state — so sequential compiles of different expressions from one session are
+  independent and BYTE-IDENTICAL to fresh-session compiles (pinned), deliberate multi-output
+  requests carry every requested output, and concurrent compiles of different outputs from one
+  shared store cannot cross-talk. The core reduce/serialize/finalize surfaces take the output
+  set explicitly; any marks-based convenience MUST NOT be read by the compile path.
 
 ## R9 — Analysis-preservation bundle
 
