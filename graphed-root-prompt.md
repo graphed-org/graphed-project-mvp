@@ -396,7 +396,9 @@ in-process), which would give a false appearance of parity without testing what 
   independent and BYTE-IDENTICAL to fresh-session compiles (pinned), deliberate multi-output
   requests carry every requested output, and concurrent compiles of different outputs from one
   shared store cannot cross-talk. The core reduce/serialize/finalize surfaces take the output
-  set explicitly; any marks-based convenience MUST NOT be read by the compile path.
+  set explicitly; there is NO public output mutator on the store — outputs exist only in compile
+  requests and in the artifacts those requests produce (a reduced/deserialized store carries the
+  outputs its request named).
 
 ## R9 — Analysis-preservation bundle
 

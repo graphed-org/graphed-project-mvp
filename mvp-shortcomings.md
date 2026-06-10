@@ -202,5 +202,7 @@ worth fixing now (details in `.graphed/tracking/torch-jit-deprecation.md`):
   `serialized_ir`/`compile_ir` pass them explicitly), so compiles from one session are
   independent and byte-identical to fresh-session compiles. Frozen m22 suites in graphed-core
   and graphed pin it. The m21 one-session-per-compile note remains as historical record (still
-  a valid pattern). Residue: the legacy `mark_output` side effect is retained for the frozen m8
-  pin but is never read by the compile path.
+  a valid pattern). 2026-06-10 follow-up (user-directed): the `mark_output` mutator was removed
+  from the public API outright and every frozen suite that used it was respun to explicit
+  `outputs=` (recorded freeze bumps in graphed-core, graphed, graphed-checkpoint, and the fork);
+  no residue remains. The core llvm-cov gate was raised 85% -> 90% in the same change.
