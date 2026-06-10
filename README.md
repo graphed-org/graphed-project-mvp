@@ -53,7 +53,7 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | Repo | Role | Pinned commit | State |
 |---|---|---|:--:|
 | [graphed-project-mvp](https://github.com/graphed-org/graphed-project-mvp) | meta/superproject | — | meta |
-| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `99bc1a8` | ✅ submodule |
+| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `0b4fa1a` | ✅ submodule |
 | [graphed-awkward-mvp](https://github.com/graphed-org/graphed-awkward-mvp) | M3/M5 reference backend | `1761c61` | ✅ submodule |
 | [graphed-checkpoint-mvp](https://github.com/graphed-org/graphed-checkpoint-mvp) | M8 checkpoint/resume | `d3bb4ab` | ✅ submodule |
 | [graphed-core-mvp](https://github.com/graphed-org/graphed-core-mvp) | M1/M4/M7-contract/M8-plan | `5312a9c` | ✅ submodule |
@@ -86,4 +86,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-10T18:49:18Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-10T19:28:21Z).</sub>
