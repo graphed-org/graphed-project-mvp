@@ -809,6 +809,40 @@ fill); it MUST be built BEFORE any analysis-benchmark port, as follows:
 - **R18.5 (Out of scope.)** Growth axes; dask-style persist/delayed collection protocols
   (the durable artifact is the compiled IR / DurablePlan).
 
+## R19 — The analysis-benchmark port (the ADL queries; the integration capstone)
+
+Ported in a fork of the reference benchmark repository, AFTER R18 exists; the original
+processors stay untouched (they generate the acceptance reference).
+
+- **R19.1 (The porting idiom: no schema layer.)** Each query zips EXACTLY the collections it
+  needs from the reader's branches (`zip(..., with_name=...)` + the behavior library via the
+  reader's `behavior=`) — no NanoEvents-style schema/convenience layer. Δ-quantities use
+  explicit property-safe formulas (behavior METHODS with arguments are not recordable through
+  the proxy — a documented Phase-2 item). Every query ends in a deferred histogram fill; one
+  query = ONE compiled multi-output graph (a two-histogram query is a single pass).
+- **R19.2 (Acceptance: bit-for-bit, SAME-PLATFORM, against the original.)** Every histogram
+  (including flow) MUST equal the ORIGINAL processors' output exactly on a committed small skim
+  of the real dataset — with the reference REGENERATED ON THE TEST PLATFORM (libm ULP
+  differences flip argmin picks between near-equidistant candidates), and the port mirroring
+  the reference's COORDINATE SYSTEM and operation order, not just its mathematics (summing
+  four-vectors in pt/eta/phi/mass instead of the reference's cartesian x/y/z/t flips near-tie
+  argmins). The parallel tier (a spawned process pool, >=2 workers, behaviors by import ref)
+  agrees to rounding; exactness is the sequential tier's claim. Partitioning MUST NOT change
+  any count (pinned).
+- **R19.3 (The harness measures the real thing.)** The sweep varies ABSOLUTE entry-count chunk
+  sizes (an explicit-partitions seam on the histogram plan, fed from reader metadata); bytes
+  read come from the reader's OWN accounting around the PROJECTED branch reads (the projection
+  must be visible in the I/O numbers — pinned: a one-branch query reads a fraction of a
+  many-branch query); metrics mirror the upstream set (entries, chunks, bytesread, walltime,
+  us*core/evt, b/evt, MB/s/core). Parallel points use PERSISTENT worker pools (one import-heavy
+  spawn amortized over many plans — fresh-pool-per-plan made small plans SLOWER parallel than
+  sequential; the persistent option is frozen-tested in the executor package with the
+  fresh-pool default pinned unchanged).
+- **R19.4 (Scale discipline.)** CI exercises the port and harness ONLY on the committed skim;
+  full-dataset sweeps are local/operational (CI runners cannot hold the file). An exploration
+  NOTEBOOK (mirroring the original repository's) ships executed, with its primary plots produced
+  by the parallel pool and a sequential-vs-parallel speedup section.
+
 ## Out of scope (later phases — MUST NOT be built initially)
 
 Distributed-scheduler executors for specific batch systems; treating systematic variations as a graph
