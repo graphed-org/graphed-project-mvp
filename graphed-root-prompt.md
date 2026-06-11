@@ -751,6 +751,43 @@ behaviors → conveniences.
   string accessor; dataframe/dask interop; tuple getitem; enforce_type/to_packed; text I/O;
   row-group-exact parquet range reads; recorded attrs.
 
+## R18 — Deferred histogramming (its own package + the hist integration)
+
+Histogramming is the terminal operation of real HEP analyses (every ADL benchmark query ends in a
+fill); it MUST be built BEFORE any analysis-benchmark port, as follows:
+
+- **R18.1 (Its own package; graphed's evaluation idiom — NOT dask's.)** Deferred histogram
+  filling is a SEPARATE package (`graphed-histogram`, the dask-histogram analogue) with the full
+  per-repo spine — never folded into a backend. A `.fill(...)` RECORDS and returns self (fills
+  accumulate). There is NO `compute()` helper: evaluation is graphed's own machinery — `plan()`
+  exports the task graph and an R7 executor's `run(plan).value` IS the aggregated histogram; the
+  reference `session.materialize(fill_node)` evaluates one fill eagerly. The recording surface
+  mirrors dask-histogram: a deferred `boost_histogram.Histogram` subclass,
+  `factory(*arrays, histref=)`, and numpy-like `histogram`/`histogram2d`/`histogramdd`.
+- **R18.2 (Fills are an External FAMILY; backends know nothing.)** Each fill records as an
+  External node whose `PayloadDescriptor.content_hash` is the SHA-256 of a CANONICAL, VERSIONED,
+  declarative axes/storage encoding (JSON params — never pickle; UHI in, UHI out; axis user
+  attributes such as hist's name/label live in the boost axis ``__dict__`` and are part of the
+  identity). Recording goes through the frontend's caller-supplied-descriptor seam
+  (`record_external(descriptor=, form=)` — R8-family: the backend is NOT consulted); evaluation
+  resolves through `evaluate_ir(externals=)` by content hash. Identical fills MUST intern.
+- **R18.3 (Aggregation rides the existing seams.)** The `plan()` task graph fills partition by
+  partition through the COMPILED IR over the partitioned-source protocol (the whole-dataset
+  loader is never invoked — counter-witnessed) and tree-reduces by NATIVE histogram addition
+  (every standard boost storage is a monoid under `+`) — R15.4 semantics, any R7 executor. Int64
+  counts are exact under any combine tree; float storages are deterministic per fixed-tree
+  executor configuration (documented, pinned). In-memory sources evaluate via the reference
+  materialize (multi-fill: the zero/add monoid helpers over per-fill materializes).
+- **R18.4 (The hist integration lives in the hist FORK.)** `hist.graphed` (in the `hist` fork,
+  mirroring `hist.dask`'s MRO sandwich) supplies `Hist`/`NamedHist` with QuickConstruct and
+  named-axis fills; an executor's result wraps back into a REAL in-memory `hist.Hist` via
+  `hist.Hist(value)` with names/labels intact (axis user attributes ride the canonical spec).
+  The fork's CI runs the FULL hist suite alongside the integration tests (the R15.7 pattern).
+  Pinned bit for bit against eager twins over the rectilinear backend, the ragged backend
+  (ragged fills flatten completely), and a real reader TTree.
+- **R18.5 (Out of scope.)** Growth axes; dask-style persist/delayed collection protocols
+  (the durable artifact is the compiled IR / DurablePlan).
+
 ## Out of scope (later phases — MUST NOT be built initially)
 
 Distributed-scheduler executors for specific batch systems; treating systematic variations as a graph
