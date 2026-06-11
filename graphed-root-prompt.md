@@ -698,6 +698,18 @@ behaviors → conveniences.
   part indices derived from the partition alone per R15.9), specialized per backend with ONLY the
   schema→form translation and the per-partition array codec. The arrow/parquet library is an
   OPTIONAL extra. Write tasks evaluate the COMPILED IR (R7.8), never a re-recorded session.
+- **R17.0 (FULL interface parity with the mirrored library — pinned by inspection.)** Every
+  ragged-frontend function mirroring an awkward operation MUST surface the SAME interface:
+  identical shared-parameter DEFAULTS (pinned by an inspect-based anti-drift test over the whole
+  surface — defaults are interface), and the semantics-bearing parameters present (zip:
+  sequence->tuple records, depth_limit, inline with_name/parameters; combinatorics: replacement,
+  axis, nested lists, naming; reducers: keepdims, mask_identity with awkward's PER-OP defaults
+  mirrored exactly, initial; WEIGHTED moments — the weight is a second graph INPUT, never a
+  parameter; sort stability; drop_none axis; nan_to_num replacements; isclose equal_nan;
+  broadcast depth_limit; *_like constructors preserve dtype by default). Deliberately absent and
+  NOT gaps: ``highlevel``/``attrs`` (eager-construction concerns) and ``behavior`` (backend-owned
+  — never a per-call kwarg). Niche broadcasting/union controls (right_broadcast,
+  optiontype_outside_record, mergebool, including_unknown, unzip how) MAY be Phase 2, documented.
 - **R17.1.1 (The read list: syntactic accesses, buffer-refined.)** A writer's per-task read list
   MUST cover every source field the recorded graph SYNTACTICALLY accesses — compiled-IR
   evaluation replays every node, so a record-constructor's untouched legs (a zip whose only
