@@ -778,6 +778,15 @@ fill); it MUST be built BEFORE any analysis-benchmark port, as follows:
   counts are exact under any combine tree; float storages are deterministic per fixed-tree
   executor configuration (documented, pinned). In-memory sources evaluate via the reference
   materialize (multi-fill: the zero/add monoid helpers over per-fill materializes).
+- **R18.3a (Process-boundary witnesses; behaviors under control.)** The frozen suite MUST
+  witness, across a REAL spawned process pool: a WEIGHTED (Weight-storage) fill equal to the
+  sequential result EXACTLY (values AND variances) and to the eager twin — weighted fills are
+  HEP's most common case; and a ragged-backend fill equal to its eager twin. Worker evaluation
+  backends are a zero-arg factory/class or an importable ``"module:attr"`` reference resolved IN
+  the worker — the REQUIRED form for behavior-carrying backends (behavior dicts contain lambdas
+  and do not pickle). Losing behaviors MUST be LOUD: the default (the session backend's class
+  constructed bare) failing on a recorded behavior property is PINNED — a silently wrong
+  histogram is never acceptable (the dask-awkward lesson).
 - **R18.4 (The hist integration lives in the hist FORK.)** `hist.graphed` (in the `hist` fork,
   mirroring `hist.dask`'s MRO sandwich) supplies `Hist`/`NamedHist` with QuickConstruct and
   named-axis fills; an executor's result wraps back into a REAL in-memory `hist.Hist` via
