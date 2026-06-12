@@ -815,6 +815,21 @@ fill); it MUST be built BEFORE any analysis-benchmark port, as follows:
   (value, weight, spec) triple — and reproduction returns the histogram itself, bit for bit;
   re-running a preserved analysis reduces the IR first (the fill remains the terminal through
   optimization, pinned) and may re-target new inputs through any executor.
+- **R18.4b (Modern-ML payload coverage.)** The preservation package MUST ship first-class
+  External plugins for the working set of modern ML tools — TensorFlow (`.keras` archives),
+  PyTorch (TorchScript), XGBoost (its open JSON model format), JAX (`jax.export` StableHLO
+  artifacts), and the NVIDIA Triton client — registered at import beside correctionlib/ONNX.
+  Hashes are CONTENT identity, never byte identity (these archive formats are not byte-stable
+  across re-saves: zip timestamps, auto-generated layer names, MLIR locations): each goes
+  through its framework's own loader and digests weights + architecture, domain-separated, with
+  stability AND weight/structure sensitivity pinned per framework. Triton preserves the SERVED
+  MODEL'S IDENTITY (a canonical JSON descriptor) with the connection as environment behind an
+  injectable importable transport (fake transport in the frozen suite — the full bundle round
+  trip runs dependency-free on every CI cell; the default tritonclient transport against a REAL
+  tritonserver container in a dedicated CI job, env-gated to skip locally); a vanished server
+  fails loudly. Heavy frameworks live in an `mltest` extra exercised by a dedicated CI job that
+  FORBIDS skips when frameworks are present. TorchScript-deprecation note: a `.pt2`
+  (torch.export) payload kind is the recorded Phase-2 follow-up.
 - **R18.5 (Out of scope.)** Growth axes; dask-style persist/delayed collection protocols
   (the durable artifact is the compiled IR / DurablePlan).
 
