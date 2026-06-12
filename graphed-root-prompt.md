@@ -830,6 +830,20 @@ fill); it MUST be built BEFORE any analysis-benchmark port, as follows:
   fails loudly. Heavy frameworks live in an `mltest` extra exercised by a dedicated CI job that
   FORBIDS skips when frameworks are present. TorchScript-deprecation note: a `.pt2`
   (torch.export) payload kind is the recorded Phase-2 follow-up.
+- **R18.4c (Externals are VARIADIC, and replay obeys the template.)** An External's callee has
+  a real signature — multiple kinematic arrays with interleaved constant selectors
+  (correctionlib systematics), multiple tensors/avals positionally OR BY KEYWORD (PyTorch,
+  JAX), multiple named protocol inputs (ONNX feeds, Triton InferInputs), multiple histogram
+  axes and multiple multiplicative weights. The call shape is PRESERVED NODE CONTENT:
+  `params["args"]`/`params["kwargs"]` ("$i" slots, stacked groups, named form, constants where
+  the callee allows) ride the IR into bundles as canonical JSON and MUST be obeyed exactly on
+  replay — record-time materialize and reproduce execute the same template. correctionlib
+  arrays pass through NATIVELY (numpy in → numpy out, awkward in → awkward out, jagged
+  structure preserved). A callee that cannot honor a shape rejects it loudly (xgboost is
+  single-tabular; positional-only callees reject kwargs) — never a silent guess. The absent
+  template is the legacy convention, byte-compatible and pinned: pre-existing bundles never
+  change meaning. Shipped plugin evaluators are kind-resolved ENVIRONMENT contracts (bundles
+  preserve payloads, never evaluator code), so evaluator changes MUST be additive.
 - **R18.5 (Out of scope.)** Growth axes; dask-style persist/delayed collection protocols
   (the durable artifact is the compiled IR / DurablePlan).
 
