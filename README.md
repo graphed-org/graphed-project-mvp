@@ -62,7 +62,7 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | [graphed-exec-local-mvp](https://github.com/graphed-org/graphed-exec-local-mvp) | M7 reference executor | `bfeea0a` | ✅ submodule |
 | [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `d3abe14` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `29dd8f7` | ✅ submodule |
-| [graphed-preserve-mvp](https://github.com/graphed-org/graphed-preserve-mvp) | M9 preservation bundle | `8137797` | ✅ submodule |
+| [graphed-preserve-mvp](https://github.com/graphed-org/graphed-preserve-mvp) | M9 preservation bundle | `753896f` | ✅ submodule |
 
 `lazy` repos are created when their milestone begins.
 
@@ -86,4 +86,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-12T15:38:38Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-06-12T16:06:00Z).</sub>
