@@ -415,6 +415,21 @@ in-process), which would give a false appearance of parity without testing what 
   memory). Quantitatively this matters in proportion to artifact size × task count; do not
   justify it with an unmeasured per-task figure (R0.11) — the witness is structural, the wire
   saving is `(tasks − workers) × artifact_bytes`.
+- **R7.11 (A long-lived worker MUST NOT accumulate unbounded state.)** A persistent pool reuses
+  its workers across many plans and files, so anything a worker caches for its lifetime is a
+  leak unless bounded. Every per-worker cache MUST be bounded with a deterministic eviction
+  policy and MUST release what it evicts: the file-handle cache behind the locality directive
+  (R7.5 `open_once`) is bounded (LRU) and **closes** evicted handles and exposes a `close()`;
+  the broadcast-process cache (R7.10) is bounded (FIFO) and evicts **in broadcast order**, in
+  lockstep with the driver's primed-token set, so "the driver believes T is primed" stays
+  equivalent to "every worker holds T". Two related rules the same review established:
+  (a) a mechanism that depends on reaching every worker (the R7.10 broadcast) MUST **verify
+  coverage and fail loudly** if it cannot reach all workers — never silently assume success and
+  let a later task fault on an unprimed worker; (b) the executor MUST NOT depend on private
+  attributes of the concurrency primitive (e.g. a pool's internal worker-count field) — resolve
+  such values explicitly. Frozen witnesses: the cache size stays at or below its bound across
+  more distinct plans than the bound (and demonstrably evicts, not merely never-fills); an
+  evicted plan re-runs correctly after a transparent re-broadcast.
 
 ## R8 — Checkpoint, resume, and error harvesting
 
@@ -565,6 +580,19 @@ in-process), which would give a false appearance of parity without testing what 
   can hold them all without collision.
 - **R13.6 (Timing tests.)** Any wall-time or scaling assertion MUST include a noise-floor sanity check
   (R4.3) and use sizes large enough to be meaningful; it MUST NOT assert on sub-millisecond timings.
+- **R13.7 (Graph traversal is iterative; test it past the recursion limit.)** Any walk over the
+  recorded or reduced graph — reference evaluation, projection, lowering, interpretation — MUST be
+  iterative (an explicit stack), because a recorded graph can be arbitrarily deep (a long
+  selection/systematics chain) and a per-node recursion imposes a hidden ceiling at the
+  interpreter's recursion limit. The suite MUST include a chain **deeper than that limit** and
+  assert it evaluates correctly, which a recursive implementation cannot satisfy.
+- **R13.8 (A frozen test imports only its own repo's declared dependencies.)** A package's
+  acceptance suite MUST run against exactly that package's declared dependency set — never a
+  sibling package the repo does not depend on (use the package's own toy/backend-independent
+  fixtures instead). A local pre-commit gate runs in a development environment where every
+  sibling is installed and so CANNOT catch such a missing-dependency import; only CI, which
+  installs only the declared dependencies, will — so a green local gate is **not** sufficient
+  evidence that a new test is dependency-correct.
 
 ## R14 — Deliverables and milestone shape
 
