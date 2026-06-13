@@ -942,6 +942,36 @@ fill); it MUST be built BEFORE any analysis-benchmark port, as follows:
   timed-region, a separate-file pool warm-up, combined single-pass plans for multi-query
   timing (per-plan runs give pool workers cross-plan cache reuse the sequential runner lacks),
   and one task per basket-sparse small file.
+- **R19.7 (Phase 2: numba kernels — user-supplied as a boundary, auto-fusion as a backend
+  lowering; numba is NEVER a core IR node.)** numba is HEP-idiomatic for hand-accelerated array
+  kernels, and kernel fusion is a future optimization — but neither puts numba into `graphed-core`.
+  Two distinct things, both off the core IR:
+  (a) **User-written numba kernels** are recorded as `External` boundary nodes, NOT a new node kind
+  — the optimizer cannot rewrite/CSE/saturate across a compiled body, so algebraically a kernel IS a
+  boundary, exactly the `External` category. Their preservation home is a numba External plugin in
+  the preservation repo's externals family: because numba's `.py_func` recovers source, the
+  `PayloadDescriptor` carries the kernel SOURCE + signature (content_hash over source + signature)
+  and recompiles on a clean machine — a TRANSPARENT payload, a strictly better preservation class
+  than the `opaque=True` cloudpickle fallback, and distinguished from it. It reuses the variadic call
+  template (multi-arg signatures) and register-time hash validation already built for the external
+  family; backends (`graphed-awkward` via awkward's native numba integration, `graphed-numpy` over
+  buffers) supply the eval. The toolchain version (numba + LLVM) rides in the descriptor like an
+  inference-runtime version, since numerics can shift across LLVM releases; the determinism gate
+  checks output, which is fixed for a pinned toolchain. numba stays an OPTIONAL/extra dependency — it
+  MUST NOT gate the §A.5 wheel matrix (numba lags new CPython; free-threaded 3.14t support is the
+  riskiest point). Upside to capture when built: `@njit(nogil=True)` releases the GIL, which AIDS the
+  thread-based morsel executor.
+  (b) **Automatic kernel fusion** — emitting ONE compiled loop for a fused stage instead of N
+  per-member `eval_stage` calls — is a BACKEND LOWERING, not an IR change, and this is the
+  load-bearing architectural claim: a `Stage` already carries its members transparently (the original
+  elementwise ops + forms + `StageRef` wiring), so a fusion-capable backend has everything it needs to
+  codegen a single kernel from the existing IR. No new core node, no optimizer change. (Contrast:
+  scheduling-fusion — what the MVP does — collapses graph/boundary/handoff touchpoints to O(stages)
+  with intermediates in a local per-stage list; it does NOT reduce the per-member kernel-dispatch
+  count. Reducing that count is what (b) adds, and only for runs of known elementwise members between
+  boundaries — never across an opaque `External`, including a user numba kernel from (a).) Until
+  built, the per-member dispatch count stands; do NOT pre-emptively add a numba node "to enable fusion
+  later" — it would not, and it would couple the IR to a runtime in violation of §A.4.
 - **R18.5 (Out of scope.)** Growth axes; dask-style persist/delayed collection protocols
   (the durable artifact is the compiled IR / DurablePlan).
 
@@ -979,12 +1009,46 @@ processors stay untouched (they generate the acceptance reference).
   NOTEBOOK (mirroring the original repository's) ships executed, with its primary plots produced
   by the parallel pool and a sequential-vs-parallel speedup section.
 
+## R20 — The live execution dashboard (passive, opt-in, executor-agnostic)
+
+A creature-comfort live view of a running `Plan` (progress, throughput, per-worker activity, a
+statistical-sampling flamegraph, and any `StageError` mapped to the user's analysis line), served
+from a separate thread to a webpage. Built as milestone **M37** (decomposition:
+`graphed-debug/.graphed/M37/decompose.md`).
+
+- **R20.1 (The seam is data-only and lives in `graphed_core.execution`.)** `TaskEvent` (a frozen,
+  picklable, display-only record), `TaskPhase` (`SUBMITTED|STARTED|FINISHED|ERRORED`), and the
+  `Monitor` / `WorkerProfiler` protocols live in core (R1.6 — the event vocabulary is shared by
+  every executor). Core gains NO web/profiler dependency. Per task the contract is exactly one
+  SUBMITTED (driver-side), then one STARTED, then exactly one of FINISHED | ERRORED (worker-side).
+- **R20.2 (Executors EMIT; they never render.)** `SequentialRunner`, `ThreadExecutor`, and
+  `ProcessExecutor` take an optional `monitor=`; threads emit in-process, a process pool forwards
+  worker events over a bounded `Manager().Queue()` drained by a driver-side collector daemon thread.
+  Any future executor conforms by emitting the same `TaskEvent` vocabulary.
+- **R20.3 (Provably passive — the determinism gate is green attached-or-not.)** Emission is
+  best-effort and **drop-on-full**; it MUST NOT back-pressure a worker (would perturb timing and the
+  adaptive `next_tasks` path). A monitor that raises is swallowed. Attaching a dashboard — including
+  `profile=True` — leaves `ExecResult.value`, `n_combines`, and the serialized plan byte-identical.
+  This is frozen-tested in core, exec-local, AND debug.
+- **R20.4 (Opt-in — no implicit server, unlike dask.)** Nothing runs until a `Dashboard` is
+  constructed and `start()`/`with`-entered. It lives in **graphed-debug** (the viz home) and reuses
+  M6 `StageError` rendering for its error panel.
+- **R20.5 (Lean, decoupled rendering.)** Python emits JSON over **Server-Sent Events**; a **static
+  SPA (uPlot + d3-flame-graph, vendored)** renders — NO Python rendering framework (no Bokeh/Dash).
+  The statistical sampler is **pyinstrument behind a `[dashboard]` extra**; `graphed-exec-local`
+  stays pyinstrument-free via the `WorkerProfiler` protocol (the picklable factory is shipped to
+  workers; per-worker sessions merge driver-side into one flamegraph).
+- **R20.6 (Phase 2.)** Browser→run control (pause/cancel) over a websocket; persisting a run-report
+  into the M9 preservation bundle; a network transport for distributed executors (the seam already
+  supports it — only the process side-queue becomes a network comm).
+
 ## Out of scope (later phases — MUST NOT be built initially)
 
 Distributed-scheduler executors for specific batch systems; treating systematic variations as a graph
 axis; advanced adaptive reshaping; predicate pushdown; interactive debugging or time-travel; export to
 external analysis-preservation portals; swapping the optimizer engine for a more capable one behind the
-engine interface; distributed (non-local) checkpoint stores; self-hosting preservation bundles that
+engine interface; **automatic numba kernel fusion (R19.7b), and numba as a first-class core IR node
+(it stays an `External` boundary)**; distributed (non-local) checkpoint stores; self-hosting preservation bundles that
 embed and launch a model-inference server; **upstreaming or production-hardening the `uproot`
 integration** (it remains an isolated MVP demonstration branch — see R15.2); the **N-D-chunking
 parity tier** (R16.7 — storage I/O *except parquet, which R17.1.2 pulled into the MVP by user
