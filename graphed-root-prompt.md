@@ -1011,10 +1011,11 @@ processors stay untouched (they generate the acceptance reference).
 
 ## R20 — The live execution dashboard (passive, opt-in, executor-agnostic)
 
-A creature-comfort live view of a running `Plan` (progress, throughput, per-worker activity, a
-statistical-sampling flamegraph, and any `StageError` mapped to the user's analysis line), served
-from a separate thread to a webpage. Built as milestone **M37** (decomposition:
-`graphed-debug/.graphed/M37/decompose.md`).
+A creature-comfort live view of a running `Plan` (progress, per-worker activity, a sampled profile,
+and any `StageError` mapped to the user's analysis line), served to a webpage. Built as milestone
+**M37** on **FINOS Perspective + websockets + a network transport** (decomposition + revision note:
+`graphed-debug/.graphed/M37/{decompose,attempts}.md`; the earlier SSE/uPlot prototype is preserved on
+the `m37-sse-uplot` branch of each repo).
 
 - **R20.1 (The seam is data-only and lives in `graphed_core.execution`.)** `TaskEvent` (a frozen,
   picklable, display-only record), `TaskPhase` (`SUBMITTED|STARTED|FINISHED|ERRORED`), and the
@@ -1032,15 +1033,24 @@ from a separate thread to a webpage. Built as milestone **M37** (decomposition:
   This is frozen-tested in core, exec-local, AND debug.
 - **R20.4 (Opt-in — no implicit server, unlike dask.)** Nothing runs until a `Dashboard` is
   constructed and `start()`/`with`-entered. It lives in **graphed-debug** (the viz home) and reuses
-  M6 `StageError` rendering for its error panel.
-- **R20.5 (Lean, decoupled rendering.)** Python emits JSON over **Server-Sent Events**; a **static
-  SPA (uPlot + d3-flame-graph, vendored)** renders — NO Python rendering framework (no Bokeh/Dash).
-  The statistical sampler is **pyinstrument behind a `[dashboard]` extra**; `graphed-exec-local`
-  stays pyinstrument-free via the `WorkerProfiler` protocol (the picklable factory is shipped to
-  workers; per-worker sessions merge driver-side into one flamegraph).
-- **R20.6 (Phase 2.)** Browser→run control (pause/cancel) over a websocket; persisting a run-report
-  into the M9 preservation bundle; a network transport for distributed executors (the seam already
-  supports it — only the process side-queue becomes a network comm).
+  M6 `StageError` rendering for the error column.
+- **R20.5 (Network transport + Perspective rendering.)** Rendering is **FINOS Perspective**: a
+  `DashboardServer` (perspective `Server` + Tornado) hosts live `tasks`/`profile`/`stats` tables; a
+  browser `<perspective-viewer>` connects to `/websocket`. The executor→dashboard hop is a **real
+  websocket network transport**: a `NetworkMonitor` (a passive `Monitor`) streams events to the
+  server's `/ingest` endpoint — **loopback for a local dashboard, `ws://host:port/ingest` for a
+  remote one**, so a dashboard can observe an executor on another machine. `Dashboard` bundles a
+  local server + loopback client (so even same-machine runs traverse the socket). NO Python rendering
+  framework (no Bokeh/Dash). The sampler is **pyinstrument**; `graphed-exec-local` stays
+  pyinstrument-free via the `WorkerProfiler` protocol — worker sessions ride the same transport and
+  the server flattens them into the `profile` table. The dashboard stack (perspective-python,
+  tornado, websocket-client, pyinstrument) is the **`[dashboard]` extra**: perspective ships
+  cp311-abi3 wheels (no free-threaded 3.14t), so the dashboard tests `importorskip` and the core
+  package stays pure-Python and import-clean without the extra.
+- **R20.6 (Phase 2.)** Browser→run control (pause/cancel) — the websocket is bidirectional, so this
+  only needs a control seam back into the executor; persisting a run-report into the M9 preservation
+  bundle; per-worker push (each remote worker opening its own `NetworkMonitor`); a flamegraph plugin
+  (the profile is a Perspective table/treemap today).
 
 ## Out of scope (later phases — MUST NOT be built initially)
 
