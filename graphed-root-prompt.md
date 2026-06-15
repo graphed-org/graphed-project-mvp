@@ -1047,6 +1047,22 @@ the `m37-sse-uplot` branch of each repo).
   tornado, websocket-client, pyinstrument) is the **`[dashboard]` extra**: perspective ships
   cp311-abi3 wheels (no free-threaded 3.14t), so the dashboard tests `importorskip` and the core
   package stays pure-Python and import-clean without the extra.
+- **R20.5a (Perspective client/server versions MUST match exactly — pin + vendor; verify in a real
+  browser.)** Perspective's Python server and JS client share a **versioned wire protocol**; a
+  mismatch fails ONLY in the browser as `cannot read properties of null` + red viewer overlays, which
+  no Python test sees. Therefore: (a) **pin `perspective-python` to an exact version** (currently
+  `==3.8.0`) and **vendor the matching JS** under `dashboard/static/vendor/` (the wheel ships no JS;
+  vendoring pins the pairing and works offline) — re-vendor whenever the pin changes
+  (`static/vendor/README.md`). (b) Use the **last FINOS line (3.8.x)**, whose `/dist/cdn/` builds are
+  browser-ready (self-registering plugins; wasm fetched via `new URL("../wasm/…", import.meta.url)`,
+  so the `cdn/`+`wasm/` sibling layout is load-bearing); the newer **perspective-dev 4.x fork is
+  browser-hostile** (bundler-only ESM, no self-contained CDN build) — do NOT chase it without a Node
+  build step. (c) Use **only the built-in Datagrid plugin** for every panel — the d3fc plot plugins
+  throw `cannot read properties of null` on empty/streaming data. (d) A **headless-browser smoke test
+  is mandatory** (`tests/frozen/m37/test_dashboard_browser.py`, Playwright + Chromium): load the page,
+  assert zero console/page errors and that each viewer renders. It is `importorskip`-gated and runs in
+  a dedicated CI job (`playwright install chromium`), never on the wheel matrix. Shipping a browser
+  page without a browser test is the gap that let the mismatch through.
 - **R20.6 (Phase 2.)** Browser→run control (pause/cancel) — the websocket is bidirectional, so this
   only needs a control seam back into the executor; persisting a run-report into the M9 preservation
   bundle; per-worker push (each remote worker opening its own `NetworkMonitor`); a flamegraph plugin
