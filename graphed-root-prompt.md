@@ -1035,16 +1035,22 @@ the `m37-sse-uplot` branch of each repo).
   constructed and `start()`/`with`-entered. It lives in **graphed-debug** (the viz home) and reuses
   M6 `StageError` rendering for the error column.
 - **R20.5 (Network transport + Perspective rendering.)** Rendering is **FINOS Perspective**: a
-  `DashboardServer` (perspective `Server` + Tornado) hosts live `tasks`/`profile`/`stats` tables; a
-  browser `<perspective-viewer>` connects to `/websocket`. The executor→dashboard hop is a **real
-  websocket network transport**: a `NetworkMonitor` (a passive `Monitor`) streams events to the
-  server's `/ingest` endpoint — **loopback for a local dashboard, `ws://host:port/ingest` for a
-  remote one**, so a dashboard can observe an executor on another machine. `Dashboard` bundles a
-  local server + loopback client (so even same-machine runs traverse the socket). NO Python rendering
-  framework (no Bokeh/Dash). The sampler is **pyinstrument**; `graphed-exec-local` stays
-  pyinstrument-free via the `WorkerProfiler` protocol — worker sessions ride the same transport and
-  the server flattens them into the `profile` table. The dashboard stack (perspective-python,
-  tornado, websocket-client, pyinstrument) is the **`[dashboard]` extra**: perspective ships
+  `DashboardServer` (perspective `Server` + Tornado) hosts live `tasks`/`stats` tables plus a merged
+  profile **flamegraph** served as JSON at `/api/flamegraph.json`; a browser `<perspective-viewer>`
+  connects to `/websocket`. The executor→dashboard hop is a **real websocket network transport**: a
+  `NetworkMonitor` (a passive `Monitor`) streams events to the server's `/ingest` endpoint —
+  **loopback for a local dashboard, `ws://host:port/ingest` for a remote one**, so a dashboard can
+  observe an executor on another machine. `Dashboard` bundles a local server + loopback client (so
+  even same-machine runs traverse the socket). NO Python rendering framework (no Bokeh/Dash). The
+  sampler is **off-thread** (dask's `distributed.profile` technique), pure stdlib in
+  `graphed_debug._sampler` — NOT a per-call profiler. A per-call hook (pyinstrument) taxes call-heavy
+  HEP code ~3× on the data thread *regardless of sample rate*; `StackSampler` instead samples its
+  worker's task thread from a **separate daemon thread** via `sys._current_frames()` every 10 ms, so
+  the data path is never hooked (measured profiling penalty fell from ~+53% to within noise). It
+  folds each stack into an inclusive **count tree** (flamegraph invariant); `graphed-exec-local`
+  stays profiler-free via the `WorkerProfiler` protocol — worker trees ride the same transport and
+  the server merges them into one flamegraph. The dashboard stack (perspective-python, tornado,
+  websocket-client — **no** profiler dependency) is the **`[dashboard]` extra**: perspective ships
   cp311-abi3 wheels (no free-threaded 3.14t), so the dashboard tests `importorskip` and the core
   package stays pure-Python and import-clean without the extra.
 - **R20.5a (Perspective client/server versions MUST match exactly — pin + self-bundle + vendor;
@@ -1061,28 +1067,35 @@ the `m37-sse-uplot` branch of each repo).
   it with plain `pip` and Node is a **build-time-only** dev tool (the wheel carries the bundle; it
   works offline). (b) Bundle from the `/inline` entries so wasm is inlined and the Datagrid plugin
   registers against the same viewer instance (one esbuild module graph). (c) Use **only the built-in
-  Datagrid plugin** for every panel — the d3fc plot plugins throw `cannot read properties of null` on
-  empty/streaming data. (d) A **headless-browser smoke test is mandatory**
-  (`tests/frozen/m37/test_dashboard_browser.py`, Playwright + Chromium): load the page, assert zero
-  console/page errors and that each viewer renders. It is `importorskip`-gated and runs in a dedicated
-  CI job (`playwright install chromium`), never on the wheel matrix. Shipping a browser page without a
-  browser test is the gap that let the original mismatch through.
+  Datagrid plugin** for the Perspective panels (`tasks`/`stats`) — the d3fc plot plugins throw
+  `cannot read properties of null` on empty/streaming data. The **profile panel is NOT Perspective**:
+  it is a d3 flamegraph (vendored `d3.min.js` + `d3-flamegraph.min.js`/`.css`, globals `d3`/
+  `flamegraph`) polling `/api/flamegraph.json`, decoupled so an empty profile never blocks render.
+  (d) A **headless-browser smoke test is mandatory** (`tests/frozen/m37/test_dashboard_browser.py`,
+  Playwright + Chromium): load the page, assert zero console/page errors, that the Datagrid panels
+  render a `regular-table`, and that the profile panel draws an `svg.d3-flame-graph`. It is
+  `importorskip`-gated and runs in a dedicated CI job (`playwright install chromium`), never on the
+  wheel matrix. Shipping a browser page without a browser test is the gap that let the original
+  mismatch through.
 - **R20.7 (Telemetry MUST stay off the data-processing critical path.)** Diagnostics may not slow
   the work. Two rules, measured: (a) a worker's per-task emit is an **in-process buffer append only**
   (no IPC, no serialization on the path) — a per-worker daemon **drain thread** batches the buffer to
   the driver with ONE `Manager().Queue()` put per cadence (a Manager-proxy put is ~30× a plain queue,
-  so it must never be per-task); and (b) the statistical profiler keeps **sampling** continuously
-  (the cheap, useful part) but its **serialize/flush is time-throttled** (~1/s) and runs on the worker
-  thread, never per task. For persistent pools the driver collector lives as long as the **pool**
-  (not the run), or the async trailing events are lost. Measured effect (1200 tiny tasks ×4 workers):
-  this took the no-profile penalty from ~40% to ~9% and the profiling penalty from ~55% to ~17% (the
-  residual is event construction + the sampler itself). Any new telemetry obeys this: append locally,
-  ship on a background thread, batch, throttle anything expensive.
+  so it must never be per-task); and (b) the statistical profiler **samples off-thread** — a daemon
+  thread reads the worker's task-thread stack via `sys._current_frames()` (the data thread is never
+  hooked; a per-call profiler like pyinstrument is banned here because its hook taxes call-heavy code
+  ~3× regardless of rate), and its **serialize/flush is time-throttled** (~1/s, the worker thread,
+  never per task). For persistent pools the driver collector lives as long as the **pool** (not the
+  run), or the async trailing events are lost. Measured effect: the comms work (off-path buffer +
+  batched drain) took the no-profile penalty from ~40% to single digits; swapping pyinstrument for the
+  off-thread sampler took the **profiling** penalty from ~+53% to **within noise (~+1.5%)** on the full
+  ADL benchmark (8-query single pass, persistent 4-worker `ProcessExecutor`). Any new telemetry obeys
+  this: append locally, ship on a background thread, batch, throttle anything expensive, and never put
+  a measurement hook on the data thread.
 - **R20.6 (Phase 2.)** Browser→run control (pause/cancel) — the websocket is bidirectional, so this
   only needs a control seam back into the executor; persisting a run-report into the M9 preservation
-  bundle; per-worker push (each remote worker opening its own `NetworkMonitor`); a flamegraph plugin
-  (the profile is a Perspective table/treemap today); further trimming the residual on-path cost
-  (lazy partition labels; emit only FINISHED and derive in-flight).
+  bundle; per-worker push (each remote worker opening its own `NetworkMonitor`); further trimming the
+  residual on-path cost (lazy partition labels; emit only FINISHED and derive in-flight).
 
 ## Out of scope (later phases — MUST NOT be built initially)
 
