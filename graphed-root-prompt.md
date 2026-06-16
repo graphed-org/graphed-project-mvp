@@ -1067,10 +1067,22 @@ the `m37-sse-uplot` branch of each repo).
   console/page errors and that each viewer renders. It is `importorskip`-gated and runs in a dedicated
   CI job (`playwright install chromium`), never on the wheel matrix. Shipping a browser page without a
   browser test is the gap that let the original mismatch through.
+- **R20.7 (Telemetry MUST stay off the data-processing critical path.)** Diagnostics may not slow
+  the work. Two rules, measured: (a) a worker's per-task emit is an **in-process buffer append only**
+  (no IPC, no serialization on the path) — a per-worker daemon **drain thread** batches the buffer to
+  the driver with ONE `Manager().Queue()` put per cadence (a Manager-proxy put is ~30× a plain queue,
+  so it must never be per-task); and (b) the statistical profiler keeps **sampling** continuously
+  (the cheap, useful part) but its **serialize/flush is time-throttled** (~1/s) and runs on the worker
+  thread, never per task. For persistent pools the driver collector lives as long as the **pool**
+  (not the run), or the async trailing events are lost. Measured effect (1200 tiny tasks ×4 workers):
+  this took the no-profile penalty from ~40% to ~9% and the profiling penalty from ~55% to ~17% (the
+  residual is event construction + the sampler itself). Any new telemetry obeys this: append locally,
+  ship on a background thread, batch, throttle anything expensive.
 - **R20.6 (Phase 2.)** Browser→run control (pause/cancel) — the websocket is bidirectional, so this
   only needs a control seam back into the executor; persisting a run-report into the M9 preservation
   bundle; per-worker push (each remote worker opening its own `NetworkMonitor`); a flamegraph plugin
-  (the profile is a Perspective table/treemap today).
+  (the profile is a Perspective table/treemap today); further trimming the residual on-path cost
+  (lazy partition labels; emit only FINISHED and derive in-flight).
 
 ## Out of scope (later phases — MUST NOT be built initially)
 
