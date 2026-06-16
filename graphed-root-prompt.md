@@ -144,6 +144,13 @@ in-process), which would give a false appearance of parity without testing what 
   in strict mode; **determinism** (identical input produces byte-identical optimized graphs and
   serialized plans across two runs); any defined performance benchmark within budget; and an automated
   integrity scan clean.
+- **R0.4a (Lint AND type-check `src` *and* `tests`, for maximum integrity.)** Both the linter and the
+  strict type-checker MUST cover the test tree (and any test-helper modules), not only `src`. A test
+  suite is the safety net; an un-type-checked net hides bugs in the tests themselves, and a
+  `src`-only type-checker turns `# type: ignore` in tests into invisible noise (never read, yet it
+  trips the integrity scan's suppression-density check). Type test functions/fixtures properly rather
+  than ignoring; reserve suppressions for genuine, justified cases. (Repos still configured `src`-only
+  are a known cross-cutting cleanup — widen each `mypy`/lint config and annotate the tests.)
 - **R0.5 (Completion-confirmation gate — MANDATORY).** A milestone MUST NOT be recorded done until the
   **exact revision pinned by the milestone's completion record** has been confirmed **green on the full
   CI matrix (R11.1)**. CI that is in progress, queued, or absent MUST count as *not green*. The
@@ -1106,6 +1113,45 @@ the `m37-sse-uplot` branch of each repo).
   only needs a control seam back into the executor; persisting a run-report into the M9 preservation
   bundle; per-worker push (each remote worker opening its own `NetworkMonitor`); further trimming the
   residual on-path cost (lazy partition labels; emit only FINISHED and derive in-flight).
+
+## R21 — Inter-worker comms: peer reduction + work-stealing (the distributed seam, built first)
+
+Pulled into MVP scope by the project owner (the plan §F/§A.4 had work-stealing + distributed as Phase
+2). The executor stays single-machine, but the **comms seam is foundational, not bolted on**.
+
+- **R21.0 (Build the comms seam + the distributed processing/telemetry framework FIRST, from
+  scratch.)** When developing this from nothing, the **`WorkerTransport` seam and its two backends
+  (IPC + HTTP) come before, not after, the reduction/scheduling logic** — the executor's data path,
+  reduction, work distribution, AND telemetry are all written *against the transport* from the start.
+  This is the opposite of dask's history (a single-machine core later retrofitted for distribution):
+  arriving at the abstractions in the wrong order is what forces the rewrites §A.3 warns against. The
+  seam (`graphed_core.execution.WorkerTransport`: `send`/`broadcast`/`poll`/`recv`/`peers`/`close`;
+  non-blocking, best-effort, no ordering/delivery guarantee) lives in **graphed-core** (the
+  exec-protocol home, no socket/IPC dep); concrete backends live in the executor; a distributed
+  scheduler supplies its own — so the SAME peer-reduction, work-stealing, monitor, and profiler code
+  runs unchanged single-machine or distributed.
+- **R21.1 (Two backends, one interface; IPC default; both tested.)** **`QueueTransport`** (IPC —
+  `queue.Queue` for threads, `multiprocessing.Queue` for processes) is the single-machine default;
+  **`HttpTransport`** (loopback `http.server` + a driver-mediated port-discovery handshake, sender
+  thread so `send` is non-blocking, ThreadingHTTPServer + retry + receiver dedup so a *partial* is
+  never dropped) is the path to true distributed schedulers. One conformance suite runs against both.
+- **R21.2 (Peer reduction, off the driver, bit-for-bit.)** Each worker owns a contiguous leaf range,
+  reduces it with the **lazy** index tree (the fixed `plan_tree` computed by index arithmetic,
+  frontier-bounded — large N with no O(N) pre-pass), and hands the O(log N) boundary partials
+  worker→worker by ownership (segment-tree merge). Every node keeps its global `(level,pos)`, so the
+  grouping — hence the result, **down to the last ULP for float histograms** — is identical to the
+  driver-hub path. Determinism is independent of message timing. No data-path regression (measured on
+  the ADL benchmark, IPC + HTTP).
+- **R21.3 (Work-stealing: steal-ONE, not steal-half.)** An idle worker steals one leaf from a busy
+  peer's far end (Blumofe–Leiserson/Cilk). Steal-half under many idle thieves drains a victim
+  geometrically and over-concentrates work (worse makespan for coarse independent partitions) — steal-
+  one spreads fairly. An idle-delay + exponential backoff make it free on balanced loads. Stealing
+  moves only `process` work; the leaf's **owner still reduces it**, so the result is unchanged.
+- **R21.4 (No silent hub fallback; the data path is sacred.)** Comms/telemetry never degrade the data
+  path (R20.7 extends here: emission is batched off-path, profiling is the off-thread sampler). Peer
+  has full **monitor + profiler emission parity** (the dashboard, flamegraph included, works under
+  peer). A feature peer can't honor (`pooled_combines`) is **refused loudly**, never silently run on
+  the hub — `comms=None` is the explicit hub opt-out. Worker failures re-raise intact + promptly (M7).
 
 ## Out of scope (later phases — MUST NOT be built initially)
 
