@@ -151,6 +151,15 @@ in-process), which would give a false appearance of parity without testing what 
   trips the integrity scan's suppression-density check). Type test functions/fixtures properly rather
   than ignoring; reserve suppressions for genuine, justified cases. (Repos still configured `src`-only
   are a known cross-cutting cleanup — widen each `mypy`/lint config and annotate the tests.)
+- **R0.4b (The local gate MUST run coverage exactly as CI does.)** The pre-commit gate MUST execute
+  the repo's OWN CI coverage command (the `pytest … --cov` invocation, read straight from its
+  workflow so it can never drift) and fail on a `fail_under` miss — never a coverage-blind `pytest`.
+  A suite that passes a coverage-less local run but misses CI's ≥ 90 % line-and-branch gate (R0.4) is
+  the precise "green locally, red in CI" failure this closes: a default flip or a new subprocess-only
+  code path can quietly drop frozen-suite coverage below threshold. Subprocess-only code (process-pool
+  worker actors) is invisible to driver-process instrumentation — cover it with an in-process frozen
+  test that drives the same protocol (the `test_inprocess_*` pattern), since the gate's hits must come
+  from the *frozen* suite. `graphed_orchestrator.precommit.check_coverage` implements this.
 - **R0.5 (Completion-confirmation gate — MANDATORY).** A milestone MUST NOT be recorded done until the
   **exact revision pinned by the milestone's completion record** has been confirmed **green on the full
   CI matrix (R11.1)**. CI that is in progress, queued, or absent MUST count as *not green*. The
