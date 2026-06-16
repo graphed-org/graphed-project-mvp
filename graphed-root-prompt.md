@@ -1038,10 +1038,12 @@ the `m37-sse-uplot` branch of each repo).
   `DashboardServer` (perspective `Server` + Tornado) hosts the live `stats` table (and a `tasks` table
   fed by the same stream) plus two derived JSON views the browser polls — a merged profile
   **flamegraph** at `/api/flamegraph.json` and overall + per-worker **progress** at
-  `/api/progress.json`. The task view is the **dask-distributed "Progress" idiom** (stacked
-  per-worker bars: finished/in-flight/errored, bar length normalized to the busiest worker so
-  stragglers show), NOT a scrolling start/stop list a human can't parse; hovering a bar (or a
-  truncated flamegraph cell) pops out the full detail. A browser `<perspective-viewer>` connects to
+  `/api/progress.json`. The task view is the **dask-distributed "Progress"/"Task Stream" idiom**, NOT
+  a scrolling start/stop list a human can't parse: one overall stacked bar
+  (finished/in-flight/errored/pending) plus, per worker, a chronological **strip of one cell per
+  task** (the server keeps a per-task record per worker, not just counts). **Hovering any individual
+  task cell** (completed or in-flight) — or a truncated flamegraph frame — pops out its full detail
+  (key, partition, entries, state, duration). A browser `<perspective-viewer>` connects to
   `/websocket`. The executor→dashboard hop is a **real websocket network transport**: a
   `NetworkMonitor` (a passive `Monitor`) streams events to the server's `/ingest` endpoint —
   **loopback for a local dashboard, `ws://host:port/ingest` for a remote one**, so a dashboard can
@@ -1081,8 +1083,8 @@ the `m37-sse-uplot` branch of each repo).
   (`tests/frozen/m37/test_dashboard_browser.py`, Playwright + Chromium): load the page, assert zero
   console/page errors, that the `stats` Datagrid renders a `regular-table`, the progress panel renders
   a `.pbar-row`, and the profile panel draws an `svg.d3-flame-graph` — and that **hovering** a
-  flamegraph cell + a progress bar shows the pop-out tooltip (the truncated-name fix is only real if
-  the mouseover works). It is `importorskip`-gated and runs in a dedicated CI job (`playwright install
+  flamegraph cell + a per-worker `.tcell` task cell shows the pop-out tooltip (the truncated-name fix
+  and the per-task detail are only real if the mouseover works). It is `importorskip`-gated and runs in a dedicated CI job (`playwright install
   chromium`), never on the wheel matrix. Shipping a browser page without a browser test is the gap
   that let the original mismatch through.
 - **R20.7 (Telemetry MUST stay off the data-processing critical path.)** Diagnostics may not slow
