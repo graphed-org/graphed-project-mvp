@@ -188,6 +188,19 @@ in-process), which would give a false appearance of parity without testing what 
   backend dispatch count equal to the *reduced* operation count; a combine observed off the driver
   thread). Asserting only input/output equivalence for such a requirement is a test-sanity failure:
   an alias for the non-incremental path satisfies equivalence by construction (see Part I §5).
+- **R0.10a (A frozen witness MUST be a deterministic invariant — never wall-clock timing or an
+  emergent scheduling distribution.)** The R0.10 witness must hold on *every* run on *every* matrix
+  leg regardless of machine speed or contention. Two failure shapes are forbidden in a frozen test
+  because they pass locally and on fast Linux yet flake on slow/contended macOS/Windows legs while the
+  mechanism is perfectly correct: (a) **wall-clock comparisons** (`dt_with < dt_without`) — on a loaded
+  runner real work is dwarfed by process-startup and transport noise; and (b) **emergent
+  distributions** (e.g. "≥ 2 *distinct* peers stole" — steal-one does not constrain *how many* peers
+  catch one-at-a-time grants; a quick peer may catch several). Assert instead the structural invariant
+  the flaky proxy stood for: for a speedup, that the critical-path work moved (the busy owner ran
+  *strictly fewer* of its own units); for steal-one, that grant-count == units-shed and
+  `sum(given) == sum(stolen)`. If a slower machine can flip the assertion while the behavior is still
+  correct, it is testing timing, not the mechanism. (Cost: M38's steal suite burned three red-CI
+  rounds learning this — measurement of a perf *claim* is R0.11; a frozen *gate* must not depend on it.)
 - **R0.11 (Claims MUST be grounded in measured facts.)** Any performance, scaling, or
   cost claim — in a report, a notebook narrative, documentation, an attempt log, or a commit
   message — MUST be backed by a measurement taken in *that* context, not by intuition, analogy,
