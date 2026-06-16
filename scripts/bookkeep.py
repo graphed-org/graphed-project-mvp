@@ -41,7 +41,12 @@ def set_updated_at(state: dict, iso: str) -> dict:
 
 
 def now_iso() -> str:
-    return datetime.datetime.now(datetime.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    return (
+        datetime.datetime.now(datetime.UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
 
 
 def files_to_stage(pins: dict[str, str]) -> list[str]:
@@ -57,9 +62,13 @@ def _git(*args: str) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--set-current", metavar="MID", help="set milestones rollup current_milestone")
+    ap.add_argument(
+        "--set-current", metavar="MID", help="set milestones rollup current_milestone"
+    )
     ap.add_argument("--touch", action="store_true", help="set updated_at to now (UTC)")
-    ap.add_argument("--commit", metavar="MSG", help="commit the staged bookkeeping changes")
+    ap.add_argument(
+        "--commit", metavar="MSG", help="commit the staged bookkeeping changes"
+    )
     ap.add_argument("--push", action="store_true", help="push after committing")
     args = ap.parse_args(argv)
 
@@ -73,8 +82,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # the hook: regenerate the README from the (possibly just-edited) state + live pins
     gen_readme.main([])
-    if gen_readme.main(["--check"]) != 0:  # belt-and-suspenders: must be in sync after regenerating
-        print("internal error: README still out of sync after regeneration", file=sys.stderr)
+    if (
+        gen_readme.main(["--check"]) != 0
+    ):  # belt-and-suspenders: must be in sync after regenerating
+        print(
+            "internal error: README still out of sync after regeneration",
+            file=sys.stderr,
+        )
         return 1
 
     _git("add", *files_to_stage(gen_readme.submodule_pins()))

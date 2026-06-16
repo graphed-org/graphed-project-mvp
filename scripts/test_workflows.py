@@ -51,7 +51,9 @@ FORBIDDEN_PUBLISH_MARKERS = [
 
 def _workflows(repo: str) -> dict[str, str]:
     wf_dir = ROOT / repo / ".github" / "workflows"
-    assert wf_dir.is_dir(), f"{repo}: no .github/workflows (submodules not checked out?)"
+    assert wf_dir.is_dir(), (
+        f"{repo}: no .github/workflows (submodules not checked out?)"
+    )
     return {p.name: p.read_text() for p in sorted(wf_dir.glob("*.yml"))}
 
 
@@ -67,7 +69,9 @@ def test_every_repo_builds_wheel_artifacts() -> None:
     for repo in REPOS:
         wheels = _workflows(repo).get("wheels.yml")
         assert wheels, f"{repo}: wheels.yml missing (A.5: wheels build on all targets)"
-        assert "upload-artifact" in wheels, f"{repo}/wheels.yml does not upload the built dist"
+        assert "upload-artifact" in wheels, (
+            f"{repo}/wheels.yml does not upload the built dist"
+        )
 
 
 def test_no_branch_push_or_pr_workflow_publishes_to_pypi() -> None:
@@ -80,8 +84,12 @@ def test_no_branch_push_or_pr_workflow_publishes_to_pypi() -> None:
             if not has_publish:
                 continue
             head = text.split("jobs:")[0]  # the `on:` trigger block
-            assert "release:" in head, f"{repo}/{name}: publish step outside a release workflow"
-            assert "pull_request" not in head, f"{repo}/{name}: a PR workflow must never publish"
+            assert "release:" in head, (
+                f"{repo}/{name}: publish step outside a release workflow"
+            )
+            assert "pull_request" not in head, (
+                f"{repo}/{name}: a PR workflow must never publish"
+            )
             if "push:" in head:
                 push_block = head.split("push:")[1].split("release:")[0]
                 assert "tags:" in push_block and "branches:" not in push_block, (
@@ -91,8 +99,14 @@ def test_no_branch_push_or_pr_workflow_publishes_to_pypi() -> None:
 
 def test_core_wheels_cover_every_target_and_freethreaded() -> None:
     wheels = _workflows("graphed-core")["wheels.yml"]
-    for marker in ("ubuntu-latest", "ubuntu-24.04-arm", "macos-latest", "windows-latest",
-                   "universal2-apple-darwin", '"3.14t"'):
+    for marker in (
+        "ubuntu-latest",
+        "ubuntu-24.04-arm",
+        "macos-latest",
+        "windows-latest",
+        "universal2-apple-darwin",
+        '"3.14t"',
+    ):
         assert marker in wheels, f"graphed-core/wheels.yml lost target {marker!r}"
 
 
@@ -101,6 +115,8 @@ def test_core_gates_rust_coverage_and_freethreaded() -> None:
     assert "cargo llvm-cov" in ci and "--fail-under-lines" in ci, (
         "graphed-core/ci.yml lost the Rust coverage gate (finding B.5)"
     )
-    assert "test-freethreaded" in ci and "continue-on-error" not in ci.split("test-freethreaded")[1].split("steps:")[0], (
-        "graphed-core 3.14t job must be a required gate"
-    )
+    assert (
+        "test-freethreaded" in ci
+        and "continue-on-error"
+        not in ci.split("test-freethreaded")[1].split("steps:")[0]
+    ), "graphed-core 3.14t job must be a required gate"

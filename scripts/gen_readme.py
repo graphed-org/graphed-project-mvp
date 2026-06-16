@@ -34,6 +34,7 @@ _NO_MVP_SUFFIX = {"graphed-orchestrator"}
 def _gh(name: str) -> str:
     return name if name in _NO_MVP_SUFFIX else f"{name}-mvp"
 
+
 _INTRO = """# graphed-project
 
 Meta / superproject for **graphed** — a schedulable, serializable, debuggable HEP task-graph system
@@ -89,7 +90,10 @@ def submodule_pins(root: Path = ROOT) -> dict[str, str]:
     one a bookkeeping commit is about to record), so a combined submodule-advance + README commit is
     self-consistent; in CI it equals the committed pin. Needs no submodule checkout or network."""
     out = subprocess.run(
-        ["git", "-C", str(root), "submodule", "status"], capture_output=True, text=True, check=True
+        ["git", "-C", str(root), "submodule", "status"],
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     pins: dict[str, str] = {}
     for line in out.splitlines():
@@ -121,7 +125,11 @@ def render(state: dict, pins: dict[str, str]) -> str:
         f"**{done} of {total} milestones DONE — all CI-green on the §A.5 matrix.** "
         f"Current milestone: **{state['current_milestone']}**."
     )
-    lines += ["", "| Milestone | Status | Repo(s) | What it delivered |", "|---|:--:|---|---|"]
+    lines += [
+        "",
+        "| Milestone | Status | Repo(s) | What it delivered |",
+        "|---|:--:|---|---|",
+    ]
     for mid, m in milestones.items():
         badge = STATUS_BADGE.get(m["status"], m["status"])
         repo_cell = ", ".join(_gh(r) for r in _clean_repos(m["repos"])) or "—"
@@ -156,7 +164,9 @@ def render(state: dict, pins: dict[str, str]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--check", action="store_true", help="exit 1 if README.md is out of sync")
+    ap.add_argument(
+        "--check", action="store_true", help="exit 1 if README.md is out of sync"
+    )
     args = ap.parse_args(argv)
 
     content = render(load_state(), submodule_pins())
