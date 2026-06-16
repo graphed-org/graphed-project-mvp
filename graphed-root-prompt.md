@@ -1035,9 +1035,14 @@ the `m37-sse-uplot` branch of each repo).
   constructed and `start()`/`with`-entered. It lives in **graphed-debug** (the viz home) and reuses
   M6 `StageError` rendering for the error column.
 - **R20.5 (Network transport + Perspective rendering.)** Rendering is **FINOS Perspective**: a
-  `DashboardServer` (perspective `Server` + Tornado) hosts live `tasks`/`stats` tables plus a merged
-  profile **flamegraph** served as JSON at `/api/flamegraph.json`; a browser `<perspective-viewer>`
-  connects to `/websocket`. The executor→dashboard hop is a **real websocket network transport**: a
+  `DashboardServer` (perspective `Server` + Tornado) hosts the live `stats` table (and a `tasks` table
+  fed by the same stream) plus two derived JSON views the browser polls — a merged profile
+  **flamegraph** at `/api/flamegraph.json` and overall + per-worker **progress** at
+  `/api/progress.json`. The task view is the **dask-distributed "Progress" idiom** (stacked
+  per-worker bars: finished/in-flight/errored, bar length normalized to the busiest worker so
+  stragglers show), NOT a scrolling start/stop list a human can't parse; hovering a bar (or a
+  truncated flamegraph cell) pops out the full detail. A browser `<perspective-viewer>` connects to
+  `/websocket`. The executor→dashboard hop is a **real websocket network transport**: a
   `NetworkMonitor` (a passive `Monitor`) streams events to the server's `/ingest` endpoint —
   **loopback for a local dashboard, `ws://host:port/ingest` for a remote one**, so a dashboard can
   observe an executor on another machine. `Dashboard` bundles a local server + loopback client (so
@@ -1067,16 +1072,19 @@ the `m37-sse-uplot` branch of each repo).
   it with plain `pip` and Node is a **build-time-only** dev tool (the wheel carries the bundle; it
   works offline). (b) Bundle from the `/inline` entries so wasm is inlined and the Datagrid plugin
   registers against the same viewer instance (one esbuild module graph). (c) Use **only the built-in
-  Datagrid plugin** for the Perspective panels (`tasks`/`stats`) — the d3fc plot plugins throw
-  `cannot read properties of null` on empty/streaming data. The **profile panel is NOT Perspective**:
-  it is a d3 flamegraph (vendored `d3.min.js` + `d3-flamegraph.min.js`/`.css`, globals `d3`/
-  `flamegraph`) polling `/api/flamegraph.json`, decoupled so an empty profile never blocks render.
-  (d) A **headless-browser smoke test is mandatory** (`tests/frozen/m37/test_dashboard_browser.py`,
-  Playwright + Chromium): load the page, assert zero console/page errors, that the Datagrid panels
-  render a `regular-table`, and that the profile panel draws an `svg.d3-flame-graph`. It is
-  `importorskip`-gated and runs in a dedicated CI job (`playwright install chromium`), never on the
-  wheel matrix. Shipping a browser page without a browser test is the gap that let the original
-  mismatch through.
+  Datagrid plugin** for the `stats` Perspective panel — the d3fc plot plugins throw `cannot read
+  properties of null` on empty/streaming data. The **progress and profile panels are NOT Perspective**:
+  the progress bars are plain HTML/CSS fed by `/api/progress.json`, and the flamegraph is a d3
+  flamegraph (vendored `d3.min.js` + `d3-flamegraph.min.js`/`.css`, globals `d3`/`flamegraph`) fed by
+  `/api/flamegraph.json` — both decoupled so empty data never blocks render, both with a shared
+  pop-out hover tooltip. (d) A **headless-browser smoke test is mandatory**
+  (`tests/frozen/m37/test_dashboard_browser.py`, Playwright + Chromium): load the page, assert zero
+  console/page errors, that the `stats` Datagrid renders a `regular-table`, the progress panel renders
+  a `.pbar-row`, and the profile panel draws an `svg.d3-flame-graph` — and that **hovering** a
+  flamegraph cell + a progress bar shows the pop-out tooltip (the truncated-name fix is only real if
+  the mouseover works). It is `importorskip`-gated and runs in a dedicated CI job (`playwright install
+  chromium`), never on the wheel matrix. Shipping a browser page without a browser test is the gap
+  that let the original mismatch through.
 - **R20.7 (Telemetry MUST stay off the data-processing critical path.)** Diagnostics may not slow
   the work. Two rules, measured: (a) a worker's per-task emit is an **in-process buffer append only**
   (no IPC, no serialization on the path) — a per-worker daemon **drain thread** batches the buffer to
