@@ -160,6 +160,18 @@ in-process), which would give a false appearance of parity without testing what 
   worker actors) is invisible to driver-process instrumentation — cover it with an in-process frozen
   test that drives the same protocol (the `test_inprocess_*` pattern), since the gate's hits must come
   from the *frozen* suite. `graphed_orchestrator.precommit.check_coverage` implements this.
+- **R0.4c (Static analysis runs on ONE host but CI is the whole §A.5 matrix — write platform-portable
+  code the first time.)** The local gate type-checks and lints on the developer's host platform only,
+  so a platform-specific typeshed/stdlib gap passes locally and fails on another matrix leg — the same
+  "green locally, red in CI" failure as R0.4b, but for `mypy`/`ruff` instead of coverage. The recurring
+  trap is touching a platform-gated stdlib module (`resource`, `fcntl`, `os.fork`, `msvcrt`, `winreg`,
+  `grp`/`pwd`, `termios`) whose attributes only exist on some platforms: a host-POSIX `mypy` sees
+  `resource.RLIMIT_NOFILE`, but the Windows leg's typeshed does not → `attr-defined`. Guard every such
+  access with an `if sys.platform == "win32": …` (or `== "linux"`, etc.) branch — `mypy` *narrows* on
+  `sys.platform` and skips type-checking the off-platform branch entirely. Do NOT reach for a
+  `# type: ignore`: it is unused on the host platform (and so trips `--strict`'s `warn_unused_ignores`)
+  while being the very thing the other leg needs. The fix is structural (platform narrowing), not a
+  suppression.
 - **R0.5 (Completion-confirmation gate — MANDATORY).** A milestone MUST NOT be recorded done until the
   **exact revision pinned by the milestone's completion record** has been confirmed **green on the full
   CI matrix (R11.1)**. CI that is in progress, queued, or absent MUST count as *not green*. The
