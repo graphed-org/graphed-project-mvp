@@ -1153,10 +1153,29 @@ Pulled into MVP scope by the project owner (the plan §F/§A.4 had work-stealing
   scheduler supplies its own — so the SAME peer-reduction, work-stealing, monitor, and profiler code
   runs unchanged single-machine or distributed.
 - **R21.1 (Two backends, one interface; IPC default; both tested.)** **`QueueTransport`** (IPC —
-  `queue.Queue` for threads, `multiprocessing.Queue` for processes) is the single-machine default;
-  **`HttpTransport`** (loopback `http.server` + a driver-mediated port-discovery handshake, sender
-  thread so `send` is non-blocking, ThreadingHTTPServer + retry + receiver dedup so a *partial* is
-  never dropped) is the path to true distributed schedulers. One conformance suite runs against both.
+  `queue.Queue` for threads; for processes, **inherited feeder-thread-free queues**, see R21.5) is the
+  single-machine default; **`HttpTransport`** (loopback `http.server` + a driver-mediated
+  port-discovery handshake, sender thread so `send` is non-blocking, ThreadingHTTPServer + retry +
+  receiver dedup so a *partial* is never dropped) is the path to true distributed schedulers. One
+  conformance suite runs against both.
+- **R21.5 (Minimise the per-worker thread/process footprint of the IPC transport — workers ≈ cores is
+  the real batch slot.)** At the normal HEP slot (workers ≈ cores) every *extra* background thread or
+  process the transport spawns competes for a core and steals cycles from the data path; the cost is
+  invisible in per-thread self-time and shows only at saturation (p25 looks fine, the median lifts).
+  Two concrete traps, both measured and removed during M38, that the from-scratch build MUST avoid:
+  (a) **no `multiprocessing.Manager` server** for the inbox queues — its proxies are picklable, which
+  is tempting, but it adds a whole server process routing every queue op as a socket-RPC (py-spy: ~31 %
+  of sampled thread-time). Create raw queues in the driver and **inherit** them in workers via the pool
+  `initializer`, resolving each actor's inbox by address (a cheap submit-arg string). (b) **Prefer a
+  feeder-thread-free queue** — `multiprocessing.Queue` spawns a background *feeder thread per queue a
+  process puts to*, so a peer worker writing to its driver + reduction peers carries ~`log N` extra
+  threads (py-spy: 5 threads/worker vs the hub's 1); use `multiprocessing.SimpleQueue` (synchronous
+  `put`, no feeder; the reader's `poll(timeout)` gives the timed receive) so a worker holds ONE thread,
+  like the hub. With both applied the peer-vs-hub gap closes with headroom and **shrinks** toward true
+  saturation. Verify the footprint directly (count live threads/processes per worker), not just wall
+  time. (The remaining few-% at workers == cores is the inherent cost of *distributed* reduction —
+  combines on the busy workers vs the hub offloading them to its driver core — and is the price of
+  scaling past a single-driver bottleneck; do not chase it by re-centralising.)
 - **R21.2 (Peer reduction, off the driver, bit-for-bit.)** Each worker owns a contiguous leaf range,
   reduces it with the **lazy** index tree (the fixed `plan_tree` computed by index arithmetic,
   frontier-bounded — large N with no O(N) pre-pass), and hands the O(log N) boundary partials
