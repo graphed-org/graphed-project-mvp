@@ -1176,6 +1176,23 @@ Pulled into MVP scope by the project owner (the plan §F/§A.4 had work-stealing
   time. (The remaining few-% at workers == cores is the inherent cost of *distributed* reduction —
   combines on the busy workers vs the hub offloading them to its driver core — and is the price of
   scaling past a single-driver bottleneck; do not chase it by re-centralising.)
+- **R21.6 (Bounded O(log N) communication overlay; the registry must be sub-quadratic.)** A worker
+  must NOT inherit/connect to all N peers — that is O(N²) handles (an all-inherit IPC registry blows
+  past the per-process fd limit on a >128-core machine; a dynamic cluster can't push O(N) peer lists).
+  Each worker talks to only **O(log N)** peers: its reduction targets ∪ a symmetric **hypercube
+  lifeline** overlay for stealing (X10 GLB / lifeline graph; HotSLAW — low degree + diameter, scales to
+  thousands). Compute the overlay once (`worker_outbox_addresses`) and SHARE it across the static
+  single-machine pool and the dynamic distributed runtime. (a) **Single machine, static:** below the fd
+  limit use the simple full-registry pool; above it use **identity-pinned** workers (each spawned once,
+  inheriting ONLY its inbox + its O(log N) overlay outboxes — a custom `concurrent.futures.Executor`
+  with per-worker, not shared, init, since inheritance is the only way to hand a process a non-picklable
+  queue and `initargs` are shared) so the registry is O(N log N). Verify the footprint (count fds/worker)
+  — it must grow ~log N, not N. (b) **Dynamic cluster (Phase 2):** membership changes (workers
+  joining/dying) MUST recompute the overlay in the driver and **push new O(log N) peer lists** (fast,
+  no respawn), with **multi-hop routing** over the overlay so any worker reaches any other — which
+  requires a *lazy-connect* transport (HTTP/named-socket: connect by address at runtime), NOT inherited
+  queues. Lost-work rerun on a death is part of this. Build the seam (the overlay + `WorkerTransport`)
+  to support it from the start even though the runtime itself is Phase 2.
 - **R21.2 (Peer reduction, off the driver, bit-for-bit.)** Each worker owns a contiguous leaf range,
   reduces it with the **lazy** index tree (the fixed `plan_tree` computed by index arithmetic,
   frontier-bounded — large N with no O(N) pre-pass), and hands the O(log N) boundary partials
