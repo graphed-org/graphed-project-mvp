@@ -73,17 +73,17 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | Repo | Role | Pinned commit | State |
 |---|---|---|:--:|
 | [graphed-project-mvp](https://github.com/graphed-org/graphed-project-mvp) | meta/superproject | — | meta |
-| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `7ecd1a9` | ✅ submodule |
-| [graphed-awkward-mvp](https://github.com/graphed-org/graphed-awkward-mvp) | M3/M5 reference backend | `58fe272` | ✅ submodule |
-| [graphed-checkpoint-mvp](https://github.com/graphed-org/graphed-checkpoint-mvp) | M8 checkpoint/resume | `ed4907f` | ✅ submodule |
-| [graphed-core-mvp](https://github.com/graphed-org/graphed-core-mvp) | M1/M4/M7-contract/M8-plan | `82519ef` | ✅ submodule |
-| [graphed-corpus-mvp](https://github.com/graphed-org/graphed-corpus-mvp) | M0.5 requirements + fixtures | `65b20c4` | ✅ submodule |
-| [graphed-debug-mvp](https://github.com/graphed-org/graphed-debug-mvp) | M6 debug/tracebacks | `62621c0` | ✅ submodule |
-| [graphed-exec-local-mvp](https://github.com/graphed-org/graphed-exec-local-mvp) | M7 reference executor | `b4daf03` | ✅ submodule |
-| [graphed-histogram-mvp](https://github.com/graphed-org/graphed-histogram-mvp) | M23/M29 deferred histogram filling | `9b0497b` | ✅ submodule |
-| [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `768d808` | ✅ submodule |
-| [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `30c959c` | ✅ submodule |
-| [graphed-preserve-mvp](https://github.com/graphed-org/graphed-preserve-mvp) | M9 preservation bundle | `2d7542e` | ✅ submodule |
+| [graphed-mvp](https://github.com/graphed-org/graphed-mvp) | M2/M3 frontend | `1d08622` | ✅ submodule |
+| [graphed-awkward-mvp](https://github.com/graphed-org/graphed-awkward-mvp) | M3/M5 reference backend | `b4535f4` | ✅ submodule |
+| [graphed-checkpoint-mvp](https://github.com/graphed-org/graphed-checkpoint-mvp) | M8 checkpoint/resume | `d175086` | ✅ submodule |
+| [graphed-core-mvp](https://github.com/graphed-org/graphed-core-mvp) | M1/M4/M7-contract/M8-plan | `c2bb9e5` | ✅ submodule |
+| [graphed-corpus-mvp](https://github.com/graphed-org/graphed-corpus-mvp) | M0.5 requirements + fixtures | `3092e6a` | ✅ submodule |
+| [graphed-debug-mvp](https://github.com/graphed-org/graphed-debug-mvp) | M6 debug/tracebacks | `b128b90` | ✅ submodule |
+| [graphed-exec-local-mvp](https://github.com/graphed-org/graphed-exec-local-mvp) | M7 reference executor | `cc02887` | ✅ submodule |
+| [graphed-histogram-mvp](https://github.com/graphed-org/graphed-histogram-mvp) | M23/M29 deferred histogram filling | `4f6b8a9` | ✅ submodule |
+| [graphed-numpy-mvp](https://github.com/graphed-org/graphed-numpy-mvp) | M2 trivial backend | `b856fdf` | ✅ submodule |
+| [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `727a87b` | ✅ submodule |
+| [graphed-preserve-mvp](https://github.com/graphed-org/graphed-preserve-mvp) | M9 preservation bundle | `d9e27d3` | ✅ submodule |
 
 `lazy` repos are created when their milestone begins.
 
