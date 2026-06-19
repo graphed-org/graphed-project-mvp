@@ -384,6 +384,19 @@ in-process), which would give a false appearance of parity without testing what 
     a full column read where the format allows it (a TTree jagged branch's counter branch; an RNTuple
     index column) — see R15.8.
 - **R5.4** Predicate pushdown is out of scope for the initial system.
+- **R5.5 (Projection MUST be APPLIED in the plan's read — computing it is not sufficient.)** Computing
+  the minimal column/buffer set (R5.1) buys nothing unless the PLAN passes it to the reader: a
+  partition-wise plan MUST hand the projected set to its source's `read_partition(columns=…)`. A plan
+  that reads the source's full selection because it never wired the projection through is an
+  order-of-magnitude I/O blowup on a wide file — reading all ~90 branches of a NanoAOD for a one-branch
+  query — **invisible on a toy test file and dominant on a real dataset** (the gap that made a graphed
+  query ~16x slower than dask). The over-reading test (R5.2) MUST therefore be **end-to-end**: run an
+  actual plan over a real partitioned source and assert the reader was asked for ONLY the projected
+  columns — not merely unit-test the projection function in isolation, which stays green while the plan
+  still over-reads. Projection MUST also flow **through External nodes** (a histogram fill, an
+  ONNX/correctionlib op) to their declared array inputs — an External reads its inputs, never extra
+  source columns — so a graph whose outputs are Externals (every histogram query) still projects to the
+  minimal read instead of collapsing to "read everything" at the opaque node.
 
 ## R6 — Debugging, lowering, and source-mapped errors
 
@@ -471,6 +484,20 @@ in-process), which would give a false appearance of parity without testing what 
   such values explicitly. Frozen witnesses: the cache size stays at or below its bound across
   more distinct plans than the bound (and demonstrably evicts, not merely never-fills); an
   evicted plan re-runs correctly after a transparent re-broadcast.
+- **R7.12 (A multi-output graph is ONE plan, evaluated once — a first-class plan primitive.)** When a
+  graph has several outputs that share a sub-graph (one selection feeding two histograms; a sum and a
+  count over the same cut), it MUST be planned as ONE plan that compiles all outputs into a single IR
+  and evaluates the shared sub-graph **once per partition** — the dask multi-output `compute(dict)`
+  behaviour. Building a separate plan per output re-reads and re-evaluates the shared work once PER
+  output (a measured ~2x blowup for a two-histogram query — and, after column projection (R5.5) was
+  applied, the remaining reason a graphed query trailed dask). This MUST be a **generic plan-layer
+  primitive** — a multi-output partition-wise reduction: compile the outputs together, read each
+  partition once projected to the **union** of their columns (R5.5), evaluate once, and reduce each
+  output by its OWN combine/empty — living at the layer it serves (R1.6) so ANY multi-output reduction
+  reuses it, not only histograms. Histogram aggregation (R18) and the benchmark's "one query = one
+  multi-output graph" (R19.1) are specializations of this primitive, NOT re-implementations; a
+  single-output plan is its degenerate case. Frozen witness (R0.10): a multi-output plan over a
+  counting partitioned source reads each partition ONCE, not once per output.
 
 ## R8 — Checkpoint, resume, and error harvesting
 
@@ -887,8 +914,11 @@ fill); it MUST be built BEFORE any analysis-benchmark port, as follows:
   per-repo spine — never folded into a backend. A `.fill(...)` RECORDS and returns self (fills
   accumulate). There is NO `compute()` helper: evaluation is graphed's own machinery — `plan()`
   exports the task graph and an R7 executor's `run(plan).value` IS the aggregated histogram; the
-  reference `session.materialize(fill_node)` evaluates one fill eagerly. The recording surface
-  mirrors dask-histogram: a deferred `boost_histogram.Histogram` subclass,
+  reference `session.materialize(fill_node)` evaluates one fill eagerly. Several histograms that share
+  a sub-graph MUST be plannable **together** in ONE pass — a free `plan(histograms)` that delegates to
+  the generic multi-output primitive (R7.12), so the shared selection is read and evaluated once, not
+  once per histogram — and every histogram plan's read MUST be column-projected (R5.5). The recording
+  surface mirrors dask-histogram: a deferred `boost_histogram.Histogram` subclass,
   `factory(*arrays, histref=)`, and numpy-like `histogram`/`histogram2d`/`histogramdd`.
 - **R18.2 (Fills are an External FAMILY; backends know nothing.)** Each fill records as an
   External node whose `PayloadDescriptor.content_hash` is the SHA-256 of a CANONICAL, VERSIONED,
@@ -1026,7 +1056,9 @@ processors stay untouched (they generate the acceptance reference).
   reader's `behavior=`) — no NanoEvents-style schema/convenience layer. Δ-quantities use
   explicit property-safe formulas (behavior METHODS with arguments are not recordable through
   the proxy — a documented Phase-2 item). Every query ends in a deferred histogram fill; one
-  query = ONE compiled multi-output graph (a two-histogram query is a single pass).
+  query = ONE compiled multi-output graph (a two-histogram query is a single pass) — built through the
+  R7.12 multi-output primitive, never a plan-per-histogram loop (that re-reads + recomputes the shared
+  selection, the ~2x measured against dask on the trijet query), and column-projected per R5.5.
 - **R19.2 (Acceptance: bit-for-bit, SAME-PLATFORM, against the original.)** Every histogram
   (including flow) MUST equal the ORIGINAL processors' output exactly on a committed small skim
   of the real dataset — with the reference REGENERATED ON THE TEST PLATFORM (libm ULP
