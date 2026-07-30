@@ -260,3 +260,18 @@ probe fixtures, byte-exact + readable everywhere. Scaled-int alternative recorde
 chosen (minus unhandled; not self-describing — murf_25 ambiguous without side table; scale varies
 per tag within a family); revisitable Phase 2. §6.4b/e simplified; §9.1 parses m?\d+(p\d+)?;
 m48 grammar anchor → canonicalization semantics; m51 fixture → murf_0p5 verbatim.
+
+## 2026-07-30 (cont.) — r9: e-form canonical (owner-selected via 3-option decision)
+
+Owner refined the scaled-int alternative to exponent-suffix form (1.2345 → 12345e-4 =
+self-describing; my r8 side-table objection retracted) and argued its parseable numeric
+structure; presented 3-option AskUserQuestion (p-canonical / e-canonical / hybrid) → owner
+selected E-FORM CANONICAL. r9 binds: canonical numeric grammar m?\d+(em\d+)? — integers = plain
+digits (PDF indices untouched: "102"→102, NOT mangled), fractional = minimal-mantissa em-form
+("0.5"→5em1, "-1.5"→m15em1, "1e-8"→1em8; bare e never appears — fractional exponent negative by
+construction). Input grammar widened to full float literals incl. exponents; canonicalization by
+EXACT decimal-string arithmetic (no IEEE artifacts); normalization unifies all spellings
+("2"≡"2.0"≡"2e0"≡"20e-1"); cross-notation numeric-equal rejection ({"0.5","0p5"}) since datacard
+p-tags remain legal identifier tags. Probe coverage carries over (identifier-shaped names
+measured safe; fixture __vary_murf_0p5__Jet_pt ≡ shape of canonical __vary_murf_5em1__Jet_pt).
+Deletes the r9-draft Phase-2 e-widening seam (e IS canonical now). Decision trail in §1.1.

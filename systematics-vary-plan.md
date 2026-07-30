@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r8).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r9).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -235,32 +235,45 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
 - **§1.1** Verb `graphed.vary`; container `graphed.Varied`; concept "variation" everywhere (docs,
   APIs, tests, R23). The reserved central label is the string `"nominal"`; user variation labels
   are `f"{name}_{tag}"` (e.g. `jes_up`). **Tag grammar (r6; float spellings r7; canonicalized
-  r8, owner-directed):** `up`/`down` are conventions, not specials — σ-families, PDF member
+  r8; e-form canonical r9, owner-selected):** `up`/`down` are conventions, not specials —
+  σ-families, PDF member
   indices, and stringified-float families (μR/μF scale factors, σ-scans; correctionlib
   scale-variation sets natively key on such strings, §4.1) are all first-class. A `name` MUST be
   a valid Python identifier. A **tag** is a string matching `[A-Za-z0-9_]+` — every label is
   therefore itself a valid identifier, usable verbatim as a kwarg name, StrCategory bin (§6.2),
   result key, manifest key, and on-disk column/branch name (§6.4). Floating-point tags use the
-  field's standard **p-encoding** (`2p5` for 2.5, `m2` for −2 — common datacard practice), and
-  `vary` ACCEPTS the plain float spelling as input sugar: a tag matching `-?\d+(\.\d+)?`
-  (`"0.5"`, `"-2"`, `"2.0"`; no exponent, no leading `+`, no `inf`/`nan`) is **canonicalized at
-  call time** (`.`→`p`, leading `-`→`m`, e.g. `"2.5"`→`"2p5"`) — the canonical p-form IS the
-  tag everywhere thereafter (labels, bins, results, disk); the raw dotted spelling never reaches
-  a label. Rationale is measured, not taste (r7 probes, worklog 2026-07-30): dotted names store
-  byte-exact but are unreadable-by-name (`ak.from_parquet(columns=["murf_0.5"])` silently
-  empty; uproot RNTuple `__getitem__` splits on `.`; the TTree writer uses `.` as its own
-  nesting separator), while the p-form name `__vary_murf_0p5__Jet_pt` round-tripped byte-exact
-  AND readable in every measured path. (A scaled-integer alternative — multiply by ten until
-  integral, `2.5`→`25`, plus a scale entry in metadata to translate back — was considered
-  [owner, 2026-07-30]: not chosen because it leaves the minus sign unhandled, is not
-  self-describing — `murf_25` is ambiguous without the side table, where the p-form carries its
-  own inverse in the tag — and the scale varies per tag across one family (`{"0.5", "1.25"}` →
-  ×10 and ×100); revisitable Phase 2 if a consumer ever needs pure-digit tags.)
-  Canonicalization makes `{"0.5", "0p5"}` the SAME tag
-  (ordinary duplicate detection); additionally, two tags in one family that both p-parse as
-  numbers MUST NOT parse numerically equal (`{"2", "2p0"}` rejected — distinct spellings of one
-  value would silently create semantically duplicate universes, distinct StrCategory bins, and
-  distinct content hashes).
+  **e-encoding** (owner-selected 2026-07-30, three-option encoding decision): the canonical
+  numeric form is `m?\d+(em\d+)?` — integer values render as plain digits (`2`, `102`, `m2` for
+  −2; PDF indices are untouched), fractional values as minimal-mantissa scientific notation
+  with `em` for the negative exponent (`0.5`→`5em1`, `2.5`→`25em1`, `1.2345`→`12345em4`,
+  `-1.5`→`m15em1`, `1e-8`→`1em8`; a fractional value's exponent is negative by construction, so
+  bare `e` never appears in canonical form) — chosen for its uniformly parseable numeric
+  structure over the WHOLE float range (parse = `m`→`-`, `em`→`e-`, then a standard float
+  literal), at the cost of not reading as the decimal at sight (the datacard p-form `2p5` was
+  the r8 canonical; p-encoded tags remain legal identifier tags, see below). `vary` ACCEPTS
+  plain float spellings as input sugar: a tag matching `-?\d+(\.\d+)?([eE][+-]?\d+)?` (`"0.5"`,
+  `"-2"`, `"2.0"`, `"1e-8"`; no leading `+`, no `inf`/`nan`, no `_` separators or whitespace)
+  is **canonicalized at call time** by exact decimal-string arithmetic (never an IEEE
+  round-trip — no float artifacts enter labels) to the form above, so `"2"`, `"2.0"`, `"2e0"`,
+  and `"20e-1"` all yield the SAME tag `2`, and a hand-typed canonical tag (`"5em1"`) unifies
+  with its spelled form (`"0.5"`); a dotted or signed spelling never reaches a label. The
+  rationale for canonicalizing at all is measured, not taste (r7 probes, worklog 2026-07-30):
+  dotted names store byte-exact but are unreadable-by-name (`ak.from_parquet(columns=
+  ["murf_0.5"])` silently empty; uproot RNTuple `__getitem__` splits on `.`; the TTree writer
+  uses `.` as its own nesting separator), while identifier-shaped names round-tripped
+  byte-exact AND readable in every measured path. Normalization kills spelling multiplicity by
+  construction; the one residual duplicate class is **cross-notation**: a p-encoded identifier
+  tag (`"0p5"`) does not canonicalize but p-parses to the same value as `"0.5"`→`5em1`, so two
+  tags in one family that both parse as numbers (under either notation) MUST NOT parse
+  numerically equal (`{"0.5", "0p5"}` and `{"2", "2p0"}` are rejected — distinct labels for
+  one value would silently create semantically duplicate universes, distinct StrCategory bins,
+  and distinct content hashes).
+  (Encoding decision trail, owner 2026-07-30: r8's canonical was the datacard p-form; the
+  owner's scaled-integer proposal — carry the scale as an exponent suffix, `1.2345`→`12345e-4`
+  — is self-describing and, in identifier-safe rendering, IS this e-form; selected over p for
+  the uniform full-range grammar and native numeric structure. Trade-off recorded: hand-typed
+  datacard tags (`0p5`) no longer unify with float spellings (`"0.5"`→`5em1`) — the
+  cross-notation rejection catches in-family mixes; p-tags stay legal identifier tags.)
   Tags arrive as **kwarg names** (`up=…, sig2=…`) or via the `variations={tag: …}` mapping.
   Validation and canonicalization are **channel-independent**: literal kwarg syntax cannot spell
   dotted or digit-leading tags (`0p5=` is a SyntaxError), but CPython admits any string key
@@ -610,8 +623,9 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   dotted names (`ak.from_parquet(columns=["murf_0.5"])` silently empty, pyarrow 25.0.0 /
   awkward 2.12.0; uproot 5.7.5 RNTuple `__getitem__` dot-split, `behaviors/RNTuple.py:1573-1576`;
   the TTree writer's own `.` nesting separator, `writing/_cascadetree.py:1606`; ROOT
-  TTreeFormula `.`/`-` operator meaning) are foreclosed at the §1.1 gate, and the p-form name
-  `__vary_murf_0p5__Jet_pt` round-tripped byte-exact and readable in every measured path.
+  TTreeFormula `.`/`-` operator meaning) are foreclosed at the §1.1 gate; the probe fixture
+  `__vary_murf_0p5__Jet_pt` — identifier-shaped exactly like the canonical
+  `__vary_murf_5em1__Jet_pt` — round-tripped byte-exact and readable in every measured path.
   (c) **Bit-exact reconstruction is REQUIRED.** Reading the file back and applying the deltas
   MUST reproduce every universe's post-selection values and row set bit-for-bit vs the in-memory
   varied run. The default representation is therefore **exact by construction**: same-dtype XOR
@@ -696,9 +710,9 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
 
 - **§9.1** `graphed.labels`/`graphed.universe`/`graphed.nominal` (§2.2),
   `graphed.variations(ctx)` (per-name listing of a context's registered variations, their tags
-  and kinds — and, for p-encoded numeric tags (pattern `m?\d+(p\d+)?`), the parsed float value
-  (`2p5` → 2.5): the ordering handle for σ-scan/envelope plots, since §6.2's sorted axis is
-  lexicographic), the §3.4 impact API, and a
+  and kinds — and, for numeric tags (canonical e-form `m?\d+(em\d+)?`, `5em1` → 0.5; plus the
+  datacard p-form `m?\d+(p\d+)?`, `2p5` → 2.5), the parsed float value: the ordering handle for
+  σ-scan/envelope plots, since §6.2's sorted axis is lexicographic), the §3.4 impact API, and a
   plan-level listing of `{output: [labels]}` constitute the introspection surface (RDF
   `GetVariations` analogue); the listing is frozen-anchored inside m50's `inspect()` test (§9.2).
 - **§9.2** Preservation: a bundle built from a variation-expanded graph reproduces **all** labels
@@ -749,12 +763,14 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     reserved names on the context (a tree branch named `weights` or `vary` stays reachable —
     the collision that motivated r6); §2.2 `graphed.universe`/`labels`/`nominal` on both
     `Varied` and contexts, string getitem = field access. The §1.1 grammar anchor MUST cover the
-    r8 canonicalization semantics: float spellings accepted via `variations=` AND via
-    `**`-unpacking (channel-independent) and canonicalized (`"2.5"` and a directly-written
-    `"2p5"` yield the SAME label; `{"0.5", "0p5"}` is a duplicate), numeric-equal pairs
-    rejected (`{"2", "2p0"}`), exponent/`+`/`inf`/`nan` spellings rejected, Python-float
-    (non-string) tags rejected, and no label ever contains `.`/`-` — freezing the r6-only
-    rejections would hard-block this grammar (review-sweep finding).
+    r9 e-canonicalization semantics: float spellings accepted via `variations=` AND via
+    `**`-unpacking (channel-independent) and normalized by exact decimal arithmetic
+    (`"2"`/`"2.0"`/`"2e0"`/`"20e-1"` → the ONE label `murf_2`; `"0.5"` and hand-typed `"5em1"`
+    unify; `"1e-8"` → `eps_1em8`; integer PDF indices untouched), cross-notation numeric-equal
+    pairs rejected (`{"0.5", "0p5"}`, `{"2", "2p0"}`), `inf`/`nan`/leading-`+`/underscore/
+    whitespace spellings rejected, Python-float (non-string) tags rejected, and no label ever
+    contains `.`/`-` — freezing an earlier revision's rejections would hard-block this grammar
+    (review-sweep finding).
 - **m49 — shift path + impact + executor end-to-end** (repos: `graphed` + `graphed-executors`).
   Targets: §3.3, §3.4 (frozen anchor), §5, §7, §8. Frozen anchors:
   - The **full 15-reference matrix** through the frontend (fingerprint-exact, as m48) AND through a
@@ -803,8 +819,8 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
   - Bit-exact round-trip: write an augmented skim → the §6.4e reader reconstructs every
     universe's post-selection values and row set bit-for-bit vs the in-memory varied run (the m9
     comparison form) — covering a shift with object-level migration (per-label inner masks,
-    §6.4d), a weight-only label, a label structurally equal to nominal (all-zero delta), and a
-    p-encoded numeric-tag label (`murf_0p5`): stored names embed the label verbatim and the
+    §6.4d), a weight-only label, a label structurally equal to nominal (all-zero delta), and an
+    e-canonical numeric-tag label (`murf_5em1`): stored names embed the label verbatim and the
     reader returns the same label.
   - Representation anchors, structural (R0.10a — no size thresholds in frozen tests): appended
     columns land in the bound exact representation (XOR-delta values, packed masks) with
@@ -921,6 +937,18 @@ helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 
 ## Revision history
 
+- **r9 (2026-07-30)** — encoding decision, owner-selected (three-option AskUserQuestion after a
+  design exchange): **e-form canonical** for float-valued tags, superseding r8's p-form.
+  Canonical numeric grammar `m?\d+(em\d+)?`: integers as plain digits (PDF indices untouched),
+  fractional values as minimal-mantissa `em`-exponent scientific form (`"0.5"`→`5em1`,
+  `"-1.5"`→`m15em1`, `"1e-8"`→`1em8`) — the identifier-safe rendering of the owner's
+  scaled-integer-with-exponent-suffix proposal (`1.2345`→`12345e-4`), self-describing with a
+  uniformly parseable numeric structure over the whole float range (deletes the r9-draft
+  Phase-2 widening seam). Input grammar widens to full float literals incl. exponents;
+  canonicalization by exact decimal-string arithmetic (no IEEE artifacts) kills all spelling
+  multiplicity (`"2"`≡`"2.0"`≡`"2e0"`≡`"20e-1"`); cross-notation numeric-equality rejection
+  covers legal datacard p-tags (`{"0.5", "0p5"}` rejected). Decision trail + trade-off recorded
+  in §1.1; §6.4b/§9.1/m48/m51 updated.
 - **r8 (2026-07-30)** — owner directive on the float-tag encoding: **canonicalize to the
   p-encoding at the source** instead of r7's dual representation. `vary` still accepts plain
   float spellings (`"2.5"`, `"-2"`) as input sugar but canonicalizes at call time (`.`→`p`,
