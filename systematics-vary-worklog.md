@@ -246,3 +246,17 @@ leading '-'→'m', datacard 0p5/m2 convention; identifier labels are their own n
 manifest = sole label resolver; name-safe collision + numeric-equal dup rejected at vary time;
 §9.1 variations() reports parsed floats (ordering handle; §6.2 sorted axis pinned lexicographic);
 m48 anchor rewritten to r7 rejections; m51 adds numeric-tag round-trip fixture.
+
+## 2026-07-30 (cont.) — r8: p-encoding canonicalized at the source (owner directive ×2)
+
+Owner: solve the dot problem by translating decimals to 'p' (2.5 → 2p5, common practice); offered
+scaled-integer alternative (×10 until integral + scale metadata). Bound: r7's dual representation
+(raw label in memory / mangled on disk / manifest as translator) DELETED in favor of call-time
+canonicalization — vary accepts "2.5"/"-2" spellings as sugar, canonicalizes '.'→'p', leading
+'-'→'m'; the p-form IS the tag everywhere. Restores the r6 every-label-is-an-identifier invariant
+unconditionally; r7 name-safe-collision check collapses into ordinary duplicate detection
+({"0.5","0p5"} = same tag). No new probes needed: __vary_murf_0p5__Jet_pt was ALREADY in both r7
+probe fixtures, byte-exact + readable everywhere. Scaled-int alternative recorded in §1.1, not
+chosen (minus unhandled; not self-describing — murf_25 ambiguous without side table; scale varies
+per tag within a family); revisitable Phase 2. §6.4b/e simplified; §9.1 parses m?\d+(p\d+)?;
+m48 grammar anchor → canonicalization semantics; m51 fixture → murf_0p5 verbatim.
