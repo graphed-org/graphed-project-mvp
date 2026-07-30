@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r4).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r5).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -173,6 +173,17 @@ Weight vs shift needs **no API distinction** (RDF lesson: the dependency structu
 difference — a varied weight only reaches the fill; varied kinematics reach the cuts). It does need
 **distinct lowering economics** at the sink, which §4/§5 bind separately.
 
+**Why systematics attach to the event record (owner semantic correction, 2026-07-30).** The r0–r4
+sketches threaded loose `Varied` weights into each fill by hand — re-creating the survey's
+forgotten-weight/name-list failure mode and mismatching the physicist's model, on which all three
+precedents agree: RDF's weight is a *column of the frame*, coffea's `Weights` belongs to the
+*event batch*, boostedhiggs expresses shifts as *collection replacements on `events`*. Systematics
+are ambient properties of the event record; the fill is where everything applicable applies
+simultaneously (plotting Jet pT must also yield the pileup-reweighting universes). §2.6 binds the
+event context (attach-once, ambient thereafter) and §6.1d the fill inference; the one genuine
+tension — selection-dependent object SFs cannot be ambient on the root — is resolved by derived,
+registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
+
 ## 4. Honest costs (the requirements in PART II that mitigate each)
 
 - **Build-time cost**: expansion re-executes the user's downstream *recording* code per variation
@@ -278,6 +289,46 @@ difference — a varied weight only reaches the fill; varied kinematics reach th
   each container with its Session (weak reference), and `compile_ir` diagnostics report any
   registered label that reaches no marked output (DCE already prunes the work; the diagnostic
   prevents the mkShapesRDF silent-cost case).
+- **§2.6 (The event context — systematics attach to `events`; owner-directed semantics,
+  2026-07-30.)** The primary user idiom is not loose `Varied` threading but an **event context**:
+  a frontend wrapper over the root event record carrying (a) the collections and (b) an
+  **ambient event-weight registry**. Pure frontend sugar over §§2.1–2.5 — no IR change, §3.1
+  intact; the ambient weight *is* a `Varied` the registry maintains. Owner-selected idioms, all
+  binding:
+  (a) **Object shifts replace collections on the context**:
+  `events.vary(name, **{Collection: {tag: varied_record}})` — every named collection is replaced
+  per tag (all collections in one call MUST share the tag set: the lockstep form that shifts
+  `Jet` and `MET` together, the boostedhiggs collection-replacement semantic); thereafter
+  `events.<Collection>` is a `Varied` and §2.3 broadcast carries it. Repeated calls stack (§2.1).
+  (b) **Weight systematics register on the context**:
+  `events.weights.add(name, nominal, *, up, down)` and
+  `events.weights.add_multi(name, {tag: weight})` accumulate multiplicative per-event factors
+  into the ambient weight (M29 factor-list semantics). Explicit up AND down in v1
+  (auto-symmetric derivation from a lone `up` is Phase 2, §11).
+  (c) **Progressive + scoped registration**: registrations accumulate in program order; each fill
+  snapshots its context's registry **at fill time** (a later registration affects only later
+  fills — deterministic because recording order is program order). Derived contexts
+  (`events[mask]`) inherit the parent registry and MAY add selection-scoped weights
+  (`sel.weights.add("btag", …)` — the replacement for the exemplars' per-channel
+  `deepcopy(Weights)`); derivation never mutates the parent.
+  (d) **Data contexts refuse weight-systematic registration** (guard, not convention) and fill
+  nominal-only — the survey's universal data special-casing, structural.
+  Sketch (spellings of helper verbs pinned at m48 freeze; the shapes here are binding):
+  ```python
+  events = gnano.events(src)                                  # MC event context
+  events.weights.add("pu", pu_nom, up=pu_up, down=pu_dn)      # event-level, ambient
+  events.weights.add_multi("pdf", {f"{i}": w_i for i in range(103)})
+  events.vary("jes", Jet={"up": j_up, "down": j_dn},
+                     MET={"up": m_up, "down": m_dn})          # lockstep collection shift
+  jets = events.Jet[events.Jet.pt > 25]                       # universes flow (§2.3)
+  sel  = events[gak.num(jets) >= 4]                           # derived context
+  sel.weights.add("btag", btag_nom(jets), up=b_up, down=b_dn) # selection-scoped
+  h.fill(pt=gak.flatten(jets.pt))                             # no weight= — see §6.1(d)
+  ```
+  The neutral context *mechanism* (registry, derivation, fill-inference seam) lives in `graphed`
+  proper; the nanoevents-flavored constructor is awkward-idiom and lives in `graphed.awkward`
+  (factorization rule preserved). The loose `graphed.vary` primitive remains public — the context
+  is built on it, not beside it.
 
 ## §3 IR and optimizer treatment
 
@@ -322,7 +373,9 @@ difference — a varied weight only reaches the fill; varied kinematics reach th
   lowering emits the nominal fill node + one sibling fill node per label under the §2.4 rule,
   differing only in the varied input ids — everything upstream interns. All siblings join the
   **same group plan**; the single-pass property is frozen-witnessed on the corpus run itself in
-  m48 (§10), not only on a toy graph.
+  m48 (§10), not only on a toy graph. With the §2.6 event context, weight variations typically
+  reach fills **ambiently** (registered once via `events.weights`, applied per §6.1d); the
+  explicit factor-list form remains the primitive underneath and stays public.
 - **§4.3** Weight variations MUST NOT change selection. The frozen m48 anchor is **structural**,
   not only behavioral (equal counts is a tautology under §3's expansion — the selection nodes are
   the same interned ids by construction, an R0.10 trap flagged in review r0): the §3.4 impact set
@@ -395,6 +448,18 @@ difference — a varied weight only reaches the fill; varied kinematics reach th
   histograms route through the group-reduce path (`_GroupReduce` `{label: hist}` generalized to
   two-level keys, `boost.py:100-122`), and `.plan()` on a varied `Histogram` raises, pointing at
   the group API.
+  (d) **Ambient-weight application (the §2.6 completion of register-then-forget).** `fill` walks
+  its input Arrays' provenance to their event context and **auto-applies that context's ambient
+  weight** (the fill-time registry snapshot): the fill's label set is the §2.4 union of
+  value-borne labels, ambient-weight labels, and explicit `weight=[...]` factor labels — so a
+  plain Jet-pT fill yields the jes/jer universes AND the pileup/PDF universes with zero per-fill
+  bookkeeping (the owner's simultaneity requirement). `weight=[...]` *adds* factors;
+  `unweighted=True` opts out (counts histograms); inputs rooted in **two distinct contexts are a
+  hard error** naming both; context-free (loose) inputs alongside contexted ones adopt the unique
+  context; an all-loose fill is unweighted (the r4 primitive path, still supported). The
+  per-event ambient weight is **broadcast to the fill's object structure** (a per-jet fill gets
+  the event weight replicated across each event's jets before the existing jagged flatten) —
+  frozen-witnessed against a manually broadcast reference.
   This reproduces the corpus reference layout (independent per-variation histograms — UHI, no
   invented formats).
 - **§6.2 (Scaling shape: the variation axis, m50 — weight labels only.)** An opt-in fill mode
@@ -481,7 +546,8 @@ Each milestone runs the full §12 process. Frozen anchors listed here are the ac
 the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **binding and unchanged**.
 
 - **m48 — `vary` frontend + weight path** (repos: `graphed` + `graphed-histogram`).
-  Targets: §1, §2, §3.2/§3.4 (API only), §4, §6.1, §6.3. Frozen anchors:
+  Targets: §1, §2 (incl. the §2.6 event context), §3.2/§3.4 (API only), §4, §6.1 (incl. §6.1d
+  ambient fills), §6.3. Frozen anchors:
   - Corpus **weight**-variation references through the frontend — ttbar 4j1b/4j2b ×
     {nominal, btag_up, btag_down} (6) + ttgamma {nominal, pho_up, pho_down} (3) = **9 of the 15
     refs**, `fingerprint(h) == ref["fingerprint"]` and `bin_values(h) == ref["values"]` (the
@@ -499,6 +565,12 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
   - §2.3 dunder-parity and gak-classification exhaustiveness tests; §2 validation errors (§1.1,
     §2.5); §2.4 label-aligned combination on a Varied-meets-itself program.
   - §4.1 correctionlib single-payload multi-parameterization.
+  - §2.6/§6.1d event-context anchors: ambient fill on a per-object quantity (Jet-pT fill yields
+    value labels ∪ ambient labels, weight broadcast frozen against a manual-broadcast reference);
+    fill-time snapshot semantics (a registration between two fills affects only the second);
+    derived-context scoping (child sees parent's + own registrations; parent unaffected);
+    two-context fill → hard error; `unweighted=True`; data-context registration guard;
+    lockstep `events.vary(Jet=…, MET=…)` tag-set validation.
 - **m49 — shift path + impact + executor end-to-end** (repos: `graphed` + `graphed-executors`).
   Targets: §3.3, §3.4 (frozen anchor), §5, §7, §8. Frozen anchors:
   - The **full 15-reference matrix** through the frontend (fingerprint-exact, as m48) AND through a
@@ -628,6 +700,14 @@ helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 
 ## Revision history
 
+- **r5 (2026-07-30)** — owner semantic correction + three owner-selected decisions (context
+  methods / inferred ambient fills / progressive+scoped registration): systematics attach to the
+  **event context**, not to per-fill threading. New §2.6 (events.vary collection replacement incl.
+  lockstep Jet+MET, events.weights.add/add_multi, derived registry-inheriting contexts, data
+  guard); §6.1d (fill infers the context and auto-applies the ambient weight; union with value
+  and explicit-factor labels; broadcast to object structure; two-context error; unweighted
+  opt-out); §4.2 cross-ref; Part I rationale paragraph; m48 targets + seven event-context
+  anchors. Frontend-only — §3 backend and the `Varied` machinery unchanged.
 - **r4 (2026-07-30)** — owner directive: do not engineer the shift contract to the monotone JES
   expectation. §5.1 rescopes the `jes_up > nominal > jes_down` witness to the JES fixture only
   (general contract asserts no ordering); new §5.5 makes stochastic JER-SF re-smearing first-class

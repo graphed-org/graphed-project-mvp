@@ -152,7 +152,23 @@ Reports split into systematics-vary-codebase-analysis.md (6 repo readers) + syst
   m49 gains a JER-SF fixture anchor (bidirectional-migration witness = no selection mask is a
   subset of another's; run-to-run byte-identity; shared-draw interned once). Anchor row added.
 
+## Event-context semantics (2026-07-30, plan → r5)
+
+- Owner semantic correction: systematics are ambient properties of the EVENT RECORD; per-fill
+  Varied-weight threading (r0-r4 sketches) re-created the forgotten-weight failure mode. Precedents
+  agree: RDF weight column / coffea Weights-on-batch / boostedhiggs shifts-as-collection-swap.
+- Owner selected (AskUserQuestion, all recommendations): context methods
+  (events.vary(name, Coll={tag: rec}, ...) lockstep + events.weights.add/add_multi); inferred
+  auto-applied ambient weight at fill (weight= adds factors, unweighted=True, two-context = error);
+  progressive + scoped registration (fill-time snapshot; derived contexts inherit + extend —
+  replaces per-channel deepcopy).
+- r5: new §2.6 (event context, frontend-only sugar over Varied — §3 backend untouched; mechanism
+  neutral in graphed, nanoevents constructor in graphed.awkward), §6.1d (fill inference, label
+  union = value ∪ ambient ∪ explicit, per-event→per-object weight broadcast witness, data guard),
+  Part I rationale para, m48 +7 event-context anchors.
+
 ## Pending (next session / owner call)
 
-- [ ] Formal §12.1 review cycle r5…rN (multi-lens, BLOCKER..NIT, until clean) before test-authoring
+- [ ] Formal §12.1 review cycle r6…rN (multi-lens, BLOCKER..NIT, until clean) before test-authoring
+      — §2.6/§6.1d are new surface and should get a dedicated design lens pass
 - [ ] On landing: R23 draft + un-park the 4 Phase-2 mentions (§12.3)
