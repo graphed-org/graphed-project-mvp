@@ -362,3 +362,154 @@ Same two-level architecture as topeft: outer `obj_corr_syst_var_list` loop conta
 - Applicability (per-sample, per-era, per-category) is metadata-driven and known before graph build (PocketCoffea validates eagerly at config time) — graphed should validate variation↔sample applicability at graph construction, and let the concrete variation list of a generic knob (e.g. "jets") be resolved per-dataset like PocketCoffea calibrators do.
 - Shift variations change selection masks, so any materialize/skim boundary must retain the OR of all live variations' selections — this must be a graph-level transform, not user code (PocketCoffea's hand-built "presel_any_variation" mode is the cautionary tale).
 - Theory-style variations need out-of-band per-sample normalization inputs (sum-of-weights per variation); model these as ordinary graph inputs (per-partition metadata reductions) so the Plan stays self-contained instead of relying on side-channel sample dicts.
+
+---
+
+# [ewkcoffea-confirmed]
+
+Addendum 2026-07-30: the owner confirmed Kelci's analysis = cmstas/ewkcoffea and additionally named FNALLPC/wwz4l (modern coffea). Single opus-high deep-dive agent, both claims spot-verified by the lead (404, pinned SHAs, masked_val_cache 4-vs-0, cloudpickle block, hout scoping, exclusion rule, empty obj_correction_systs). Cited from the plan as lit §ewkcoffea-confirmed.
+
+# WWZ systematics deep-dive — `cmstas/ewkcoffea` (coffea 0.7-era) + its modern-coffea port
+
+## Scope note: `FNALLPC/wwz4l` is inaccessible — substitute located and justified
+
+`https://github.com/FNALLPC/wwz4l` **could not be cloned or read**, and this is not a transient failure:
+
+- anonymous clone → `remote: Repository not found`; `gh api repos/FNALLPC/wwz4l` → **404** to the authenticated `lgray` account (token scopes `repo`, `read:org`);
+- the FNALLPC org resolves (`public_repos: 46`) and **all 46 were enumerated** — no `wwz4l`; `?type=all` also returns exactly 46, so no private repo is visible to this account;
+- `gh search repos wwz4l` → **zero results**; `gh search code 'wwz4l'` across public GitHub returns hits in **`cmstas/ewkcoffea` only**;
+- `kmohrman/das_wwz` (2026-04-07) contains **only an empty README**; `kmohrman/cortado` (2025-12-16) is a **skimmer only** — `grep 'syst|Weights|shift|JES|variation'` over `analysis/template_4l/skimmer_processor.py` returns **nothing**.
+
+Conclusion: the repo is private (consistent with FNALLPC's CMSDAS-exercise pattern) — **UNVERIFIABLE from here; access is needed.** Rather than stall, I located the verifiable equivalent: **`cmstas/ewkcoffea` branch `coffea2023`** — the *same analysis, same author-org*, ported to dask-era coffea. PART B analyzes it, explicitly labelled as a substitute.
+
+**Pinned commits.** 0.7-era: `cmstas/ewkcoffea@063e8d7dab4b3c8861148cf0a7d3f7376b571234` (2026-07-08, branch `main`) — *identical to the prior survey's commit, so drift is structurally zero*; all prior `[pythonic-analyses]` item-4 claims re-verified true, with two refinements: `append_up_down_to_sys_base` is called at **two** sites (`:449` weights **and `:459` object shifts**) and its `def` is `:31-36`. Modern: `cmstas/ewkcoffea@63abb064b01ac8ef3a5ed0c46860885b04a6d45c` (2024-06-22, branch `coffea2023`, HEAD "Comment out samples for consistency, add run script"). URL form: `https://github.com/cmstas/ewkcoffea/blob/63abb06/analysis/wwz/wwz4l.py#L807-L865`. Clones at `/private/tmp/claude-501/prior-art/ewkcoffea` and `.../ewkcoffea-coffea2023`.
+
+**Attribution caveat, load-bearing.** The modern branch ports a **2024 state** of the analysis, not today's `main`. Content differences (Run 3, BDT regions, 54 vs 16 categories, combine-style names) are **two years of analysis evolution, not migration effects**. Only structural/framework differences are attributed to the migration, and one candidate was falsified by direct check (C.4).
+
+---
+
+# PART A — ewkcoffea `main`: the 0.7-era treatment
+
+Framework idioms are 0.7-era: `processor.Runner` + `futures`/`iterative`/`WorkQueueExecutor` (`run_wwz4l.py:17,347-355`), `processor.dict_accumulator` (`wwz4l.py:191`), `events.caches[0]` (`:501`). `environment.yml:8` pins bare `coffea`, so the exact version is **UNVERIFIED**.
+
+## A.1 Inventory
+
+**Weight-corrections** — base names, then `Up`/`Down` appended (`wwz4l.py:439-449`):
+
+| Base name | Registered | Scope |
+|---|---|---|
+| `CMS_btag_fixedWP_comb_bc_correlated` | `:607` (R3) / `:635` (R2) | correlated |
+| `CMS_btag_fixedWP_incl_light_correlated` | `:615` / `:634` | correlated |
+| `CMS_btag_fixedWP_comb_bc_uncorrelated_{year}` | `:607`/`:635` | per-year |
+| `CMS_btag_fixedWP_incl_light_uncorrelated_{year}` | `:634` (**R2 only**, list `:447`) | per-year |
+| `CMS_eff_e_{com_tag}`, `CMS_eff_m_{com_tag}` | `:434-435` | per-√s |
+| `CMS_pileup` | `:429` (R2) / `:431` (R3) | correlated |
+| `QCDscale_ren`, `QCDscale_fac` | `:424-425` | correlated (needs metadata norm) |
+| `ps_isr`, `ps_fsr` | `:421-422` | correlated |
+| `CMS_l1_ecal_prefiring` | `:428` (**R2 only**, list `:447`) | correlated |
+
+**12 bases → 24 labels (Run 2); 10 → 20 (Run 3).** Registered-but-never-varied: `norm` (`:413`), `btagSF` central (`:590`) — deliberately nominal-only.
+
+**Object-corrections (shifts)** — `:454-459`: `CMS_scale_j_{year}`, `CMS_res_j_{year}`, `CMS_scale_met_unclustered_energy_{year}` → **6 labels**. Applied by pure column swap: `ApplyJetSystematics` returns `cleanedJets.JES_Total.up` / `.JER.down` / pass-through and **raises on unknown names** (`modules/corrections.py:581-593`); MET is recomputed from shifted jets with the unclustered branch keyed off name prefix and `Up`/`Down` suffix (`:636-665`). Only the `Total` JEC source is enabled (`:546`); the 27-source split is parked reference-only in `analysis/wwz/for_jec_27_var.py` (`JERC_LST`, 241 lines).
+
+**Total `systematic`-axis labels per MC sample: 31 (R2) / 27 (R3)** = `1 + 24|20 + 6`.
+
+**Data / fake-factor: none in the processor.** Data gets `["nominal"]` (`:462`, `:1202-1203`); unlike topeft there is **no `data_syst_lst`**. `--do-np` is declared at `run_wwz4l.py:81` and **`args.do_np` is never read** (grep: declaration is the only match) — a dead flag. Data-driven normalizations live in the datacard layer as lnN rates (`params/rate_systs.json`: `CMS_SMP24015_fakeRate_WZ` 1.3 on `WZ`; `CMS_SMP24015_background_normalization_other` 1.3 on `other`), plus per-process MC-stat kappas synthesized at `make_datacards.py:421-449`.
+
+## A.2 Execution structure
+
+- **Outer shift loop = `:467-1289`** (AST-verified), 823 of 1069 body lines. Re-runs per shift: jet cleaning/JEC/JER (`:476-508`), b-tagging and its SFs (`:551-635`), triggers (`:645-646`), the full selection (55 `selections.add`, `:972-1062`), ~79 observables (`:694-829`), the **XGBoost BDT** (`:839-846` → `selection_wwz.py:529-541`, `xgb`, `.to_list()` round-trips), and the fill loop. **7 shift passes per MC sample.**
+- **Weights hand-partitioned by impact.** Shift-invariant ones built outside the loop (`:400-435`) with the reason in-code — *"These weights can go outside of the outside sys loop since they do not depend on pt of mu or jets"* (`:396-397`); shift-dependent b-tag SFs inside (`:590,607,615,634-635`).
+- **`copy.deepcopy(weights_obj_base)` per shift iteration** (`:470`), *"so that each time through the loop we do not double count systs"*. Second deepcopy class at registration (`:434-435`), justified by *"add() will generally modify up/down weights…"* (`:398-399`). coffea is not installed here, so that mutation claim is **UNVERIFIED in-context** — cited as the codebase's own stated reason.
+- **Inner weight-fluctuation loop `:1223-1275`**, list at `:1201-1210`. **Nominal-only exclusion is explicit** (`:1204-1207`): under a shift, `wgt_var_lst = [obj_corr_syst_var]`, and `:1226-1231` selects `weight(None)` — **no shift × weight cross product ever forms**, and the shift label fills with the **central weight as re-evaluated in that shift's universe** (b-tag SF recomputed on shifted jets).
+- **Nesting variable → fluctuation → category** (`:1215,1223,1235`) puts `weight()` inside the *variable* loop: **79 × 25 = 1,975 calls/chunk** in the nominal pass. `.fill()` upper bound (all hists, before `exclude_var_dict` pruning): `25×79×54 + 6×79×54` = **132,246**/chunk.
+- **No cutflow object** (grep: `cutflow` only in downstream table/plot scripts); cutflow is emulated by `all_events`/`4l_presel` categories, so it is variation-aware for free and cannot be clobbered.
+
+## A.3 Histogram schema
+
+One `hist.Hist` per observable (`:158-165`): three **growth `StrCategory`** axes `process`, `category`, `systematic` (`:159-161`) + a dense `Regular` axis, `storage="weight"`. **80 declared, 79 ever filled — `nbtagsm` (`:134`) is declared and never filled** (set-difference of `_dense_axes_dict` keys vs `dense_variables_dict` literal + subscript assignments). 54 categories. Label selection is a **scalar string** in the fill dict, `"systematic": wgt_fluct` (`:1268-1275`), not a per-event column. Because `growth=True`, labels are created on first fill, so the axis is the **union over every process and year** in the file; nothing declares which labels apply where. `_counts` hists override the weight to unity (`:1241`).
+
+Data special-casing, all flag-driven: no shifts (`:462`), no weight fluctuations (`:1202-1203`), no `Weights` content (`:401`), dummy `pt_gen` (`:495-496`), `genPartFlav` → `events.nom` (`:826-829`), golden-JSON cut appended only for data (`:1247`). Data occupies **only** the `"nominal"` bin, yet downstream still slices data at variation labels (`get_wwz_yields.py:547-548`) — which works only because the axis is shared across processes and yields zeros.
+
+## A.4 Naming and bookkeeping
+
+`append_up_down_to_sys_base` (`:31-36`) is the single suffix generator, used for **both** weights (`:449`) and shifts (`:459`); the suffix convention is what coffea's `Weights.weight(modifier)` consumes (`:1231`). Names are combine datacard names encoding correlation scope structurally (no year suffix / `_correlated` = correlated; `_uncorrelated_{year}` / `_{year}` = decorrelated), and the downstream contract is pure string parsing: `Up`-stripping (`make_datacards.py:361-368`), year-suffix skip `sys.split("_")[-1]` (`:379`), and `SYSTS_SPECIAL` (`:29-96`) hard-coding `yr_rel`/`yr_notrel` per year-grouping. `handle_per_year_systs_for_fr` (`:229-248`) rebuilds full-Run-2 varied yields by adding the other years' **nominal**, because "the yields for per year systs come _only_ from that year" (`:226-227`). Theory weights need metadata sums (`nSumOfWeights`, `nSumOfLheWeights`, `:234,258`) with a 9-vs-8-vs-empty LHE index branch (`:262-277`) and `sow/sow_renormUp` rescaling (`:424-425`); the runner raises if absent while `do_systs` is on (`run_wwz4l.py:221-224`). Escape hatches: `do_systematics`, `skip_obj_systematics` (`:52,209-210,462` — keeps the 24 cheap weight labels, drops the 6 expensive passes), `hist_lst` (`:194-202`). Rate systematics carry per-process applicability and a per-year decorrelation map in JSON (`make_datacards.py:294-333`), and a `syst group = …` line is emitted (`:101-106,708`).
+
+## A.5 Failure modes fought
+
+1. **Applicability is not represented, so it is re-derived by string surgery — with an admission**: `get_wwz_yields.py:524-540` builds `blacklist_years` and suffix-matches to drop labels, headed *"Skip the variations that don't apply (**TODO: why are these in the hist to begin with??**)"*. Repeated at `make_datacards.py:379`.
+2. **Dead histogram**: `nbtagsm` (`:134`) shipped empty in every output.
+3. **Dead flag**: `--do-np` (`run_wwz4l.py:81`) never consumed.
+4. **Drifted copy-paste fork**: `analysis/wwz_etaphi_plotting/wwz4l.py` (**201 changed lines**) computes `wgt_correction_syst_lst` (`:341-351`) and **never reads it**, has **no `systematic` axis** (`:59-63`; fill dict `:1118-1123`), yet still runs the 7-pass shift loop (`:364-369,405-410`) — by code inspection it would fill identical bins once per shift (not executed → inference, not measurement).
+5. **Name-vs-content divergence is uncheckable**: for R3 the label `CMS_btag_fixedWP_incl_light_correlated` carries the *total* light uncertainty, honestly commented (`:595-597,609`), but nothing enforces that a correlation-scoped name carries correlation-scoped content.
+6. **Double-counting prevented by hand-written ratios**: every b-tag variation divided by `wgt_btag_nom` in three near-identical blocks (`:606-607,614-615,633-635`).
+7. **Deepcopy at two levels** (`:434-435,470`) purely because `Weights` accumulates by mutation.
+8. **Downstream numerical guards**: `SMALL`-clipping with warnings dragging all variations along (`make_datacards.py:258-290,405-410`), same-direction up/down detection + symmetrization (`:336-353`), and one **hard-coded skip** naming a specific year-set, category, systematic and process (`:393-397`).
+9. Commented-out debug scaffolding in the innermost fill loop (`:1250-1265`) and alternative weight choices (`:1242-1243`).
+
+---
+
+# PART B — the `coffea2023` branch: the same analysis under dask-era coffea
+
+**Framework surface.** `coffea.dataset_tools.{preprocess, apply_to_fileset, filter_files}`, `distributed.Client`, `dask.compute`, `ndcctools.taskvine.DaskVine` (`run_wwz4l.py:9-16,230-296`), `import hist.dask as hda` (`wwz4l.py:29`), python 3.9 (`environment.yml:4`). Processor 896 lines vs main's 1295; **59 dense-axis definitions, 56 filled, 16 categories, 32 `selections.add`** (AST-counted).
+
+**Inventory.** Weight bases (`:321-325`): `btagSFlight_correlated`, `btagSFbc_correlated`, `btagSFlight_uncorrelated_{year}`, `btagSFbc_uncorrelated_{year}`, `lepSF_elec`, `lepSF_muon`, `PreFiring`, `PU`, `renorm`, `fact`, `ISR`, `FSR` → **12 bases / 24 labels** (same count as main-R2; **older topeft-style names** — the combine-style rename happened later on main). Registration mirrors main: `norm` (`:297`), theory (`:305-309`) with the same `sow/sow_renormUp` metadata rescaling, `PreFiring`/`PU` (`:312-313`), lepton SFs (`:316-317`), b-tag inside the loop (`:415,434-435`). **Shifts: `obj_correction_systs = []  # Will have e.g. jes etc` (`:331`) — zero shift labels.** No `skip_obj_systematics` in the signature (`:43`).
+
+**Execution — structure preserved verbatim**: shift loop `:339-890`, a copy of the Weights per shift, the same nominal-only exclusion rule (`:793-802`), the same `weight(None)`-under-shift branch (`:831-836`). Three framework-driven changes:
+
+1. **`Weights(None, storeIndividual=True)`** (`:284`) — main passes `len(events)` (`:400`). Under a lazy graph the length is unknown, so the size argument becomes `None`.
+2. **`copy.copy(weights_obj_base)  # TODO do we need copy here?`** (`:342`) — main's `copy.deepcopy` (`:470`) degraded to a shallow copy **with the necessity now an open question**; likewise `copy.copy` at registration (`:316-317`) where main deepcopies. The defensive-copy boilerplate did not disappear; it became *unclear*.
+3. **Hand-rolled CSE.** `masked_val_cache` / `masked_weights_cache` (`:808-809`), keyed `tuple(cuts_lst + [dense_axis_name])` and `tuple(cuts_lst + [wgt_fluct, "weights_norm"|"weights_counts"])`, guard every `dense_axis_vals[all_cuts_mask]` and `weight[all_cuts_mask]` (`:850-865`), commented *"So we don't need to build the same mask multiple times"*. **Absent from `main`** (grep count **0**) — new in the dask port: **manual hash-consing of graph nodes written inside a physics processor**.
+
+**Histogram schema.** Accumulators gone: `hda.Hist(...)` constructed **inside `process()`, inside the fill loop, per dense variable** (`:818-825`), collected into a plain `hout` dict (`:807`), returned (`:892`). Axes unchanged (three growth `StrCategory` + dense, `storage="weight"`). **Latent bug**: `hout = {}` is assigned **inside** the shift loop (line 807 ∈ 339-890, AST-verified) while `return hout` is **outside** it (line 892) — the moment `obj_correction_systs` becomes non-empty, every shift but the last is silently discarded. Invisible today only because the list is empty.
+
+**Data special-casing got stronger**: `if isData or dense_axis_name.endswith("_counts"): weight = events.nom` (`:856-859`), where main branches on `_counts` alone (`:1241`). Plausible cause is `Weights(None)` with no registered weights having no derivable length for data — **an inference from the code, not executed**.
+
+**Runner-level evidence (the richest part).**
+- `# Does not work` above a commented `cloudpickle.dump(histos_to_compute, ...)` (`run_wwz4l.py:259-261`) — **the built task graph could not be serialized to disk.**
+- `dak.necessary_columns(histos_to_compute[...])` commented out (`:264-267`) — column-projection introspection tried and disabled.
+- Timing instrumented to separate **graph construction from execution**: `time_for_preprocess`, **`time_for_applytofset`** (`apply_to_fileset` = graph build), `time_for_compute`, each printed (`:249-252,270,302-313`).
+- `preprocess(step_size=100_000, save_form=False)` (`:230-236`), then `filter_files` (`:237`).
+
+---
+
+# PART C — COMPARISON: coffea 0.7 → modern coffea
+
+1. **Unchanged (the semantics survived intact).** Two-level loop; outer-shift/inner-weight nesting; the **nominal-only exclusion rule** (`main:1204-1207` ≡ `c2023:796-802`); the `weight(None)`-under-shift rule; `append_up_down_to_sys_base`; three growth `StrCategory` axes; scalar per-fill label; the hand-partitioned Weights registry — the *same comment* survives verbatim (`main:396-397` / `c2023:280-282`). **The variation model is framework-independent**; the migration made variations no more expressible.
+2. **Got easier — one thing, modest.** Accumulator ceremony vanished: `dict_accumulator` + `self.accumulator` (`main:156-191,1275`) became a local `hda.Hist` dict returned directly (`c2023:807,818-825,892`). Execution also gained a real distributed story (`Client`, `DaskVine`) in place of `WorkQueueExecutor` plumbing.
+3. **Got harder — four concrete regressions.** (a) The analyst **hand-implemented CSE** (`masked_val_cache`/`masked_weights_cache`, absent on main) because the lazy graph rebuilt identical masked columns per fill. (b) Object lifetimes became ambiguous: `deepcopy` → `copy` + `# TODO do we need copy here?`. (c) `Weights(None)` — length no longer knowable, forcing an explicit data/unit-weight branch. (d) The graph **is not serializable** (`# Does not work`, `run_wwz4l.py:259-261`), so the variation-expanded artifact cannot be persisted, shipped, or inspected offline.
+4. **Not dropped — attribution falsified.** The empty `obj_correction_systs` (`c2023:331`) looks like a migration casualty and is **not**: `main`'s own `wwz4l.py` at `5f47bb5866c37ebac370a70f81b71521cf4e8808` (last main commit to that file on/before 2024-06-22) reads **`obj_correction_systs = [] # Will have e.g. jes etc`** at line 419 — identical. Object shifts were added to `main` *after* the branch was cut and never back-ported. **Consequence: no dask-era version of this analysis has ever carried an object-shift systematic**; the dask-era evidence covers the **weight path only**, and the cost of a dask-era shift loop is **UNVERIFIED**. The `hout` scoping bug shows the port is not ready for one.
+5. **Which patterns matter most for graphed.** The modern branch, decisively — graphed replaces exactly the dask-awkward layer whose pain is recorded there. Its four regressions are graphed's four claims, stated by an analyst who hit them: manual CSE ↔ interning (§3.1); unserializable graph ↔ IR-as-durable-artifact (§A.3.1, §9); build-vs-compute instrumentation ↔ the anti-quadratic build-cost guard (§3.3); disabled `necessary_columns` ↔ projection (§5.3). The 0.7-era `main` remains the authority for **inventory and downstream bookkeeping** (real names, correlation scope, datacards) — the modern branch never grew that far.
+
+---
+
+# ASSESSMENT / LESSONS
+
+In both eras variation identity lives entirely in strings, and every structural property one would want — applicability, correlation scope, which nodes a label affects — is re-derived downstream by parsing them. The single admission of confusion in the whole codebase (*"why are these in the hist to begin with??"*) is caused by a growth axis silently unioning labels across samples. The author is disciplined about the two things that matter physically (no cross products; central weight re-evaluated per shift) and has already factored out everything factorable in this model; the residue is not carelessness but the absence of any representation for a variation.
+
+The migration is the more interesting artifact. It changed **none** of the systematics semantics and **added** three pieces of boilerplate existing only to compensate for the lazy layer — most tellingly a hand-written cache that is structurally hash-consing, written inside a physics processor. And the one capability an analyst most needs when a graph is multiplied by 31 labels — save it, inspect it, ship it — is a commented-out block labelled *"Does not work"*.
+
+---
+
+## Design implications for the graphed vary plan
+
+- **Manual CSE in a physics processor is the strongest available justification for the interning architecture.** `masked_val_cache`/`masked_weights_cache` (`c2023:808-809,850-865`), absent from the eager version, is Part I §3's chosen mechanism re-implemented by hand in user code. `GraphStore::intern` makes it disappear.
+- **An unserializable variation-expanded graph is a measured failure of the dask-era stack** (`run_wwz4l.py:259-261`, *"Does not work"*). §A.3.1's IR-as-canonical-durable-artifact and §9's one-bundle-N-labels preservation answer a real, recorded defect.
+- **The analyst already separates graph-build time from compute time** (`:302-313`). §3.3's build-cost benchmark measures the number they are watching; keep that framing in docs.
+- **Hand-partitioning the Weights registry by impact** (`main:396-397` vs `:590`; identical in the port) is §3.4's impact set done by human judgement in a comment — the highest-value item in the plan for this user.
+- **The nominal-only exclusion rule is load-bearing and identical across both eras** (`main:1204-1207` ≡ `c2023:796-802`). §2.4's label-aligned union reproduces it structurally instead of with an `if`.
+- **Labels must not be the applicability record.** Growth axes union labels across samples and years, forcing suffix blacklists (`get_wwz_yields.py:524-540`, `make_datacards.py:379`). §6.1(a)'s per-output label sets with absent-means-absent is the direct fix.
+- **A shared output axis does not require a shared fill call**: both versions put weight *and* shift labels on one `systematic` axis while filling from separate passes with different-length columns and a scalar label (`main:1273`, `c2023:888`).
+- **Moving histogram construction into the variation loop is a live hazard, not hypothetical**: `hout = {}` inside the shift loop with `return hout` outside (`c2023:807,892`) silently keeps only the last shift. The frontend owning `(output, label) → position` (§7.2) removes the class of bug — worth an explicit design.rst note.
+
+## Plan deltas
+
+1. **§6.2 (with §6.1) — let shift labels reach the variation axis as scalar-labeled sibling fills.** §6.2 binds *"Shift labels always lower as sibling fills"* because per-label columns have diverging lengths, which splits a mixed program's output between `{label: hist}` (shifts) and one axis-mode hist (weights). **Both** ewkcoffea versions show the field's actual layout is one histogram carrying both classes, achieved by giving each independent fill a **scalar** label (`main:1273`, `c2023:888`) — no single-spec evaluator loop needed, and scalar-string broadcast is already probe-verified. Change: keep the evaluator loop as the weight-label mechanism, additionally permit a shift sibling fill to write into the same pre-declared non-growth `"variation"` axis carrying its label as a constant; extend the m50 anchor to a mixed shift+weight program producing one histogram. If rejected, state the reason in §6.2 — as written it reads as a capability limit when the limit applies only to the single-call form.
+2. **§11 — name "per-sample divergence of the label set" as parked, distinct from dataset-level variations.** The label set is a function of per-sample metadata (`main:232,445-447`), so merging across samples unions label sets that legitimately differ — the origin of `SYSTS_SPECIAL`, `handle_per_year_systs_for_fr` and the year blacklists. Without this bullet, §6.1(a) reads as having solved the multi-sample merge.
+3. **§4.1 — record that weight variations routinely need a per-dataset scalar normalization factor.** `sow/sow_renormUp` with a 9-vs-8 LHE index branch appears in **both** versions (`main:258-277,424-425`; `c2023:169-172,308-309`), so the constant/scalar gap already flagged in the m48 anchor is a standing user requirement, not a test-authoring footnote. Name the arithmetic workaround or park a scalar-broadcast helper.
+4. **§7.3 — make the checkpoint limitation concrete with the real workflow.** `skip_obj_systematics` (`main:210,462`) exists precisely so users re-run with the expensive variation class disabled; under §7.3 that toggle invalidates every `task_id`. Docs should name it as the canonical cache-invalidating edit, not an edge case.
+5. **§9.2 / §3.3 — cite the dask-era failures as motivating evidence.** Add two anchors to the Anchors appendix (`run_wwz4l.py:259-261` unserializable graph; `:302-313` build-vs-compute instrumentation). Not a requirements change — it replaces "dask-awkward didn't scale" as an assertion with a citable artifact from the exemplar analysis the owner named.
+
+Everything else in PART II that this evidence touches — §1.1/§1.2 label rules, §2.4 label-aligned union with no cross products, §3.1 no-new-NodeKey, §3.4 impact sets, §4.3 selection invariance, §5.1 shift-before-selection, §6.1(a), §6.3 goldens — is **reinforced as bound; no change warranted**.
+
+**One open item requiring you or the owner:** `FNALLPC/wwz4l` access. If it is a distinct modern-coffea WWZ (not the `coffea2023` branch), the C.4 finding — that no dask-era version of this analysis has ever carried an object shift — may not hold there, and the shift-path-under-laziness evidence would be worth re-running.

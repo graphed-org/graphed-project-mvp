@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r1).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r2).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -102,10 +102,28 @@ evidence: **variation forking is a graph-transformation problem, not a data-layo
 coffea Discussion #469 measured 2-8× wins for vectorized (extra-axis) systematics over re-run loops.
 
 **Pythonic analyses** (lit §pythonic-analyses): nsmith-/boostedhiggs, PocketCoffea,
-TopEFT/topeft + cmstas/ewkcoffea, and
-**[STUB — Kelci's analysis: repo location pending confirmation from Kelci; unconfirmed candidates
-from the survey: `TopEFT/topeft` + `cmstas/ewkcoffea`, where `kmohrman` is the #1 contributor
-(API-verified). Fill this in and re-run the §2 lesson extraction once confirmed.]**
+TopEFT/topeft + cmstas/ewkcoffea.
+**Kelci's analysis — CONFIRMED (owner, 2026-07-30): `cmstas/ewkcoffea`**, promoted to the
+canonical exemplar with a dedicated deep-dive over both its eras (lit §ewkcoffea-confirmed;
+`main@063e8d7` = coffea-0.7-era, branch `coffea2023@63abb06` = dask-era port). The 0.7-era
+treatment is the field's mature form: 12 weight bases → 24 labels under combine-datacard names
+encoding correlation scope, 6 object-shift labels by column swap, a 7-pass outer shift loop
+re-running selection + a BDT, the nominal-only exclusion rule explicit in code, and the Weights
+registry **hand-partitioned by shift-impact** ("these weights can go outside the sys loop since
+they do not depend on pt of mu or jets") — a human-judgement impact analysis. The **dask-era port
+is the highest-value evidence in the survey**: migration changed *none* of the systematics
+semantics but forced the analyst to hand-write CSE inside the physics processor
+(`masked_val_cache`/`masked_weights_cache` — interning re-implemented in user code), degraded
+`deepcopy` to `copy` + "TODO do we need copy here?", and abandoned persisting the built task graph
+(`# Does not work` above a commented `cloudpickle.dump`) — the variation-expanded artifact could
+not be saved, shipped, or inspected. No dask-era version of the analysis ever carried an object
+shift (falsified as a migration casualty: the empty `obj_correction_systs` predates the branch),
+and a latent `hout = {}`-inside-the-shift-loop bug would silently keep only the last shift the
+moment one is added — the dask-era shift-loop cost is therefore UNVERIFIED there. **[OPEN — the
+owner also named `FNALLPC/wwz4l` (modern coffea); that repo is not visible to this GitHub account
+(404 authenticated; absent from FNALLPC's 46 public repos — likely private). The `coffea2023`
+branch stands in as the same analysis/author-org dask-era port. Needs access or a corrected URL;
+if it is a distinct port, re-check whether it carries object shifts.]**
 Universal conventions across all four surveyed: `"nominal"` reserved; `Up`/`Down`-suffixed labels;
 **shift × weight cross products never produced** (under a kinematic shift, only the central weight
 fills — evaluated on that shift's selection); one histogram with a `systematic` StrCategory axis;
@@ -288,7 +306,12 @@ difference — a varied weight only reaches the fill; varied kinematics reach th
   arbitrary expressions, or a correctionlib `External` evaluated per label). The **canonical
   correctionlib form varies the existing `systematic` category parameter** of ONE payload
   (`preserve/m9/agc.py:56-62` fixture precedent): same `content_hash`, N parameterizations — the
-  payload is never duplicated (§A.3.1 reproducibility).
+  payload is never duplicated (§A.3.1 reproducibility). Weight variations routinely require a
+  **per-dataset scalar normalization** — the sum-of-weights rescaling (`sow/sow_renormUp`, with
+  per-sample LHE-index branching) appears in both eras of the confirmed exemplar
+  (lit §ewkcoffea-confirmed) — and the frontend has no constant-Array constructor: the binding v1
+  form is arithmetic on an existing per-event Array (the m48 anchor names it); a constant/scalar
+  broadcast helper is parked in §11.
 - **§4.2** Fills accept a `Varied` entry in the M29 `weight=[...]` factor list (`boost.py:166-174`);
   lowering emits the nominal fill node + one sibling fill node per label under the §2.4 rule,
   differing only in the varied input ids — everything upstream interns. All siblings join the
@@ -356,8 +379,14 @@ difference — a varied weight only reaches the fill; varied kinematics reach th
   StrCategory `"variation"` axis** via an evaluator-side loop (extend/sibling `FillEvaluator`;
   labels ride the spec/params under the §1.2 carve-out; scalar-string broadcast and non-growth
   combine-safety are probe-verified — cba §histogram §3). **Shift labels always lower as sibling
-  fills** — their per-label axis columns have diverging lengths (§5.1 cutflow), which the
-  single-spec evaluator shape cannot carry; the m50 equality anchor is scoped accordingly.
+  fill nodes** — their per-label axis columns have diverging lengths (§5.1 cutflow), which the
+  single-weight-loop evaluator shape cannot carry — **but a shift sibling MAY target the same
+  pre-declared variation axis**, writing its label as the scalar category value of its own fill:
+  one histogram carrying both classes, filled from separate passes with a scalar label, is the
+  field's actual layout in both eras of the confirmed exemplar (lit §ewkcoffea-confirmed), and
+  scalar-string broadcast is probe-verified. The m50 equality anchor covers both the weight-label
+  evaluator loop and a mixed shift+weight program landing in ONE axis-mode histogram equal to its
+  sibling-fill decomposition.
   Non-growth is required: identical spec per partition keeps `+` combine safe and deterministic
   (PocketCoffea's deterministic pre-declared axis lesson; growth axes stay Phase 2 per the existing
   `_spec.py:70,74` refusal). M29's identity discipline binds: new params/spec content only when the
@@ -380,8 +409,11 @@ difference — a varied weight only reaches the fill; varied kinematics reach th
   freezes an interrupt/resume test over a varied graph whose result is byte-identical to an
   uninterrupted run. Across plan revisions, adding/removing a variation changes the IR and
   therefore **every** `task_id` (`plan.py:164-176,286-301`) — no cross-revision reuse. This
-  limitation MUST be documented in the user docs and design.rst; stage-granular content addressing
-  is the named Phase-2 fix (§11). Blob storage stays content-deduped (`store.py:62-73`).
+  limitation MUST be documented in the user docs and design.rst — naming the canonical
+  invalidating edit from the exemplar workflow: toggling the expensive shift class on or off
+  between runs (the `skip_obj_systematics` pattern, lit §ewkcoffea-confirmed) rebuilds the IR and
+  invalidates the whole cache. Stage-granular content addressing is the named Phase-2 fix (§11).
+  Blob storage stays content-deduped (`store.py:62-73`).
 - **§7.4** Retry/dead-letter stay partition-atomic; docs state that one poisoned variation
   dead-letters the partition's whole composite (`runner.py:100-109`); the dead-letter surface names
   the guilty label via the §8 StageError (asserted inside the §8.2 frozen test).
@@ -464,8 +496,10 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     byte-identity.
 - **m50 — scale + integration** (repos: `graphed-histogram` + `graphed` preserve/docs).
   Targets: §6.2, §9. Frozen anchors:
-  - Variation-axis fill equals sibling-fill results bin-for-bin on the corpus **weight** labels
-    (§6.2 scope); combine-safety across partitions (identical spec, deterministic label order).
+  - Variation-axis fill equals sibling-fill results bin-for-bin on the corpus **weight** labels,
+    AND a mixed shift+weight program lands in ONE axis-mode histogram equal to its sibling-fill
+    decomposition (§6.2, scalar-labeled shift siblings); combine-safety across partitions
+    (identical spec, deterministic label order).
   - The §6.2 scaling claim frozen **structurally** (R0.10a: no wall-clock in frozen tests): per
     partition, axis mode allocates 1 histogram object and ships 1 combine payload entry vs `N+1`
     in sibling mode (countable at the `FillEvaluator`/`_GroupReduce` seam, `boost.py:100-117`),
@@ -489,8 +523,11 @@ variation automation (separate-sample variations stay a partition-metadata patte
 variation-aware materialize/write-out (OR-of-selections masks — RDF Snapshot's bitmask cautionary
 tale); per-variation monitor/dashboard axis; stage-granular checkpoint task ids (the §7.3 fix);
 variations crossing Exchange/Join boundaries (§5.4); implicit variation cross products; weight
-clamping/validation hooks (narf `theory_weight_truncate` precedent); growth category axes; a
-first-class Rust `Vary` NodeKey.
+clamping/validation hooks (narf `theory_weight_truncate` precedent); growth category axes;
+**per-sample divergence of the variation-label set** (merging outputs across samples whose label
+sets legitimately differ — the exemplar's suffix-blacklist pathology, lit §ewkcoffea-confirmed;
+§6.1a governs one program's outputs, not cross-sample merging); a constant/scalar-Array broadcast
+helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 
 ## §12 Process and bookkeeping
 
@@ -551,10 +588,23 @@ first-class Rust `Vary` NodeKey.
 | narf tensor-axis fills; WRemnants no-Vary | lit §rdf-users §1-§3 |
 | coffea three mechanisms; prototype stall; #469 measurements | lit §coffea-sys §1-§5 |
 | Cross-analysis conventions + failure modes | lit §pythonic-analyses |
+| Exemplar 0.7-era: exclusion rule; impact-partitioned Weights | `ewkcoffea@063e8d7 analysis/wwz/wwz4l.py:1204-1207,396-397` (lit §ewkcoffea-confirmed) |
+| Exemplar dask-era: hand-written CSE in the processor; build-vs-compute timing | `ewkcoffea@63abb06 analysis/wwz/wwz4l.py:808-865`; `run_wwz4l.py:302-313` |
+| Exemplar dask-era: unserializable variation-expanded graph ("Does not work") | `ewkcoffea@63abb06 analysis/wwz/run_wwz4l.py:259-261` |
 | Phase-2 parking being un-parked | `graphed-root-prompt.md:1262,1282,1286`, `ops_catalog.md:75` |
 
 ## Revision history
 
+- **r2 (2026-07-30)** — Kelci's analysis confirmed by the owner as `cmstas/ewkcoffea` and
+  integrated as the canonical exemplar (deep-dive appended to the litsearch as
+  §ewkcoffea-confirmed, both eras pinned: `main@063e8d7`, `coffea2023@63abb06`; headline claims
+  spot-verified by the lead). Part I §2 stub replaced. Evidence-driven deltas applied: §4.1
+  per-dataset scalar normalization named (+ §11 parks a scalar-broadcast helper); §6.2 permits
+  scalar-labeled shift siblings on the shared variation axis (+ m50 mixed-program anchor); §7.3
+  names the `skip_obj_systematics` re-run as the canonical cache-invalidating edit; §11 parks
+  per-sample label-set divergence; 3 exemplar anchor rows added. OPEN item recorded: the
+  owner-named `FNALLPC/wwz4l` is 404 to this account (likely private) — `coffea2023` stands in;
+  needs access or a corrected URL.
 - **r1 (2026-07-28)** — applied the 4-lens pre-delivery hygiene review
   (`systematics-vary-plan-review-r0.md`; facts/design/tests/process). Headline changes: §2.4
   rewritten to **label-aligned union** (fixes the Varied-meets-itself BLOCKER); §2.1 gains
