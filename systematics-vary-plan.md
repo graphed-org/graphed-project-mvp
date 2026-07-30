@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r3).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r4).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -336,9 +336,12 @@ difference — a varied weight only reaches the fill; varied kinematics reach th
   **before selection** — the corpus applies JES at the jets record before the pt cut
   (`systematics.py:60-61`) and the m9 AGC fixture shifts `Jet.pt` before its jet mask
   (`agc.py:106-107`); broadcast (§2.3) re-records the selection/observable cone per label;
-  interning shares everything else. Cutflow divergence is the *defining* behavior and is
-  frozen-gated by the m05 ordering witness (`jes_up > nominal > jes_down` selected counts) through
-  the frontend.
+  interning shares everything else. The *defining* behavior is per-universe re-derivation of the
+  selection (cutflow divergence). **The general shift contract asserts NO monotonicity or ordering
+  across labels** (owner directive, 2026-07-30): the `jes_up > nominal > jes_down` ordering is a
+  property of the corpus's monotone-scale JES *fixture* and MUST stay scoped to it — a JER-SF
+  re-smearing shift migrates events in both directions (§5.5), and any suite or API language
+  implying shifts order is a test-authoring error.
 - **§5.2 (Witnesses that sharing engaged — R0.10.)** The m49 suite pins mechanism witnesses, not
   just results: (a) **arena-delta witness on a fixed topology with a literal expected integer**
   (the m4 style — e.g. a 50-op varied chain adds exactly 52 nodes; a self-derived
@@ -360,6 +363,20 @@ difference — a varied weight only reaches the fill; varied kinematics reach th
   refusal. The refusal test carries a **positive control**: a variation entirely *downstream* of a
   Join/Exchange compiles and produces correct results (a blanket "Varied near Join raises" must
   fail the suite). Generalizing the builders is named Phase 2 (§11).
+- **§5.5 (Stochastic shifts — JER-SF re-smearing is first-class; determinism still binds.)** A
+  shift variation MAY be stochastic (MC jet re-smearing under a jet-energy-resolution scale
+  factor). Two binding rules, both grounded in coffea's own implementation (local checkout @
+  `f34b8bdf`, measured representative of upstream — lit §coffea-sys): (a) **randomness MUST be a
+  deterministic pure function of event content** — the precedent seeds PCG64 from the input
+  array's own bytes (`rand_gauss`, `coffea jetmet_tools/CorrectedJetsFactory.py:36-47`); global
+  RNG state, wall-clock, or per-run seeds are forbidden — the R0.4/R12 determinism gate applies
+  to varied graphs unchanged. (b) **One draw, all universes**: the random vector is drawn once
+  and shared — coffea's `jer_smear` takes a single `jet_resolution_rand_gauss` while only the SF
+  column varies per label (`:64-95`, hybrid `detSmear`/`stochSmear`, where `deltaPtRel` is signed
+  and the stochastic branch scales a signed gaussian — hence non-monotone by construction) — so
+  under `vary` the draw node lives in the shared prefix and interns once (§3). The m49 suite
+  carries a JER-SF-style fixture (§10) whose witnesses assert bidirectional migration and
+  run-to-run byte-identity, never ordering (§5.1).
 
 ## §6 Histogram integration
 
@@ -490,7 +507,15 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     only run-to-run, not vs the rounded references — review r0). The §5.2b read witness binds to
     this same run. This is the executor-level systematics end-to-end no frozen test currently
     discharges (cba §corpus §4).
-  - m05 ordering witness (`jes_up > nominal > jes_down`) through graphed.
+  - m05 ordering witness (`jes_up > nominal > jes_down`) through graphed — explicitly scoped to
+    the monotone JES fixture (§5.1); the suite MUST NOT assert ordering for any other shift.
+  - A **JER-SF-style stochastic shift fixture** (additive — corpus m05 tests/references
+    untouched): content-seeded re-smearing per §5.5, one shared draw, SF-varied per label.
+    Witnesses: run-to-run byte-identical results (content-seeded stochasticity survives the
+    determinism gate); selected counts pairwise distinct across {nominal, jer_up, jer_down} with
+    NO ordering asserted, plus **bidirectional migration** (no universe's selection mask is a
+    subset of another's — the non-monotone discriminator); and the shared random-draw node
+    interned ONCE across all universes (mechanism witness, §5.5b).
   - §5.2 witnesses (a: literal-integer arena delta; c: reduced-stage shape).
   - §3.4 impact-set anchor: three labels where two share a derived node — the shared node appears
     in both impact sets; result independent of expansion order.
@@ -575,6 +600,7 @@ helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 | m05 behavioral invariants (weight preserves / shift orders selection) | `tests/frozen/corpus/m05/test_systematics.py:26-38` |
 | Corpus JES-before-cut; AGC shift-before-mask | `systematics.py:60-61`; `tests/frozen/preserve/m9/agc.py:106-107` |
 | Corpus stacked weight (central b-tag on shifted jets) | `systematics.py:74-76,31-36` |
+| JER-SF hybrid smear: content-seeded PCG64, one draw for all variations, signed/non-monotone | `coffea src/coffea/jetmet_tools/CorrectedJetsFactory.py:36-47,64-95` (local @ f34b8bdf) |
 | correctionlib `systematic` category param in one payload | `tests/frozen/preserve/m9/agc.py:38-66` |
 | M29 multi-weight fill + identity discipline | `graphed-histogram src/graphed_histogram/boost.py:166-174,205-206`; `tests/frozen/m29/test_multi_weight_fills.py:82-99` |
 | Single-pass group plan witness | `graphed-histogram tests/frozen/m23/test_group_plan.py:68-77` |
@@ -602,6 +628,13 @@ helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 
 ## Revision history
 
+- **r4 (2026-07-30)** — owner directive: do not engineer the shift contract to the monotone JES
+  expectation. §5.1 rescopes the `jes_up > nominal > jes_down` witness to the JES fixture only
+  (general contract asserts no ordering); new §5.5 makes stochastic JER-SF re-smearing first-class
+  with two binding rules grounded in coffea's implementation (content-seeded PCG64 randomness —
+  determinism gate unchanged; one shared draw across universes → interns in the shared prefix,
+  non-monotone by construction); m49 gains the JER-SF fixture anchor (bidirectional-migration +
+  byte-identity + shared-draw witnesses, no ordering); anchor row added.
 - **r3 (2026-07-30)** — the r2 OPEN item resolved with its conclusion inverted: access to
   `FNALLPC/wwz4l` granted; measured to be a coffea-0.7-era CMS-DAS teaching derivative of
   `ewkcoffea@main` (not modern coffea as framed) carrying the full weight+shift treatment; the

@@ -140,7 +140,19 @@ Reports split into systematics-vary-codebase-analysis.md (6 repo readers) + syst
   accidental complexity, exactly what vary deletes. Zero requirement changes (PART II untouched).
 - Litsearch addendum appended; plan r3 (Part I §2 resolution + anchor row + revision entry).
 
+## JER-SF corner killed (2026-07-30, plan → r4)
+
+- Owner: don't engineer the shift contract to jes_up>nominal>jes_down — JER-SF re-smearing is
+  non-monotone. Verified in coffea's CorrectedJetsFactory.py: rand_gauss seeds PCG64 from the
+  input array's own bytes (:37-40, content-seeded determinism); jer_smear draws ONCE and varies
+  only the SF column per label (:64-95, hybrid detSmear/stochSmear, signed → bidirectional
+  migration).
+- r4: §5.1 rescopes ordering witness to the JES fixture; new §5.5 (stochastic shifts first-class:
+  content-seeded randomness mandatory, one-draw-all-universes → draw interns in shared prefix);
+  m49 gains a JER-SF fixture anchor (bidirectional-migration witness = no selection mask is a
+  subset of another's; run-to-run byte-identity; shared-draw interned once). Anchor row added.
+
 ## Pending (next session / owner call)
 
-- [ ] Formal §12.1 review cycle r4…rN (multi-lens, BLOCKER..NIT, until clean) before test-authoring
+- [ ] Formal §12.1 review cycle r5…rN (multi-lens, BLOCKER..NIT, until clean) before test-authoring
 - [ ] On landing: R23 draft + un-park the 4 Phase-2 mentions (§12.3)
