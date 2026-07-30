@@ -275,3 +275,39 @@ EXACT decimal-string arithmetic (no IEEE artifacts); normalization unifies all s
 p-tags remain legal identifier tags. Probe coverage carries over (identifier-shaped names
 measured safe; fixture __vary_murf_0p5__Jet_pt ≡ shape of canonical __vary_murf_5em1__Jet_pt).
 Deletes the r9-draft Phase-2 e-widening seam (e IS canonical now). Decision trail in §1.1.
+
+## 2026-07-30 (cont.) — §12.1 REVIEW CYCLE round 1 DONE (r9 → r10); PAUSED at round boundary
+
+Owner launched the formal multi-lens cycle: per round 3 ISOLATED Opus-high reviewers
+(facts/design/tests, fresh contexts) + 1 isolated Opus-high reviser; loop until zero
+B/H/M/L. Workflow wf_c45b3140-382 (script persisted in session workflows dir).
+
+Round 1 on r9: B=1 H=5+ M=8+ L=4+ across lenses (design DIRTY: 1/5/8/4). Reviser re-verified
+all 32 findings (28 distinct), applied ALL, rejected 0, deferred 0 (nothing touched
+owner-locked decisions). Headlines: BLOCKER — §6.1d context inference via "provenance" can't
+work → NEW §2.3(e) context-tag propagation dispatch point; §8.2 StageError label transport
+channel measured nonexistent → withdrawn + rebound as named m49 work (variation_labels on
+_PartitionReduce, post-reduction ids); §7.2 positional unpacking breaks under interning dedup →
+(output,label)→node-id map; §6.2 axis declaration contract (silent label swallowing fixed);
+§6.1d broadcast contradiction → unflattened values + gak.broadcast_arrays; §6.4a implicit mask
+undecidable → explicit to_parquet(record, select=varied_mask); §6.4d multiplicity-divergence
+refusal; §3.3 pinned integers re-derived BOTH WAYS (with/without per-universe reduction:
+2N+2/Δ52 vs N+2/Δ51); + 5 missing-anchor traceability fixes, 6 facts corrections (RNTuple
+hazard re-measured: to_akform splits :562,567 not getitem; TBranch :2015-2017; ak
+Discussion #469 restated as reported-not-measured). Plan now r10, 1388 lines. Reviews:
+review-r9-{facts,design,tests}.md; audit: revision-r10-notes.md.
+
+PAUSED (owner laptop shutdown) at the clean round boundary: workflow STOPPED after reviser
+completion; round 1 (4 agents) fully journal-cached.
+
+## RESUME INSTRUCTIONS (next session)
+
+1. Relaunch: Workflow({scriptPath: "~/.claude/projects/-Users-lgray-vibe-coding-graphed-workdir/
+   8f54f531-a6e8-4340-a81d-efa35f73b6f6/workflows/scripts/vary-plan-review-cycle-wf_c45b3140-382.js",
+   resumeFromRunId: "wf_c45b3140-382"}) — round 1 replays from cache instantly; round 2 (fresh
+   isolated reviews of r10) runs live; loop continues until clean (cap 6 rounds).
+2. NOTE: the loop's `rev` starts at 9 in the script — resume replay reconstructs state through
+   the cached round-1 results, so round 2 reviews r10 automatically.
+3. On clean: commit final plan + all review/notes files, set status "review-clean", update
+   memory, then proceed toward m48 test-authoring (gated pipeline).
+4. Verify readme-sync CI green on the pause commit (docs-only; 9-for-9 green today).

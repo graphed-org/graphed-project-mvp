@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r9).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r10).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -99,7 +99,9 @@ The in-IR `add_systematic` prototype stalled for ~4 years: it materialized varia
 (solving storage, not propagation), left selection propagation a documented TODO, and left the
 combinatorics abstract method (`explodes_how`) an unimplemented joke. Lesson, verbatim from the
 evidence: **variation forking is a graph-transformation problem, not a data-layout problem** — and
-coffea Discussion #469 measured 2-8× wins for vectorized (extra-axis) systematics over re-run loops.
+coffea Discussion #469 *reports* ~2-3× (up to ~7-8× for many systematics) for vectorized
+(extra-axis) systematics over re-run loops — read via summarizing fetch, word-level UNVERIFIED
+(lit §coffea-sys, `systematics-vary-litsearch.md:236` carries the caveat).
 
 **Pythonic analyses** (lit §pythonic-analyses): nsmith-/boostedhiggs, PocketCoffea,
 TopEFT/topeft + cmstas/ewkcoffea.
@@ -237,8 +239,9 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   are `f"{name}_{tag}"` (e.g. `jes_up`). **Tag grammar (r6; float spellings r7; canonicalized
   r8; e-form canonical r9, owner-selected):** `up`/`down` are conventions, not specials —
   σ-families, PDF member
-  indices, and stringified-float families (μR/μF scale factors, σ-scans; correctionlib
-  scale-variation sets natively key on such strings, §4.1) are all first-class. A `name` MUST be
+  indices, and stringified-float families (μR/μF scale factors, σ-scans; correctionlib category
+  inputs are arbitrary strings — `preserve/m9/agc.py:56-62` — so a float-spelled key is
+  expressible, §4.1) are all first-class. A `name` MUST be
   a valid Python identifier. A **tag** is a string matching `[A-Za-z0-9_]+` — every label is
   therefore itself a valid identifier, usable verbatim as a kwarg name, StrCategory bin (§6.2),
   result key, manifest key, and on-disk column/branch name (§6.4). Floating-point tags use the
@@ -247,7 +250,10 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   −2; PDF indices are untouched), fractional values as minimal-mantissa scientific notation
   with `em` for the negative exponent (`0.5`→`5em1`, `2.5`→`25em1`, `1.2345`→`12345em4`,
   `-1.5`→`m15em1`, `1e-8`→`1em8`; a fractional value's exponent is negative by construction, so
-  bare `e` never appears in canonical form) — chosen for its uniformly parseable numeric
+  bare `e` never appears in canonical form; **negative zero canonicalizes to `0`**, never `m0` —
+  one value, one label; and a canonical tag longer than **32 characters is REJECTED**, which
+  covers every real σ-scan / μR-μF / PDF family and bounds the label that reaches a StrCategory
+  bin and an on-disk column name, §6.4b) — chosen for its uniformly parseable numeric
   structure over the WHOLE float range (parse = `m`→`-`, `em`→`e-`, then a standard float
   literal), at the cost of not reading as the decimal at sight (the datacard p-form `2p5` was
   the r8 canonical; p-encoded tags remain legal identifier tags, see below). `vary` ACCEPTS
@@ -259,7 +265,12 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   with its spelled form (`"0.5"`); a dotted or signed spelling never reaches a label. The
   rationale for canonicalizing at all is measured, not taste (r7 probes, worklog 2026-07-30):
   dotted names store byte-exact but are unreadable-by-name (`ak.from_parquet(columns=
-  ["murf_0.5"])` silently empty; uproot RNTuple `__getitem__` splits on `.`; the TTree writer
+  ["murf_0.5"])` silently empty; a dotted uproot 5.7.5 RNTuple field is reachable via
+  `__getitem__` — exact lookup runs first, `behaviors/RNTuple.py:1560-1562` — but
+  `RField.array()` FAILS, because `to_akform` splits the field path on `.`
+  (`behaviors/RNTuple.py:562,567` → `KeyInFileError: 'murf_0'`; re-measured this session,
+  uproot 5.7.5 / awkward 2.12.0 / pyarrow 25.0.0 — `ntuple.arrays(["murf_0.5"])` still works,
+  so the hazard is per-field access, not wholesale unreadability); the TTree writer
   uses `.` as its own nesting separator), while identifier-shaped names round-tripped
   byte-exact AND readable in every measured path. Normalization kills spelling multiplicity by
   construction; the one residual duplicate class is **cross-notation**: a p-encoded identifier
@@ -303,7 +314,14 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   the factorization rule it is not an `Array` method, not gak, not numpy-idiom). It NEVER
   mutates: the result is a new object of the target's kind and the target remains valid,
   unchanged — provenance hangs on object lineage (§2.6b). Tag/member pairs come from `**tags`
-  and/or `variations=` under the §1.1 grammar. Three binding overloads:
+  and/or `variations=` under the §1.1 grammar. **The signature's own keyword names shadow
+  `**tags`**: `nominal`, `is_weight` and `variations` are all legal §1.1 tags AND legal tree
+  collection names, so a tag or collection so named MUST come through a mapping channel —
+  `variations={tag: …}` for tags in overloads (a)/(b), a `collections={Name: {tag: record}}`
+  mapping for collections in overload (c). `variations=` is REJECTED in the shift form (c) with an
+  error naming `collections=`. This is the §2.6a no-reserved-names hazard re-surfacing at the
+  signature instead of on the record; the m48 grammar anchor covers all three shadowed names.
+  Three binding overloads:
   (a) **Array | Varied target** (the loose primitive): members are Arrays;
   `graphed.vary(jets, "jes", up=j_up, down=j_dn) -> Varied` with the target as `"nominal"`.
   `is_weight=True` and `nominal=` are invalid here (a loose weight variation is just a `Varied`
@@ -344,19 +362,29 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   contracts must not share a name.) `fn` MUST return an `Array`; if it returns a `Varied` (because
   it closed over another container), `.apply` raises with guidance to combine containers via
   ordinary ops instead. `Varied` is a plain frontend object — no IR type, no new NodeKey (§3.1).
-- **§2.3 (Broadcast propagation — four bound dispatch points.)**
+- **§2.3 (Broadcast propagation — five bound dispatch points.)**
   (a) **`Varied` implements the full `Array` dunder surface** by mapping over labels — enumerated
   at implementation from `array.py` and including `__array_ufunc__` (`array.py:156`), the bitwise
   set (`__and__/__or__/__invert__`, `array.py:245-275`), `__getitem__`, field access, and all
-  reflected variants; parity is gated by a frozen test iterating the dunder inventory.
-  (b) **Plain-`Array` entry points learn `Varied`**: `Array.__getitem__` and `Array.filter`
-  currently reject non-Array keys (`array.py:344-375`) and there is no reflected protocol for
-  subscription — both gain an explicit `Varied`-mask branch delegating to the container (the corpus
+  reflected variants; parity is gated by a frozen test iterating the dunder inventory
+  **enumerated dynamically from `Array` at test time**, not from a literal list (same
+  self-repairing rule as (c)).
+  (b) **Plain-`Array` entry points learn `Varied`**: today `Array.__getitem__` accepts only an
+  `Array` mask, a `str` field, a `list[str]` field subset, a `slice`, or an `int`, and raises
+  `TypeError` on anything else (`array.py:344-371`) — including a `Varied`; `Array.filter` has NO
+  runtime check at all (`array.py:374-375`), so a `Varied` falls through into `record_op` and
+  surfaces as an `AttributeError` on `a.node_id` (`session.py:152,159`). There is no reflected
+  protocol for subscription, so both gain an explicit `Varied`-mask branch delegating to the
+  container (the corpus
   requires it: unvaried `photons`/`muons` sliced by a JES-varied selection, `systematics.py:91-92`).
   (c) **The gak layer gets one dispatch mechanism plus a bound per-function classification** —
   "one wrapper, zero per-function thought" is falsified by the measured surface (review r0), so the
-  classification is explicit, lives in code, and is gated by a frozen exhaustiveness test (every
-  public gak function classified; no silent default): *broadcast* (elementwise/structural default),
+  classification is explicit, lives in code, and is gated by a frozen exhaustiveness test that
+  **enumerates gak's public surface DYNAMICALLY at test time** (`dir`/`__all__`-driven, not a
+  hand-written literal name tuple — the `m24/test_interface_parity.py:37-78` anti-drift pin is a
+  41-name literal, which would let a future gak function go silently unclassified, exactly the
+  failure this requirement names; a dynamic check is also self-repairing, since a new function is
+  fixed in `src`, never by editing a frozen test): *broadcast* (elementwise/structural default),
   *container-traversing* (`gak.zip`/`concatenate`/… detect `Varied` **inside** their
   Mapping/Sequence arguments), *tuple-returning* (`gak.unzip`/`broadcast_arrays` return a tuple of
   `Varied`), *eager-metadata* (`fields`/`type_of`/… answer on the nominal member — sound because
@@ -364,6 +392,26 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   Signatures do not change (R17.0 anti-drift preserved).
   (d) **Module verbs and sinks**: `graphed.join`/`repartition` refuse `Varied` inputs with the
   §5.4 error; `Histogram.fill` accepts `Varied` (§6).
+  (e) **Context-tag propagation** (the §6.1d substrate; NEW in r10 — it was previously implied,
+  and mis-named "provenance"). Every `Array`/`Varied` produced from a contexted input carries a
+  **context handle: a plain Python attribute on the frontend wrapper object, explicitly NOT part of
+  node identity** — it never reaches `NodeKey` params/tokens/hashes (§1.2 and interning stay
+  intact). A wrapper attribute is the only sound carrier, measured: two sibling contexts derived
+  from one root that differ only in registered weights expose collections whose reads record
+  identical `NodeKey`s and therefore the SAME node id (interning, `src/store.rs:73-88`; re-measured
+  this session — `src * 2.0` recorded twice returns node id 1 both times), so a node-id-keyed
+  context map provably cannot distinguish them; and `Provenance` is a frozen
+  `(filename, lineno, function, source)` dataclass with no lineage channel
+  (`provenance.py:26-33,66-79`), so provenance cannot carry it either. Propagation is bound at the
+  same four dispatch points above: every frontend op, every gak function, and every module verb
+  propagates the handle from its inputs. **Merge rule at the op, not at the fill**: inputs whose
+  handles lie on ONE ancestry chain propagate the most-derived handle; handles on divergent
+  branches are an error at that op naming both (this is where §6.1d's "hard error" is actually
+  raised). **Drop rule**: an op that cannot propagate a handle (no contexted input) yields a
+  context-free result, and a subsequent fill mixing context-free with contexted inputs adopts the
+  unified context (§6.1d) — an op that silently *loses* a handle it had is the §2.5 failure mode
+  and is a bug, gated by the SAME frozen exhaustiveness test as (c): every public gak function and
+  every `Array` dunder is asserted to preserve the handle, dynamically enumerated.
   Broadcast recording happens while the *user's* frame is on the stack, so `capture()` attributes
   each varied node to the user's own op line with no provenance copying (`provenance.py:66-79`
   skips graphed frames).
@@ -371,7 +419,10 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   operation combines `Varied` inputs — including a `Varied` combined with one derived from it
   (`jets[jets.pt > 25]` is the canonical case) — the result's labels are the **union**, and for
   each label L every container contributes **its own member for L when present, else its
-  `"nominal"` member**. Within a universe L, all uses of varied quantities are therefore coherent
+  `"nominal"` member**. **The union's ORDER is bound** (§3.2 determinism and the §6.1b/`_GroupReduce`
+  positional layout both depend on it, `boost.py:102-117`): the first operand's order, then labels
+  new to the second operand in its own order, `"nominal"` always first. Within a universe L, all
+  uses of varied quantities are therefore coherent
   (RDF's whole-cone-substitution semantic). Because §2.1 makes each label belong to exactly one
   knob, cross products can never arise implicitly: at a fill combining shift-varied kinematics with
   a stacked weight `Varied`, shift labels fill with the central weight *as evaluated in that
@@ -406,14 +457,31 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   (c) **Scoping is lineage.** A fill sees exactly the registrations present on the context its
   inputs were read from (§6.1d) — r5's fill-time-snapshot rule re-bound as immutability: a fill
   from a pre-`vary` context is unaffected by later `vary` calls *by construction*. Derived
-  contexts (`events[mask]`) inherit the ambient registry; selection-scoped weights are `vary` on
+  contexts (`events[mask]`) **inherit the ambient registry with every member RE-INDEXED by the
+  derivation mask, label-aligned per §2.4** — the parent's members carry the PARENT's row count, so
+  an un-re-indexed inheritance makes every §6.1d ambient fill from a derived context
+  length-mismatched, and §6.1d's "unify to the most-derived context" is ill-defined without it.
+  Selection-scoped weights are `vary` on
   the derived context (`sel = graphed.vary(sel, "btag", …, is_weight=True, …)` — the replacement
   for the exemplars' per-channel `deepcopy(Weights)`); the parent is never touched. Inputs whose
   contexts lie on ONE ancestry chain unify to the most-derived one; contexts on divergent
-  branches are the §6.1d hard error.
-  (d) **Data contexts refuse the weight form** (`is_weight=True` on a data context is a guard
-  error, not a convention) and fill nominal-only — the survey's universal data special-casing,
-  structural.
+  branches are the §6.1d hard error (raised at the op, §2.3e).
+  **Varied contexts (per-label row sets) are first-class.** When the derivation mask is itself
+  `Varied` — the central idiom of the sketch below, `sel = events[gak.num(jets) >= 4]` with a
+  JES-varied `jets` — the derived context's ROW SET DIFFERS PER LABEL. Binding: its collections are
+  `Varied` per §2.6b; `graphed.labels(ctx)` reports the mask's labels; re-indexing happens per label
+  (each label's ambient member is re-indexed by THAT label's mask, nominal's by nominal's);
+  `graphed.vary(ctx, …, is_weight=True)` on it stacks per §2.1 (a new weight label's member is the
+  provided value's central universe, each inherited shift label keeps its own); fills from it are
+  label-aligned per §2.4; and §6.4a's OR-of-selections is exactly the union of these per-label row
+  sets.
+  (d) **Data contexts refuse BOTH forms.** `is_weight=True` on a data context is a guard error, and
+  a **shift-form `vary` on a data context is likewise refused**, with an error naming the variation:
+  accepting it and discarding its labels at the fill would silently drop an explicit user
+  registration — the §2.5 failure mode. "Data fills nominal-only" is therefore structural, not a
+  convention. What makes a context a data context is an explicit constructor flag
+  (`gnano.events(src, is_data=True)`-shaped; exact spelling pinned at m48 freeze) — the survey's
+  universal data special-casing, made explicit.
   Sketch (binding shapes; helper-verb spellings pinned at m48 freeze):
   ```python
   events = gnano.events(src)                                  # MC event context (immutable)
@@ -431,7 +499,11 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   sel  = graphed.vary(sel, "btag", btag_sf(sel.Jet),          # selection-scoped weight
                       is_weight=True,
                       up=btag_sf(sel.Jet, "up"), down=btag_sf(sel.Jet, "down"))
-  h.fill(pt=gak.flatten(sel.Jet.pt))                          # ambient auto-applies (§6.1d)
+  h.fill(pt=sel.Jet.pt)                                       # per-OBJECT fill: the value stays
+                                                              # UNFLATTENED so the ambient event
+                                                              # weight can broadcast against it
+                                                              # (§6.1d); the evaluator flattens
+                                                              # both (boost.py:39-47,60-71)
   ```
   The neutral context *mechanism* (lineage, ambient weight, fill-inference seam) lives in
   `graphed` proper; the nanoevents-flavored constructor is awkward-idiom and lives in
@@ -451,13 +523,27 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   anchor (§10) in the strong R22.3 form (fresh processes, differing `PYTHONHASHSEED`).
 - **§3.3 (Anti-quadratic guard gains a variation topology — in a NEW frozen file.)** A new frozen
   benchmark (`tests/frozen/core/m49/…`, replicating the `test_benchmark.py:10,40-53` pattern;
-  **the m4 files are untouched** — frozen tests are read-only, §B.6) pins the variation shape:
-  shared prefix + N varied suffixes where **each variation is a separately marked output** (the
-  real `vary` topology — the m4 `_systematics` builder funnels all variations into one output and
-  would make the assertion vacuous, review r0), N ∈ {16, 32, 64, 128}, asserting the exact reduced
-  shape for the fixed topology (`stages == N + 1`, `reduced_nodes == 2N + 2`) and a linear-growth
-  bound (time(128)/time(16) < 24.0, the m4 threshold style). The underlying measurement is in
-  Part I §3; the frozen test pins it so it stays true.
+  **the m4 files are untouched** — frozen tests are read-only, §B.6) pins the variation shape.
+  **The builder is bound explicitly, because the pinned integers depend on it**: source → a shared
+  prefix of D ops → per universe {one varied fork op, K chain ops, **exactly one terminating
+  reduction node**}, every universe's reduction separately marked as an output, N counting nominal
+  (the m4 `_systematics` builder funnels all variations into ONE output and would make the
+  assertion vacuous, review r0). N ∈ {16, 32, 64, 128}. Under that topology the exact reduced shape
+  is `stages == N + 1` and `reduced_nodes == 2N + 2` — re-measured this session against
+  `graphed-latest` (D=500, K=50): N=16 → stages 17 / reduced 34; N=128 → stages 129 / reduced 258,
+  matching cba §optimizer §2 exactly. **The terminating reduction is load-bearing**: the same
+  builder WITHOUT it reports `reduced_nodes == N + 2` (N=16 → 18, N=128 → 130), so a suite that
+  omits it freezes an assertion a correct reducer fails. A fill IS a reduction, so the
+  with-reduction shape is also the realistic one.
+  Plus a linear-growth bound (time(128)/time(16) < 24.0, the m4 threshold style), replicating the
+  m4 noise floor (`base = max(times[SIZES[0]], 1e-4)`) and best-of-N timing
+  (`test_benchmark.py:28-33,40-43`). **This is the ONE frozen wall-clock gate in m48–m51, and it is
+  a deliberate, named carve-out to R0.10a**: the project plan's M4 mandates a CI benchmark that
+  fails on super-linear reduction time, and `tests/frozen/core/m4/test_benchmark.py` is the frozen
+  precedent that discharges it. Every other performance claim in this plan (§6.2 axis scaling,
+  §6.4c compression) is demoted to an R0.11 implementer-report measurement precisely because it has
+  no such mandate. Threshold headroom is measured, not assumed: cba §optimizer §2 records 3.1 ms at
+  N=16 and 16.7 ms at N=128, a ratio of ≈5.4 against the 24.0 gate.
 - **§3.4 (Impact-set API.)** A read-only frontend helper reports, per label, the **reachability
   difference** `reachable(label's outputs) − reachable(nominal outputs)` computed via
   `session.walk` — NOT an id watermark (interleaved broadcast recording makes watermark
@@ -475,9 +561,14 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   payload is never duplicated (§A.3.1 reproducibility). Weight variations routinely require a
   **per-dataset scalar normalization** — the sum-of-weights rescaling (`sow/sow_renormUp`, with
   per-sample LHE-index branching) appears in both eras of the confirmed exemplar
-  (lit §ewkcoffea-confirmed) — and the frontend has no constant-Array constructor: the binding v1
-  form is arithmetic on an existing per-event Array (the m48 anchor names it); a constant/scalar
-  broadcast helper is parked in §11.
+  (lit §ewkcoffea-confirmed). The binding v1 form is **`gak.full_like(<an existing per-event
+  Array>, sf)`** — a real recorded graph op producing a constant-valued Array shaped like an
+  existing one (`python/graphed/awkward/functions.py:612-616`; already parity-pinned by
+  `tests/frozen/awkward/m24/test_interface_parity.py:74-76`) — or ordinary arithmetic on such an
+  Array. What does NOT exist is a constant Array from *nothing* (no shape donor): cba §histogram §1's
+  "no constant-Array constructor" grep was scoped to the session/array modules and did not cover
+  `graphed/awkward/functions.py`. That gap — a constant/scalar broadcast helper needing no donor —
+  is parked in §11.
 - **§4.2** Fills accept a `Varied` entry in the M29 `weight=[...]` factor list (`boost.py:166-174`);
   lowering emits the nominal fill node + one sibling fill node per label under the §2.4 rule,
   differing only in the varied input ids — everything upstream interns. All siblings join the
@@ -488,9 +579,13 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   public.
 - **§4.3** Weight variations MUST NOT change selection. The frozen m48 anchor is **structural**,
   not only behavioral (equal counts is a tautology under §3's expansion — the selection nodes are
-  the same interned ids by construction, an R0.10 trap flagged in review r0): the §3.4 impact set
-  of every weight-only label MUST contain no node outside the fill's weight-input cone
-  (equivalently: the selection cone's node ids are identical across weight labels). The m05
+  the same interned ids by construction, an R0.10 trap flagged in review r0): **the selection
+  cone's node ids MUST be identical across all weight labels.** (r9's alternative wording — "the
+  §3.4 impact set contains no node outside the fill's weight-input cone" — is WITHDRAWN in r10: it
+  is false for a correct implementation, because a label's output IS its sibling fill node, which
+  by construction is not reachable from nominal's output and therefore always lands in the impact
+  set while sitting *downstream* of, not inside, the weight-input cone. The two are not equivalent;
+  the node-id form is binding, and the m48 anchor quotes it verbatim.) The m05
   equal-counts check rides along as a sanity assertion.
 
 ## §5 Shift-path lowering
@@ -506,14 +601,19 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   re-smearing shift migrates events in both directions (§5.5), and any suite or API language
   implying shifts order is a test-authoring error.
 - **§5.2 (Witnesses that sharing engaged — R0.10.)** The m49 suite pins mechanism witnesses, not
-  just results: (a) **arena-delta witness on a fixed topology with a literal expected integer**
-  (the m4 style — e.g. a 50-op varied chain adds exactly 52 nodes; a self-derived
+  just results: (a) **arena-delta witness on the §3.3 topology with a literal expected integer**
+  (the m4 style — on the §3.3 builder, one universe = {1 varied fork op, K=50 chain ops, 1
+  terminating reduction}, so going N=1→2 adds exactly `K + 2 = 52` nodes; re-measured this session
+  against `graphed-latest`. **The terminating reduction is load-bearing here too**: the same
+  builder without it measures Δ = 51, so the literal must travel with the builder. A self-derived
   `delta == len(cone)` comparison is tautological, review r0). Labels structurally identical to a
-  prior label dedup to Δ = 0 by §1.2 — that case is witnessed separately as the dedup feature, not
-  under this witness. (b) **single-read witness bound to the reference-matrix run itself**: the
+  prior label dedup to Δ = 0 by §1.2 — that case is witnessed separately as the dedup feature, in
+  the **m48 §1.2 label-out-of-identity anchor** (§10), not under this witness. (b) **single-read
+  witness bound to the reference-matrix run itself**: the
   read-counting partitioned source (m23 pattern) asserts `part_reads == n_partitions` — not
   `n_partitions × n_labels` — on the SAME Session/plan that reproduces the corpus references
-  (§10 m49), so a per-variation re-run loop cannot pass. (c) **reduced-stage shape** — the shared
+  (the m49 **frontend** half, §10, where the vendored references live), so a per-variation re-run
+  loop cannot pass. (c) **reduced-stage shape** — the shared
   prefix appears in exactly one stage.
 - **§5.3 (Projection.)** Column projection is the union over all requested outputs — correct today
   with zero changes (`read_columns` takes `Sequence[Array]`, `projection.py:109-147`); m49 pins a
@@ -549,7 +649,14 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   (a) **Per-output label sets.** Each output's mapping carries exactly the union of labels reaching
   *that* output — `{output_name: {label: hist}}`, nominal always present; an output no variation
   reaches returns a bare `hist` (NOT `{"nominal": hist}`), so unvaried programs see today's shapes
-  unchanged. Absent labels are absent, never silently duplicated from nominal.
+  unchanged. Absent labels are absent, never silently duplicated from nominal. The declared result
+  type is therefore the value-dependent union
+  `dict[str, bh.Histogram | dict[str, bh.Histogram]]` — a real typing cost under the DoD's
+  `mypy --strict` on src AND tests, accepted for the backward-compatibility win and paid for
+  explicitly: the combine BRANCHES on the two shapes (today's `_add_groups` assumes a homogeneous
+  mapping, `boost.py:120-122`), and a bound narrowing helper is provided so callers do not
+  hand-roll `isinstance` — `graphed.universe(result[name], label)` and `graphed.labels(result[name])`
+  work uniformly on BOTH shapes (§2.2), a bare `hist` reading as the single label `"nominal"`.
   (b) **Structural fill-node arity.** A fill combining shift labels S and weight labels W records
   exactly `1 + |S| + |W|` fill nodes — never the product (frozen-counted via the staged-fill list,
   the §2.4 discriminator).
@@ -558,20 +665,28 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   histograms route through the group-reduce path (`_GroupReduce` `{label: hist}` generalized to
   two-level keys, `boost.py:100-122`), and `.plan()` on a varied `Histogram` raises, pointing at
   the group API.
-  (d) **Ambient-weight application (the §2.6 completion of register-then-forget).** `fill` walks
-  its input Arrays' provenance to their event context and **auto-applies that context's ambient
-  weight** (§2.6c lineage rule — contexts are immutable, so *which context* fully determines
-  *which registrations*): the fill's label set is the §2.4 union of value-borne labels,
+  (d) **Ambient-weight application (the §2.6 completion of register-then-forget).** `fill` reads its
+  input Arrays' **context handle** (§2.3e — a Python-object attribute on the frontend wrapper,
+  outside node identity; NOT `Provenance`, which is source-location only,
+  `provenance.py:26-33,66-79`, and NOT `Session._provenance`/`sourcemap()`) and **auto-applies that
+  context's ambient weight** (§2.6c lineage rule — contexts are immutable, so *which context* fully
+  determines *which registrations*): the fill's label set is the §2.4 union of value-borne labels,
   ambient-weight labels, and explicit `weight=[...]` factor labels — so a plain Jet-pT fill
   yields the jes/jer universes AND the pileup/PDF universes with zero per-fill bookkeeping (the
   owner's simultaneity requirement). `weight=[...]` *adds* factors; `unweighted=True` opts out
   (counts histograms); inputs whose contexts sit on one ancestry chain unify to the
-  **most-derived** context; contexts on **divergent branches are a hard error** naming both;
+  **most-derived** context; contexts on **divergent branches are a hard error** naming both (raised
+  at the combining op per §2.3e, so the fill only ever sees an already-unified handle);
   context-free (loose) inputs alongside contexted ones adopt the unified context; an all-loose
   fill is unweighted (the r4 primitive path, still supported). The per-event ambient weight is
-  **broadcast to the fill's object structure** (a per-jet fill gets the event weight replicated
-  across each event's jets before the existing jagged flatten) — frozen-witnessed against a
-  manually broadcast reference.
+  **broadcast to the fill's object structure** — and the mechanism is bound, because the r9 wording
+  was unsatisfiable as written: **a per-object fill MUST pass its value UNFLATTENED**
+  (`h.fill(pt=sel.Jet.pt)`, the r10 sketch — not `gak.flatten(...)`, which destroys the jagged
+  structure there is nothing left to broadcast against), and the frontend then records
+  `gak.broadcast_arrays(ambient, value)` and relies on the evaluator's existing independent
+  per-input flatten (`boost.py:39-47,60-71`). A per-object fill whose value arrives already flat
+  alongside a per-event ambient weight is REFUSED with an error naming the flatten, not silently
+  length-mismatched. Frozen-witnessed against a manually broadcast reference.
   This reproduces the corpus reference layout (independent per-variation histograms — UHI, no
   invented formats).
 - **§6.2 (Scaling shape: the variation axis, m50 — weight labels only.)** An opt-in fill mode
@@ -589,8 +704,21 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   sibling-fill decomposition.
   Non-growth is required: identical spec per partition keeps `+` combine safe and deterministic
   (PocketCoffea's deterministic pre-declared axis lesson; growth axes stay Phase 2 per the existing
-  `_spec.py:70,74` refusal). M29's identity discipline binds: new params/spec content only when the
-  feature is used. The sorted bin order is **lexicographic over label strings and MUST NOT be
+  `_spec.py:70,74` refusal). **Who declares the bins is bound, because non-growth alone is a
+  silent-drop hazard**: measured, boost_histogram 1.7.2, a non-growth `StrCategory` does NOT raise
+  on an undeclared string — it has an overflow bin
+  (`Traits(underflow=False, overflow=True, growth=False, …)`), so filling `['nominal','bogus',
+  'jes_up']` into `StrCategory(['nominal','jes_up','jes_down'])` gives `h.sum() == 2.0` while
+  `h.sum(flow=True) == 3.0`: the label just vanishes — exactly the "hand-maintained name lists where
+  a typo silently drops a systematic" failure mode §2.5 exists to delete. Binding: (i) **the
+  FRONTEND declares the axis** at plan time from the §6.1d inferred label set, so the spec is
+  identical per partition by construction and combine-safety follows; (ii) if a user-declared axis
+  is supported at all, an **exact-set check runs at fill**: a label not among the declared bins is a
+  hard error naming it, and a declared bin no label reaches is a diagnostic (§2.5); (iii) the
+  frontend, not the user, imposes the sort — a user-supplied bin ORDER is normalized to sorted
+  order, so "sorted" and "pre-declared" cannot conflict. M29's identity discipline binds: new
+  params/spec content only when the feature is used. The sorted bin order is **lexicographic over
+  label strings and MUST NOT be
   read numerically** (r7): determinism and combine-safety are unaffected by numeric-tag labels —
   sorting is a total order over arbitrary strings, every partition still declares an identical
   spec — but `murf_10` sorts before `murf_2`; positional/plot ordering for numeric families comes
@@ -606,11 +734,21 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   its Snapshot stage as suffixed columns + OR-of-cuts — Part I §2), and graphed's write path is
   measured greenfield (zero variation machinery, zero metadata use, one seam method per backend —
   Anchors, write-seam rows). Binding:
-  (a) **Row rule — OR of selections.** When the written rows pass through a varied selection, the
-  writer materializes the **superset**: rows passing ANY universe's selection, nominal included.
-  The OR is recorded as ordinary graph ops over the per-label masks (`getitem`/`gak.mask` — no
-  mask algebra exists in the IR and none is added); stored columns are evaluated on the superset
-  rows.
+  (a) **Row rule — OR of selections, with the selection supplied EXPLICITLY.** When the written rows
+  pass through a varied selection, the writer materializes the **superset**: rows passing ANY
+  universe's selection, nominal included. The OR is recorded as ordinary graph ops over the
+  per-label masks (`getitem`/`gak.mask` — no mask algebra exists in the IR and none is added).
+  **The varied write API takes the mask, it does not infer it**:
+  `graphed.to_parquet(record, select=varied_mask)`-shaped (exact spelling at m51 freeze), where
+  `record` is PRE-selection by construction and `select=` is the `Varied` mask. This is binding
+  because the implicit form is not implementable under §3.1: if the user writes
+  `to_parquet(sel.Jet)` with `sel = events[nominal_mask]`, producing the same fields on superset
+  rows would require substituting the OR mask INSIDE an already-interned, immutable expression —
+  a node rewrite the IR forbids, needing a second record-time expansion pass plus an undecidable
+  "which node in the cone is *the* selection" rule (several selections; selection not outermost).
+  With `select=`, the writer owns the mask, builds both the OR and the per-label masks, and no
+  retargeting is needed. A varied write whose record expression already embeds a `Varied` selection
+  is REFUSED with an error pointing at `select=`.
   (b) **Column rule — augmentation.** The written record carries the user's fields evaluated in
   the **nominal** universe (on superset rows), PLUS appended per-label reconstruction data: for
   every stored field whose value differs per label, a same-shaped delta column; and per-label
@@ -618,14 +756,17 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   recoverable. Weight-only labels contribute no kinematic deltas — their varied factors, when
   among the stored fields, augment like any other varied field. Appended names follow one bound
   convention (`__vary_{label}__{field}`-shaped; exact spelling pinned at m51 freeze). Labels are
-  valid identifiers by construction (§1.1 r8 canonicalization — a dotted spelling never reaches
-  a label), so labels appear in on-disk names VERBATIM: the probe-measured hazards that forbade
+  valid identifiers by construction (**§1.1 canonicalization, r9 e-form** — a dotted spelling never
+  reaches a label), so labels appear in on-disk names VERBATIM: the canonical on-disk shape is
+  `__vary_murf_5em1__Jet_pt`. The probe-measured hazards that forbade
   dotted names (`ak.from_parquet(columns=["murf_0.5"])` silently empty, pyarrow 25.0.0 /
-  awkward 2.12.0; uproot 5.7.5 RNTuple `__getitem__` dot-split, `behaviors/RNTuple.py:1573-1576`;
+  awkward 2.12.0; a dotted uproot 5.7.5 RNTuple field is reachable via `__getitem__`
+  (`behaviors/RNTuple.py:1560-1562`, exact lookup first) but `RField.array()` fails because
+  `to_akform` splits the path on `.` (`behaviors/RNTuple.py:562,567`);
   the TTree writer's own `.` nesting separator, `writing/_cascadetree.py:1606`; ROOT
-  TTreeFormula `.`/`-` operator meaning) are foreclosed at the §1.1 gate; the probe fixture
-  `__vary_murf_0p5__Jet_pt` — identifier-shaped exactly like the canonical
-  `__vary_murf_5em1__Jet_pt` — round-tripped byte-exact and readable in every measured path.
+  TTreeFormula `.`/`-` operator meaning) are foreclosed at the §1.1 gate. Carried-over probe
+  evidence: the r8 p-form fixture `__vary_murf_0p5__Jet_pt` — identifier-shaped exactly like the
+  r9 canonical form — round-tripped byte-exact and readable in every measured path.
   (c) **Bit-exact reconstruction is REQUIRED.** Reading the file back and applying the deltas
   MUST reproduce every universe's post-selection values and row set bit-for-bit vs the in-memory
   varied run. The default representation is therefore **exact by construction**: same-dtype XOR
@@ -637,14 +778,33 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   XOR-diff+packbits masks are ~4.7× smaller than raw booleans (169 KB vs 798 KB, 5 labels).
   Lossy ratio storage is a Phase-2 opt-in (§11); the representation is recorded per column in
   the manifest; sizes are re-measured on real skims in the m51 implementer report.
-  (d) **Structure rule.** Deltas require same-shaped buffers: varied columns are stored at the
+  (d) **Structure rule, with an explicit refusal.** Deltas require same-shaped buffers: varied
+  columns are stored at the
   widest common structure (pre-object-cut values on the event-row superset), with per-label
   validity masks at every selection level that varies — event-level AND object-level (a JES
   shift moves jets across a per-jet pt cut, so per-label *inner* masks are part of the cutflow
-  data, not an edge case).
+  data, not an edge case). That holds for scale/smear shifts, which preserve multiplicity — but
+  §2.1 does NOT guarantee it: §2.1's construction check is awkward form compatibility, a TYPE
+  check (`var * float64` matches `var * float64` whatever the per-event counts), so a variation
+  that legitimately changes multiplicity (shift-dependent cleaning, overlap removal, a matched
+  collection) passes §2.1 and then has no representable XOR delta. **Binding refusal**: a stored
+  varied field whose per-label offsets differ from nominal's is REFUSED with an error naming the
+  label and the field. The supported v1 model is same-multiplicity variation plus per-label
+  validity masks; multiplicity-changing stored variations are Phase 2 (§11). Frozen as an m51
+  negative anchor.
   (e) **Manifest — invent no formats.** A manifest (labels → appended columns → representation)
   travels in existing metadata channels: parquet key-value file metadata (measured unused today —
-  greenfield; the `ak.to_parquet` call is swapped for a metadata-capable arrow write), the
+  greenfield). **The writer swap is CONDITIONAL, not unconditional** — otherwise it contradicts
+  §6.4g's byte-identity requirement: measured this session (awkward 2.12.0 / pyarrow 25.0.0),
+  `ak.to_parquet(a, p)` and `pq.write_table(ak.to_arrow_table(a), p)` produce **different bytes**
+  (sha256[:16] `ad1725aca34f2bbb` vs `43b093e8bc616bd7`) and different key-value metadata sets
+  (`{awkward_array_metadata, ak:parameters}` vs `{ak:parameters}` — the plain arrow path LOSES
+  awkward's own metadata, which would break `ak.from_parquet` round-tripping). `ak.to_parquet` has
+  no metadata parameter (signature verified), so the swap genuinely is required for the manifest.
+  Binding: an **unvaried write keeps `ak.to_parquet` untouched** (preserving the §6.4g golden); a
+  **varied write** takes the `ak.to_arrow_table` + `pq.write_table` path and MUST reproduce
+  awkward's own KV entries alongside the graphed manifest, with `ak.from_parquet` round-tripping
+  the augmented file as a frozen m51 anchor. The
   ROOT-side equivalent pinned at m51 freeze. The manifest maps each label to its stored
   column/branch names and per-column representation; readers resolve labels **through the
   manifest**, never by parsing stored names (names embed labels for human inspection, not as
@@ -670,9 +830,19 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
 - **§7.1** One Session, one IR, one plan for nominal + all variations; executors are untouched
   (`R` opaque through `Plan`/tree-reduce/engines — cba §exec-checkpoint §1,§4). No per-variation
   execution loop may be introduced anywhere.
-- **§7.2** The frontend owns `(output, label) → position` and unpacks results into the §6.1 named
-  mapping. `ExecResult`/`Plan`/monitor schemas do not change in m48–m50 (per-variation monitor
-  events: Phase 2, the defaulted-field trick documented — `store.py:31-41` precedent).
+- **§7.2** The frontend owns `(output, label) → **node id**` — NOT `→ position` — and derives
+  `node id → position` from the compiled output list, so **many labels MAY resolve to one position
+  and the unpacker replicates that value**. This is forced by content dedup, measured:
+  `GraphStore::mark_output` de-duplicates (`src/store.rs:152-153`) and `evaluate_ir` returns
+  `[vals[o] for o in store.outputs()]` (`execute.py:126`), so compiling two structurally identical
+  outputs returns ONE value — re-measured this session against `graphed-latest`: `compile_ir(s, b,
+  c)` with `b`/`c` structurally identical returns 1 value, `compile_ir(s, b, d)` with distinct
+  expressions returns 2. A positional `(output, label) → position` map would therefore walk off the
+  end of `_GroupReduce`'s `fills` list or mis-assign labels (`boost.py:102-117`) on exactly the case
+  §1.2 mandates and §5.2a/m51 put in scope (a label structurally equal to nominal). The frontend
+  unpacks into the §6.1 named mapping. `ExecResult`/`Plan`/monitor schemas do not change in m48–m50
+  (per-variation monitor events: Phase 2, the defaulted-field trick documented — `store.py:31-41`
+  precedent); the absence is a frozen m48 anchor (§10).
 - **§7.3 (Checkpoint semantics, documented honestly and anchored.)** Within one plan, resume works
   per-partition exactly as today (the N-variation composite partial is the journal unit) — m49
   freezes an interrupt/resume test over a varied graph whose result is byte-identical to an
@@ -694,14 +864,40 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `__dict__` `__reduce__` for free. Empty string = nominal/unvaried (backward compatible).
 - **§8.2 (Label transport — mechanism bound.)** Under §1.2 the label is not in the IR and under
   §2.3 all sibling nodes share the user's source line, so op+frames cannot disambiguate labels
-  (review r0). The bound mechanism: the frontend's **node-id → label map travels the same
-  process-closure channel that already delivers per-node provenance to worker-side StageError
-  construction** (`debug/runner.py:20-45`; closures ship via the plan's OpSpec payload,
-  `aggregate.py:54,96-104`) — no `Plan`/`ExecResult` schema change; the worker sets
-  `StageError.variation` from the failing node id at construction. Frozen m49 anchor: a failure
+  (review r0). **r9's mechanism sentence is WITHDRAWN in r10: the channel it named does not exist.**
+  Verified against `graphed-latest`: `_PartitionReduce.__call__` — the callable that actually runs
+  on a worker for an `aggregate_plan` — reads the partition and calls `evaluate_ir` bare, with no
+  provenance, no node map, no try/except and no `StageError` (`aggregate.py:44-65`); `grep
+  "StageError("` over `python/graphed/` returns exactly two hits, the class itself
+  (`debug/errors.py:29`) and the M6 debug runner (`debug/runner.py:37`), which is **driver-side** —
+  it needs a live `Session` (`lower(session, array)`, `session.source_value(nid)`,
+  `runner.py:57-69`) and its own docstring says "a *debug* runner, not the M7 executor"
+  (`runner.py:6-7`). Per-node provenance is likewise driver-side only (`Session._provenance`,
+  `session.py:30`, exposed via `sourcemap()`, `:113-125`). The executors never build one either —
+  they translate worker death or re-raise an already-raised `StageError`
+  (`submit/engine.py:381-396`). Every existing cross-process `StageError` with real provenance comes
+  from a test closure that REBUILDS the graph in the worker (`tests/frozen/debug/m6/analyses.py:52-56`;
+  `graphed-executors tests/frozen/m7/analyses.py:118-127`).
+  **The r10 mechanism is therefore NEW work, in two parts, both m49 targets.**
+  (i) *Transport*: a `variation_labels: tuple[tuple[int, frozenset[str]], ...]` field is ADDED to
+  the worker process closure (`_PartitionReduce`, `aggregate.py:44-55`) — an additive dataclass
+  field, so `Plan`/`ExecResult` schemas stay untouched (§7.2). It is keyed on **POST-REDUCTION node
+  ids** taken from the same `compile_ir` call that produced the shipped `ir` (`aggregate.py:95-97`);
+  record-time ids are wrong, because DCE compacts and remaps (`src/optimizer/mod.rs:88-116`, the
+  `remap` vector) and the pipeline rebuilds into a fresh interned store (`mod.rs:1-11`).
+  (ii) *Attributed worker-side errors*, which do not exist today: the `evaluate_ir` call site in
+  `_PartitionReduce.__call__` is wrapped so a worker failure becomes a `StageError`, and the
+  per-node provenance the map keys alongside is shipped in the same closure.
+  **The map is set-valued, not a function** — §3.4 proves it in this document: "a node shared by
+  `jes_up` and `jes_down` but not nominal appears in BOTH impact sets." Rendering is bound: a
+  singleton renders as that label; a multi-label set renders as its labels sorted and joined by
+  `,`; the empty set renders `""` (nominal/unvaried, §8.1).
+  Frozen m49 anchors: a failure
   raised inside the `jes_up` universe on a worker across a process boundary re-raises driver-side
   carrying `variation == "jes_up"` AND the user's analysis line (M6 contract extended, not
-  altered), and the dead-letter descriptor shows the label (§7.4).
+  altered), and the dead-letter descriptor shows the label (§7.4); **plus a shared-node failure
+  asserting the multi-label rendering** — without it the single-label anchor passes under a
+  pick-one-arbitrarily implementation and the defect survives the freeze.
 - **§8.3** Per-node provenance needs no new machinery (§2.3): varied nodes record at user op lines.
   `to_dot`/debug labels remain readable; the impact-set API (§3.4) is the "which nodes belong to
   which label" view.
@@ -719,13 +915,27 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   from ONE bundle, in the m9 comparison form (per label,
   `np.array_equal(reproduce(bundle)[label], build_time[label])` — the genuinely bit-exact
   in-process form, `preserve/m9/test_reproduce.py:19-23`), and `inspect()` lists the labels without
-  executing. This replaces the m9 fixture's one-bundle-per-config pattern *additively*: existing
-  m9 frozen tests are untouched.
+  executing. **The API surface this presupposes does not exist today and is bound here**: today
+  `build_bundle(root, *, session, value, weight=None, …, histogram=None, …)` is strictly SINGULAR
+  (and raises unless `weight=` and `histogram=` are given together, `preserve/bundle.py:103-123`),
+  and `reproduce(bundle)` returns a single array (`bundle.py:206-210`). m50 extends both: a varied
+  bundle accepts a `Varied` `value=`/`weight=` (equivalently a per-label mapping) and `reproduce`
+  returns `{label: array}`; **an unvaried bundle still takes bare Arrays and `reproduce` still
+  returns a bare array** (backward compatible). Exact spellings pinned at m50 freeze. This replaces
+  the m9 fixture's one-bundle-per-config pattern *additively*: existing m9 frozen tests are
+  untouched.
 
 ## §10 Milestones (strictly ordered; m48 → m49 → m50 → m51)
 
-Numbering: the executors repo froze m47 last. Frozen layouts by repo: consolidated `graphed` =
-`tests/frozen/<pkg>/m48…`; `graphed-executors` = flat `tests/frozen/m49…`;
+Numbering: the executors repo froze m47 last. Frozen layouts by repo: consolidated `graphed` —
+directories pinned now, because that repo's frozen tree is partitioned by package, pytest runs it
+per subtree at per-milestone granularity, and duplicate basenames have bitten it before
+(`pyproject.toml:103-130`): **`tests/frozen/frontend/m48`, `tests/frozen/frontend/m49`,
+`tests/frozen/preserve/m50`, `tests/frozen/awkward/m51`**, plus the §3.3 benchmark in
+`tests/frozen/core/m49`. Any helper imported ACROSS those directories must be added to
+`pyproject.toml`'s `pythonpath` list (the corpus-reference anchors already have `tests/_corpus`
+there); a shared `vary` fixture module is expected and must be listed.
+`graphed-executors` = flat `tests/frozen/m49…`;
 **`graphed-histogram` = flat `tests/frozen/m48…`** (its existing shape — `m23/`, `m29/`);
 `uproot5-graphed-mvp` (m51 only) follows its existing frozen layout, pinned at m51 freeze.
 Each milestone runs the full §12 process. Frozen anchors listed here are the acceptance skeleton
@@ -738,26 +948,64 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     {nominal, btag_up, btag_down} (6) + ttgamma {nominal, pho_up, pho_down} (3) = **9 of the 15
     refs**, `fingerprint(h) == ref["fingerprint"]` and `bin_values(h) == ref["values"]` (the
     `m05/test_fixtures_reproduce.py` comparison form). Note: the ttgamma flat SF weight is a
-    constant — expressible only as arithmetic on an existing per-event Array (no constant-Array
-    constructor exists, cba §histogram §1); the anchor says so to spare the test-author the
-    mid-freeze discovery.
-  - §4.3 structural selection-invariance (impact set of each weight label ⊆ weight-input cone;
-    m05 equal-counts as sanity).
+    constant — spell it `gak.full_like(<a per-event Array>, sf)`
+    (`python/graphed/awkward/functions.py:612-616`, parity-pinned at
+    `tests/frozen/awkward/m24/test_interface_parity.py:74-76`) or as arithmetic on such an Array;
+    what does not exist is a constant Array with no shape donor (§4.1, §11). The anchor says so to
+    spare the test-author the mid-freeze discovery.
+  - §4.3 structural selection-invariance, in the r10 binding form: **the selection cone's node ids
+    are identical across all weight labels** (NOT the withdrawn impact-set-subset wording, which is
+    false for a correct implementation — §4.3); m05 equal-counts as sanity.
+  - **§1.2 label-out-of-identity** (no anchor existed before r10, and it guards the whole interning
+    story): for a varied program, NO node in the store carries any label string in its params or
+    token, AND renaming every label leaves `compile_ir(...).ir` byte-identical. Plus the **dedup
+    witness §5.2a defers to this bullet**: two labels whose members are structurally identical give
+    arena Δ = 0, the same node id, and — per §7.2 — both keys present in the result with ONE
+    evaluated fill (measured: `mark_output` de-dups, `src/store.rs:152-153`, so `compile_ir` over
+    two identical outputs returns one value).
+  - **§6.1c `.plan()` refusal** (no anchor existed before r10): `.plan()` on a varied `Histogram`
+    raises naming the group API — `_SumFills` sums ALL staged fills into one histogram
+    (`boost.py:88-98`) and would otherwise silently merge universes into a plausible-looking,
+    physically wrong result. Positive control: `.plan()` on an unvaried `Histogram` still works.
+  - **§2.1 stacking** (an r1 BLOCKER fix with no anchor until r10; m49's 15-reference matrix
+    exercises it only implicitly, one milestone later): `vary` on a target that already carries
+    variations inherits those labels unchanged, adds the new ones, label order = inherited-then-new,
+    the new label's member is the provided value's central universe, and each label differs from
+    nominal in exactly ONE knob (the corpus b-tag-on-JES case, `systematics.py:74-76`).
+  - **§2.2 `Varied.apply`**: per-universe application of an `Array -> Array` function, plus the
+    error contract — `fn` returning a `Varied` raises with guidance to combine via ordinary ops.
+  - **§6.1a result shapes** on a MIXED varied/unvaried output set: a varied output is
+    `{label: hist}`, an output no variation reaches is a BARE `hist` (not `{"nominal": hist}`),
+    absent labels are absent (never duplicated from nominal), and `graphed.universe`/`graphed.labels`
+    narrow both shapes uniformly.
+  - **§7.2 schema absence**: `ExecResult`/`Plan`/monitor payload schemas are unchanged by a varied
+    program (the §6.3 params-key-absence pattern applied to the plan/result schemas).
   - Single-pass read witness **on the reference-matrix run** (§5.2b applied to the weight matrix).
   - §3.2 determinism: same varied program compiled in two fresh processes under differing
     `PYTHONHASHSEED` → byte-identical `compile_ir` output; `graphed.labels` order pinned
     (nominal-first + insertion order).
   - §6.3 goldens (committed GIR blob + params-key absence).
-  - §2.3 dunder-parity and gak-classification exhaustiveness tests; §2 validation errors (§1.1,
-    §2.5); §2.4 label-aligned combination on a Varied-meets-itself program.
+  - §2.3 dunder-parity and gak-classification exhaustiveness tests, both **dynamically enumerated**
+    (§2.3a/c) — the classification test freezes only that every DISCOVERED public gak function has a
+    classification; the *behaviour* of the `refusing` class is an m49 anchor, since §5.4 (the refusal
+    message and its positive control) is an m49 target. Same dynamic enumeration gates §2.3e
+    context-handle propagation. Plus §2 validation errors (§1.1,
+    §2.5); §2.4 label-aligned combination on a Varied-meets-itself program, **including the bound
+    union ORDER** (first operand's order, then labels new to the second in its own order, nominal
+    first).
   - §4.1 correctionlib single-payload multi-parameterization.
-  - §2.6/§6.1d event-context anchors (r6 functional form): ambient fill on a per-object quantity
-    (Jet-pT fill yields value labels ∪ ambient labels, weight broadcast frozen against a
-    manual-broadcast reference); lineage semantics (`graphed.vary` returns a NEW context and the
+  - §2.6/§6.1d event-context anchors (r6 functional form): ambient fill on a per-object quantity —
+    the value passed **UNFLATTENED** (§6.1d), Jet-pT fill yields value labels ∪ ambient labels,
+    weight broadcast frozen against a manual-broadcast reference, plus the refusal when a per-object
+    fill hands in an already-flattened value alongside a per-event ambient weight;
+    lineage semantics (`graphed.vary` returns a NEW context and the
     input context is unchanged — a fill from the pre-vary context carries no new label, a fill
     from the returned context does; ancestor-chain inputs unify to the most-derived context);
-    selection-scoped weight via `vary` on a derived context (parent unaffected);
-    divergent-lineage fill → hard error; `unweighted=True`; data-context `is_weight` guard;
+    selection-scoped weight via `vary` on a derived context (parent unaffected) **and the derived
+    context's ambient weight re-indexed to the derived row count** (§2.6c — length equality against
+    a manual re-index); `graphed.labels` on a context derived by a **Varied** mask (per-label row
+    sets, §2.6c); divergent-lineage fill → hard error; `unweighted=True`; data-context guard for
+    **both** forms (`is_weight=True` AND a shift-form `vary`, §2.6d);
     lockstep `graphed.vary(events, name, Jet=…, MET=…)` shared-tag-set validation; §1.1 tag
     grammar (kwarg tags + `variations=` numeric-tag escape + every listed rejection); no
     reserved names on the context (a tree branch named `weights` or `vary` stays reachable —
@@ -768,16 +1016,34 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     (`"2"`/`"2.0"`/`"2e0"`/`"20e-1"` → the ONE label `murf_2`; `"0.5"` and hand-typed `"5em1"`
     unify; `"1e-8"` → `eps_1em8`; integer PDF indices untouched), cross-notation numeric-equal
     pairs rejected (`{"0.5", "0p5"}`, `{"2", "2p0"}`), `inf`/`nan`/leading-`+`/underscore/
-    whitespace spellings rejected, Python-float (non-string) tags rejected, and no label ever
-    contains `.`/`-` — freezing an earlier revision's rejections would hard-block this grammar
-    (review-sweep finding).
+    whitespace spellings rejected, Python-float (non-string) tags rejected, negative zero
+    canonicalizing to `0` (never `m0`) and a >32-character canonical tag rejected (§1.1 r10), the
+    three **signature-shadowed names** (`nominal`/`is_weight`/`variations` reachable only through
+    `variations=` / `collections=`, and `variations=` refused in the shift form, §2.1), and no
+    label ever containing `.`/`-` — freezing an earlier revision's rejections would hard-block this
+    grammar (review-sweep finding).
 - **m49 — shift path + impact + executor end-to-end** (repos: `graphed` + `graphed-executors`).
   Targets: §3.3, §3.4 (frozen anchor), §5, §7, §8. Frozen anchors:
-  - The **full 15-reference matrix** through the frontend (fingerprint-exact, as m48) AND through a
-    process-pool executor — fingerprint-exact vs the references plus a separate run-to-run
-    `array_equal` determinism assertion (the m29 dual-assert precedent; "bit-for-bit" is claimed
-    only run-to-run, not vs the rounded references — review r0). The §5.2b read witness binds to
-    this same run. This is the executor-level systematics end-to-end no frozen test currently
+  - The **full 15-reference matrix**, split across two repos explicitly (r10 — the halves have
+    different fixture problems and r9 named neither):
+    (i) **`graphed`, `tests/frozen/frontend/m49`** — the matrix through the frontend,
+    fingerprint-exact against the 15 stored references, which that repo already vendors at
+    `tests/_corpus/references` (on `pythonpath`, `pyproject.toml:115-117`), plus a separate
+    run-to-run `array_equal` determinism assertion (the m29 dual-assert precedent; "bit-for-bit"
+    is claimed only run-to-run, not vs the rounded references — review r0). **The §5.2b read
+    witness binds to THIS run.**
+    (ii) **`graphed-executors`, flat `tests/frozen/m49`** — the same matrix through a process-pool
+    executor (the `graphed` repo contains no process pool). Two fixture facts bind the shape:
+    the 15 stored references are NOT reachable from the `graphed-corpus` wheel (it packages only
+    `src/graphed_corpus`, `pyproject.toml:28-30`, while the reference JSONs live in the repo
+    directory `corpus/references/`), and `graphed-histogram` is **not** a dependency of
+    `graphed-executors` (`pyproject.toml:20-35`; no `histogram` hit in its pyproject or workflows).
+    Because this half must exercise §4.2/§6.1's varied-fill lowering — the whole point of a
+    weight-variation matrix — **m49 adds `graphed-histogram` to `graphed-executors`' `dev` extra**
+    and compares against corpus references recomputed in-process via `graphed_corpus` (the m7 house
+    pattern, `tests/frozen/m7/adl.py:124-158`). The materialize-then-fill-eagerly alternative is
+    explicitly NOT chosen: it reproduces the numbers while exercising none of §4.2/§6.1/§6.2.
+    This is the executor-level systematics end-to-end no frozen test currently
     discharges (cba §corpus §4).
   - m05 ordering witness (`jes_up > nominal > jes_down`) through graphed — explicitly scoped to
     the monotone JES fixture (§5.1); the suite MUST NOT assert ordering for any other shift.
@@ -809,13 +1075,26 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     plus bin-for-bin equality. The N≈100 wall-clock sibling-vs-axis comparison is an
     **implementer-report measurement under R0.11** (methodology stated: what is warmed, timed,
     held constant) — NOT a frozen gate.
-  - §9.2 one-bundle-N-labels preservation (m9 comparison form) + `inspect()` label listing (§9.1).
+  - §9.2 one-bundle-N-labels preservation (m9 comparison form, on the r10-bound varied
+    `build_bundle`/`reproduce` surface — with the backward-compat control that an unvaried bundle
+    still returns a BARE array) + `inspect()` label listing (§9.1).
+  - **§9.1 `graphed.variations(ctx)`** (no anchor before r10, and load-bearing because §6.2
+    explicitly refuses to give numeric ordering from bin index): per-name tags and kinds, plus the
+    parsed float value under **both** parsers — canonical e-form `m?\d+(em\d+)?` (`5em1` → 0.5,
+    `m15em1` → −1.5) and datacard p-form `m?\d+(p\d+)?` (`2p5` → 2.5) — and a non-numeric tag
+    (`up`) returning no value rather than raising.
   - Docs: a "How variations work" design.rst section with **executed** examples (the docs-sweep
     rule) covering §7.3's limitation explicitly.
 - **m51 — variation-aware write-out (skim augmentation)** (repos: `graphed` +
   `uproot5-graphed-mvp`). Targets: §6.4. Frozen anchors:
-  - Superset-row anchor: a varied selection writes exactly the OR-of-selections row set — every
-    universe's rows present, no row outside the union (frozen vs per-label in-memory row sets).
+  - Superset-row anchor, against an **INDEPENDENT** reference (r10 — the r9 wording compared the
+    written rows against per-label row sets taken from the same varied graph, which under §6.4a's
+    "the OR is recorded as ordinary graph ops over the per-label masks" degenerates to
+    `OR(masks) == OR(masks)` for any wrong per-label mask — the self-derived trap §5.2a names): the
+    per-label reference row sets are computed **eagerly with plain awkward, outside graphed**, from
+    the same input events (the `m23/test_group_plan.py:60-66` and `m7/adl.py:156-158` house
+    pattern); the written row set MUST equal their union, and each universe's reconstructed rows
+    MUST equal that universe's eager row set.
   - Bit-exact round-trip: write an augmented skim → the §6.4e reader reconstructs every
     universe's post-selection values and row set bit-for-bit vs the in-memory varied run (the m9
     comparison form) — covering a shift with object-level migration (per-label inner masks,
@@ -828,8 +1107,12 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     schema + manifest; the compression WIN is an R0.11 implementer-report measurement on a real
     skim (methodology stated), NOT a frozen gate.
   - Manifest: parquet KV metadata lists exactly the appended labels/columns/representations and
-    reads back; an unvaried write carries NO manifest and is byte-identical to today (§6.4g
-    golden).
+    reads back; the augmented file also round-trips through `ak.from_parquet` (the arrow-write path
+    must reproduce awkward's own KV entries, §6.4e); an unvaried write keeps the `ak.to_parquet`
+    path, carries NO manifest, and is byte-identical to today (§6.4g golden).
+  - **Structure refusal (negative anchor, §6.4d)**: a stored varied field whose per-label offsets
+    differ from nominal's is refused with an error naming the label and the field — with a positive
+    control that a same-multiplicity shift with object-level migration still writes and round-trips.
   - ROOT half: `graphed_write` gains IR evaluation (derived columns in ROOT skims — the §6.4f
     larger half) with the same round-trip anchor; numpy-backend refusal test (§6.4f).
   - Single-read witness on the augmented write run (§5.2b form).
@@ -854,7 +1137,10 @@ clamping/validation hooks (narf `theory_weight_truncate` precedent); growth cate
 **per-sample divergence of the variation-label set** (merging outputs across samples whose label
 sets legitimately differ — the exemplar's suffix-blacklist pathology, lit §ewkcoffea-confirmed;
 §6.1a governs one program's outputs, not cross-sample merging); a constant/scalar-Array broadcast
-helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
+helper needing NO shape donor (§4.1's normalization gap — `gak.full_like` covers the donor case);
+**multiplicity-changing stored variations** for §6.4 (shift-dependent cleaning / overlap removal /
+matched collections: no representable same-shape delta, refused in v1 per §6.4d); a first-class
+Rust `Vary` NodeKey.
 
 ## §12 Process and bookkeeping
 
@@ -903,12 +1189,22 @@ helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 | bh rejects 2-D weight; StrCategory probes | cba §histogram §2,§3 (runtime probes, bh 1.7.2) |
 | `{label: hist}` group reduce; `_SumFills` merges all fills | `graphed-histogram src/graphed_histogram/boost.py:100-122,88-98` |
 | Golden-bytes + param-absence frozen patterns | `tests/frozen/core/m40/test_join_serialize.py:84-99`; `m29/test_multi_weight_fills.py:93-99` |
-| Array dunder surface incl. `__array_ufunc__`, bitwise; `__getitem__`/`filter` reject non-Array | `python/graphed/array.py:156,245-275,344-375,377-379` |
+| Array dunder surface incl. `__array_ufunc__`, bitwise; `__getitem__` accepts Array/str/list/slice/int and TypeErrors otherwise; `filter` has NO check (a Varied AttributeErrors inside `record_op`) | `python/graphed/array.py:156,245-275,344-371,374-375,377-379`; `python/graphed/session.py:152,159` |
+| `Provenance` = (filename, lineno, function, source) only — no lineage channel (why §2.3e is an object attribute) | `python/graphed/provenance.py:26-33,66-79`; driver-side `Session._provenance`/`sourcemap()` `session.py:30,113-125` |
 | Positional outputs; unknown-kind raise | `graphed python/graphed/execute.py:99-126` |
 | Whole-IR task_id (no cross-revision reuse) | `python/graphed/core/plan.py:164-176,286-301` |
 | First-boundary-only plan builders (§5.4) | `python/graphed/shuffle.py:170,232` |
 | Single-partitioned-source check | `python/graphed/aggregate.py:89-93`; union projection `:101` |
-| Worker-side StageError construction channel (§8.2) | `python/graphed/debug/runner.py:20-45`; closure shipping `aggregate.py:54,96-104` |
+| StageError is built ONLY driver-side today (M6 debug runner); the worker closure has no provenance/error wrapping — §8.2's transport is NEW work | `python/graphed/debug/runner.py:6-7,37,57-69`; `python/graphed/aggregate.py:44-65,95-97`; executors translate only: `graphed-executors src/graphed_executors/submit/engine.py:381-396` |
+| DCE compacts + remaps node ids; pipeline rebuilds into a fresh interned store (why §8.2 keys post-reduction) | `src/optimizer/mod.rs:1-11,88-116` |
+| `mark_output` de-duplicates; `evaluate_ir` returns one value per DISTINCT output (why §7.2 keys node ids, not positions) | `src/store.rs:152-153`; `python/graphed/execute.py:126` (re-measured 2026-07-30) |
+| Non-growth `StrCategory` silently overflows an undeclared label (why §6.2 binds the declaration) | measured, boost_histogram 1.7.2 (2026-07-30): `sum 2.0` vs `sum(flow=True) 3.0`, `Traits(overflow=True, growth=False)` |
+| `FillEvaluator` flattens each input INDEPENDENTLY (why §6.1d's per-object fill stays unflattened) | `graphed-histogram src/graphed_histogram/boost.py:39-47,60-71` |
+| `ak.to_parquet` vs `pq.write_table` differ in bytes AND KV metadata; `ak.to_parquet` has no metadata param (why §6.4e branches) | measured, awkward 2.12.0 / pyarrow 25.0.0 (2026-07-30): sha256[:16] `ad1725aca34f2bbb` vs `43b093e8bc616bd7`; KV `{awkward_array_metadata, ak:parameters}` vs `{ak:parameters}` |
+| §3.3/§5.2a reduced shape requires a per-universe terminating reduction | measured 2026-07-30 vs `graphed-latest`: with reduction N=16→(17, 34), N=128→(129, 258), Δ(N=1→2)=52; without, N=16→(17, 18), N=128→(129, 130), Δ=51 |
+| `build_bundle`/`reproduce` are singular today (why §9.2 binds a varied surface) | `python/graphed/preserve/bundle.py:103-123,206-210` |
+| `gak.full_like` records a real constant-valued op (the §4.1 flat-SF form) | `python/graphed/awkward/functions.py:612-616`; parity-pinned `tests/frozen/awkward/m24/test_interface_parity.py:74-76` |
+| `graphed-executors` has no `graphed-histogram` dep; corpus wheel ships no reference JSONs (m49 fixture facts) | `graphed-executors pyproject.toml:20-35`; `graphed-corpus pyproject.toml:28-30` vs `corpus/references/`; vendored copy `graphed tests/_corpus/references` |
 | StageError field mechanics | `python/graphed/debug/errors.py:29-81` |
 | Provenance skips graphed frames | `python/graphed/provenance.py:66-79` |
 | Neutral-verb factorization precedent | `python/graphed/shuffle.py:92-96,5-8` |
@@ -931,12 +1227,53 @@ helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 | Compression probe: ratio NOT bit-exact; XOR exact by construction; packed XOR masks ~4.7× | worklog 2026-07-30 (R0.11, methodology stated) |
 | Dotted/minus field names round-trip byte-exact in pyarrow storage; KV metadata round-trips | measured probe, pyarrow 25.0.0 (worklog 2026-07-30, r7) |
 | `ak.from_parquet(columns=["a.b"])` silently EMPTY (splits on `.`; list-path form works) — why §1.1 canonicalizes | measured probe, awkward 2.12.0 (worklog 2026-07-30, r7) |
-| uproot RNTuple getitem splits on `.`; TTree writer joins nested fields with `.`; TTree lookup exact-first | uproot 5.7.5 `behaviors/RNTuple.py:1573-1576`, `writing/_cascadetree.py:1606`, `behaviors/TBranch.py:2098` (measured) |
+| uproot 5.7.5 RNTuple: `__getitem__` is exact-first (a dotted field IS reachable) but `RField.array()` fails — `to_akform` splits the path on `.`; `ntuple.arrays([name])` still works | `behaviors/RNTuple.py:1560-1562` (exact lookup), `:1564-1569` (dot-split fallback), `:562,567` (`to_akform` split → `KeyInFileError 'murf_0'`) — re-measured 2026-07-30 |
+| TTree writer joins nested fields with `.`; TTree lookup is exact-first and splits only on `/`, never `.` | `writing/_cascadetree.py:1606`; `behaviors/TBranch.py:2015-2017` (exact-first), `:2019-2024` (`/`-split) |
 | CPython `**`-unpacking admits non-identifier tag strings (validation must be channel-independent) | measured, CPython 3.12.10 (worklog 2026-07-30, r7) |
 | Phase-2 parking being un-parked | `graphed-root-prompt.md:1262,1282,1286`, `ops_catalog.md:75` |
 
 ## Revision history
 
+- **r10 (2026-07-30)** — review round 1 (three independent r9 reviews: facts / design / tests,
+  `systematics-vary-plan-review-r9-{facts,design,tests}.md`; 1 BLOCKER, 7 HIGH, 13 MID, 11 LOW after
+  cross-lens merge). Every finding re-verified in-session against the pinned verification roots
+  before acting; audit trail in `systematics-vary-plan-revision-r10-notes.md`.
+  **BLOCKER (context inference)** — §6.1d named `provenance` as the carrier of a fill's event
+  context, which measurably cannot carry one (`Provenance` is a 4-field source-location dataclass;
+  and interning gives sibling contexts the SAME node ids, so no node-id-keyed map can distinguish
+  them). New **§2.3(e)**: context-tag propagation as a fifth bound dispatch point — a Python-object
+  attribute on the frontend wrapper, explicitly outside node identity, with a merge rule at the op,
+  a drop rule, and the same dynamic exhaustiveness gate as the gak classification.
+  **HIGH** — §7.2 re-bound to `(output, label) → node id` (measured: `mark_output` de-dups, so a
+  positional map breaks on the very dedup case §1.2 mandates); §8.2's transport mechanism withdrawn
+  and rebuilt as NEW m49 work (the cited "already delivers" channel does not exist — no worker-side
+  `StageError` construction anywhere in the production path) and the map made set-valued per §3.4;
+  §6.2 gained a bound declaration contract (measured: non-growth `StrCategory` silently overflows an
+  undeclared label); §6.1d's ambient broadcast made implementable (per-object fills pass UNFLATTENED;
+  the sketch fixed to match); §6.4a re-bound to an explicit `select=` mask (the implicit form needed
+  an expression-retargeting pass §3.1 forbids); §2.6c gained ambient re-indexing and a definition of
+  varied (label-plural) contexts; §1.2/§6.1c and five other unanchored binding requirements gained
+  m48 anchors.
+  **MID** — §3.3/§5.2a spell the benchmark builder (the pinned `2N+2`/`Δ=52` need a per-universe
+  terminating reduction; measured both ways) and name §3.3 as the deliberate M4 carve-out to R0.10a;
+  §4.3's impact-set predicate withdrawn for the node-id form (the old one is false for a correct
+  implementation); §2.4 union order bound; §2.1 signature-shadowed names (`nominal`/`is_weight`/
+  `variations`) bound with mapping escapes; §2.6d now refuses shift forms on data contexts too;
+  §6.4d gained a multiplicity refusal; §6.4e's writer swap made conditional (measured: the arrow path
+  changes bytes and loses awkward's KV metadata); m49's reference matrix split across repos with its
+  fixture facts; m51's superset anchor re-based on an eager, independent reference; §9.2 binds the
+  varied `build_bundle`/`reproduce` surface; §10 pins the consolidated repo's frozen directories.
+  **LOW** — dynamic (not literal-list) enumeration for the §2.3 parity/classification gates;
+  §1.1 negative-zero and 32-char tag rules; §6.1a's union result type declared with a narrowing
+  helper; §4.1 corrected (`gak.full_like` exists — the cba grep was module-scoped); the correctionlib
+  float-key claim weakened to what `agc.py:56-62` supports; #469's "2-8×" carries its
+  word-level-UNVERIFIED caveat; RNTuple hazard re-stated from measurement (exact-first getitem;
+  `to_akform` is what splits) and its anchor re-pointed; `TBranch.py:2098` → `:2015-2017`;
+  §2.3(b)'s description of today's `__getitem__`/`filter` corrected; §6.4b's stale "r8
+  canonicalization" citation and p-form lead fixed. Anchors appendix +12 measured rows.
+  **Nothing rejected, nothing deferred**: no finding's resolution required reversing an owner-locked
+  decision (naming, functional surface, e-form canonical, context attachment, record-time
+  expansion + interning, m48–m51 scope incl. §6.4, JER-SF non-ordering, the Phase-2 pull-in).
 - **r9 (2026-07-30)** — encoding decision, owner-selected (three-option AskUserQuestion after a
   design exchange): **e-form canonical** for float-valued tags, superseding r8's p-form.
   Canonical numeric grammar `m?\d+(em\d+)?`: integers as plain digits (PDF indices untouched),
