@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r6).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r7).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -234,18 +234,34 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
 
 - **§1.1** Verb `graphed.vary`; container `graphed.Varied`; concept "variation" everywhere (docs,
   APIs, tests, R23). The reserved central label is the string `"nominal"`; user variation labels
-  are `f"{name}_{tag}"` (e.g. `jes_up`). **Tag grammar (r6):** `up`/`down` are conventions, not
-  specials — σ-families (`sig1`, `sig2`, …), PDF member indices, and any other tag family are
-  first-class. Tags arrive as **kwarg names** (`up=…, sig2=…`) or via the `variations={tag: …}`
-  mapping (the escape hatch for tags that are not valid kwarg names, e.g. numeric PDF indices
-  `"1"…"102"`). A `name` MUST be a valid Python identifier; a tag MUST be a string matching
-  `[A-Za-z0-9_]+`; the full label `f"{name}_{tag}"` is then itself a valid identifier — every
-  label stays usable as a kwarg name, StrCategory bin (§6.2), result key, and column/branch-name
-  fragment (§6.4). Arbitrary hashables are REJECTED (labels serialize into specs, files, and
-  manifests; string-only). `vary` MUST reject, at call time: a label equal to `"nominal"`,
+  are `f"{name}_{tag}"` (e.g. `jes_up`). **Tag grammar (r6, extended r7):** `up`/`down` are
+  conventions, not specials — σ-families, PDF member indices, and stringified-float families
+  (μR/μF scale factors `"0.5"`/`"2.0"`, σ-scans `"-2"`…`"2"`; correctionlib scale-variation sets
+  natively key on such strings, §4.1) are all first-class. A `name` MUST be a valid Python
+  identifier. A tag MUST be a string in one of two forms:
+  (i) **identifier tags** matching `[A-Za-z0-9_]+` — the label is then itself a valid
+  identifier; or
+  (ii) **numeric tags** — fixed-point decimal floats matching `-?\d+(\.\d+)?` (`"0.5"`, `"-2"`,
+  `"2.0"`). No exponent, no leading `+`, no `inf`/`nan`: the narrow grammar kills most spelling
+  multiplicity at the gate. Additionally, two tags in one family that both parse as numbers MUST
+  NOT parse numerically equal (`{"2", "2.0"}` is rejected — string-distinct spellings of one
+  value would silently create semantically duplicate universes, distinct StrCategory bins, and
+  distinct content hashes).
+  Tags arrive as **kwarg names** (`up=…, sig2=…`) or via the `variations={tag: …}` mapping.
+  Validation is **channel-independent**: literal kwarg syntax cannot spell numeric tags, but
+  CPython admits non-identifier string keys through `**`-unpacking (measured, CPython 3.12.10),
+  so both channels validate the same grammar; `variations=` is simply the documented route for
+  non-identifier tags. Labels of BOTH forms are guaranteed usable as StrCategory bins (§6.2),
+  result keys, and manifest keys; kwarg-name use and *verbatim* on-disk column/branch-name use
+  hold for identifier-tag labels only — numeric-tag labels go to disk through the §6.4b
+  name-safe form. Arbitrary hashables are REJECTED (labels serialize into specs, files, and
+  manifests; string-only — a float tag is passed as its string, never as a Python float, so the
+  user owns the spelling). `vary` MUST reject, at call time: a label equal to `"nominal"`,
   duplicate labels (within the call, within the container, or colliding with inherited labels,
-  §2.1), a tag supplied both as kwarg and in `variations=`, malformed or non-string tags, and
-  empty tag sets.
+  §2.1), numeric-equal tag pairs within a family (above), a label whose §6.4b name-safe form
+  collides with an existing label's name-safe form (`murf` tags `"0.5"` and `"0p5"` collide), a
+  tag supplied both as kwarg and in `variations=`, malformed or non-string tags (including
+  Python floats — pass the string), and empty tag sets.
 - **§1.2** In the expansion/sibling-fill lowering (§4, §5, §6.1), variation labels are **frontend
   metadata, never structural identity**: a label MUST NOT enter `NodeKey` params, tokens, or
   content hashes. Two variations with structurally identical content intern to the same nodes
@@ -551,7 +567,11 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   Non-growth is required: identical spec per partition keeps `+` combine safe and deterministic
   (PocketCoffea's deterministic pre-declared axis lesson; growth axes stay Phase 2 per the existing
   `_spec.py:70,74` refusal). M29's identity discipline binds: new params/spec content only when the
-  feature is used.
+  feature is used. The sorted bin order is **lexicographic over label strings and MUST NOT be
+  read numerically** (r7): determinism and combine-safety are unaffected by numeric-tag labels —
+  sorting is a total order over arbitrary strings, every partition still declares an identical
+  spec — but `murf_10` sorts before `murf_2`; positional/plot ordering for numeric families comes
+  from §9.1's parsed-value introspection, never from bin index.
 - **§6.3** Data / no-variation paths are unchanged, gated by both in-tree golden patterns (review
   r0): a **committed golden GIR blob** for an unvaried fill graph (the
   `core/m40/test_join_serialize.py:84-99` pattern) plus **params-key absence** (`assert
@@ -574,7 +594,17 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   selection masks (the varied cutflow) plus the nominal mask, so each universe's row set is
   recoverable. Weight-only labels contribute no kinematic deltas — their varied factors, when
   among the stored fields, augment like any other varied field. Appended names follow one bound
-  convention (`__vary_{label}__{field}`-shaped; exact spelling pinned at m51 freeze).
+  convention over the label's **name-safe form** (`__vary_{label_safe}__{field}`-shaped; exact
+  spelling pinned at m51 freeze), where `label_safe` maps `.` → `p` and leading `-` → `m` (the
+  field's `0p5`/`m2` datacard convention); an identifier-tag label is its own name-safe form, so
+  on-disk names are ALWAYS identifier-shaped. This is measured necessity, not taste (r7 probes,
+  worklog 2026-07-30): dotted names round-trip byte-exact in raw pyarrow AND uproot storage, but
+  `ak.from_parquet(columns=["murf_0.5"])` **silently returns an empty array** (awkward splits
+  string column specs on `.`; pyarrow 25.0.0 / awkward 2.12.0), uproot's RNTuple `__getitem__`
+  splits on `.` unconditionally (`t["murf_0.5"]` → `KeyInFileError: 'murf_0'`; uproot 5.7.5
+  `behaviors/RNTuple.py:1573-1576`), uproot's own TTree writer uses `.` as its nested-record
+  separator (`writing/_cascadetree.py:1606`), and ROOT TTreeFormula assigns `.`/`-` operator
+  meaning. True labels never appear in on-disk names; the §6.4e manifest carries them.
   (c) **Bit-exact reconstruction is REQUIRED.** Reading the file back and applying the deltas
   MUST reproduce every universe's post-selection values and row set bit-for-bit vs the in-memory
   varied run. The default representation is therefore **exact by construction**: same-dtype XOR
@@ -594,9 +624,12 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   (e) **Manifest — invent no formats.** A manifest (labels → appended columns → representation)
   travels in existing metadata channels: parquet key-value file metadata (measured unused today —
   greenfield; the `ak.to_parquet` call is swapped for a metadata-capable arrow write), the
-  ROOT-side equivalent pinned at m51 freeze. A frontend reader (`graphed.read_varied(path)`-
-  shaped; spelling at freeze) reconstructs `{label: array}` per universe from the manifest — the
-  round-trip is the m51 frozen anchor.
+  ROOT-side equivalent pinned at m51 freeze. The manifest maps each TRUE label (which may
+  contain `.`/`-`, §1.1) to its name-safe stored column/branch names and per-column
+  representation; readers resolve labels **exclusively through the manifest**, never by parsing
+  stored names. A frontend reader (`graphed.read_varied(path)`-shaped; spelling at freeze)
+  reconstructs `{label: array}` per universe from the manifest — the round-trip is the m51
+  frozen anchor.
   (f) **Seam binding (write-seam evidence, verified).** Parquet: appended columns are extra
   marked outputs of the SAME `compile_ir` (variadic by design, `execute.py:54-70`), so the M4
   optimizer shares the pass with the primary expression — appended between the evaluate and
@@ -656,9 +689,10 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
 
 - **§9.1** `graphed.labels`/`graphed.universe`/`graphed.nominal` (§2.2),
   `graphed.variations(ctx)` (per-name listing of a context's registered variations, their tags
-  and kinds), the §3.4 impact API, and a plan-level listing of `{output: [labels]}` constitute
-  the introspection surface (RDF `GetVariations` analogue); the listing is frozen-anchored inside
-  m50's `inspect()` test (§9.2).
+  and kinds — and, for §1.1 numeric tags, the parsed float value: the ordering handle for
+  σ-scan/envelope plots, since §6.2's sorted axis is lexicographic), the §3.4 impact API, and a
+  plan-level listing of `{output: [labels]}` constitute the introspection surface (RDF
+  `GetVariations` analogue); the listing is frozen-anchored inside m50's `inspect()` test (§9.2).
 - **§9.2** Preservation: a bundle built from a variation-expanded graph reproduces **all** labels
   from ONE bundle, in the m9 comparison form (per label,
   `np.array_equal(reproduce(bundle)[label], build_time[label])` — the genuinely bit-exact
@@ -706,7 +740,11 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     grammar (kwarg tags + `variations=` numeric-tag escape + every listed rejection); no
     reserved names on the context (a tree branch named `weights` or `vary` stays reachable —
     the collision that motivated r6); §2.2 `graphed.universe`/`labels`/`nominal` on both
-    `Varied` and contexts, string getitem = field access.
+    `Varied` and contexts, string getitem = field access. The §1.1 grammar anchor MUST cover the
+    r7 two-form grammar: numeric tags accepted via `variations=` AND via `**`-unpacking
+    (channel-independent), numeric-equal pairs rejected, name-safe collisions rejected,
+    exponent/`+`/`inf`/`nan` spellings rejected, Python-float (non-string) tags rejected —
+    freezing the r6-only rejections would hard-block the r7 grammar (review-sweep finding).
 - **m49 — shift path + impact + executor end-to-end** (repos: `graphed` + `graphed-executors`).
   Targets: §3.3, §3.4 (frozen anchor), §5, §7, §8. Frozen anchors:
   - The **full 15-reference matrix** through the frontend (fingerprint-exact, as m48) AND through a
@@ -755,11 +793,14 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
   - Bit-exact round-trip: write an augmented skim → the §6.4e reader reconstructs every
     universe's post-selection values and row set bit-for-bit vs the in-memory varied run (the m9
     comparison form) — covering a shift with object-level migration (per-label inner masks,
-    §6.4d), a weight-only label, and a label structurally equal to nominal (all-zero delta).
+    §6.4d), a weight-only label, a label structurally equal to nominal (all-zero delta), and a
+    numeric-tag label (`murf_0.5`-style): stored names are the §6.4b name-safe form while the
+    reader returns the TRUE label.
   - Representation anchors, structural (R0.10a — no size thresholds in frozen tests): appended
-    columns land in the bound exact representation (XOR-delta values, packed masks — verified by
-    reading the raw file schema + manifest); the compression WIN is an R0.11 implementer-report
-    measurement on a real skim (methodology stated), NOT a frozen gate.
+    columns land in the bound exact representation (XOR-delta values, packed masks) with
+    name-safe identifier-shaped stored names — verified by reading the raw file schema +
+    manifest; the compression WIN is an R0.11 implementer-report measurement on a real skim
+    (methodology stated), NOT a frozen gate.
   - Manifest: parquet KV metadata lists exactly the appended labels/columns/representations and
     reads back; an unvaried write carries NO manifest and is byte-identical to today (§6.4g
     golden).
@@ -862,10 +903,31 @@ helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 | numpy write hard-caps one 1-D column (§6.4f exemption) | `python/graphed/numpy/io.py:163-171` |
 | `part_path` prefix/suffix seam (per-universe file fan-out parked, §11) | `python/graphed/write.py:77-79` |
 | Compression probe: ratio NOT bit-exact; XOR exact by construction; packed XOR masks ~4.7× | worklog 2026-07-30 (R0.11, methodology stated) |
+| Dotted/minus field names round-trip byte-exact in pyarrow storage; KV metadata round-trips | measured probe, pyarrow 25.0.0 (worklog 2026-07-30, r7) |
+| `ak.from_parquet(columns=["a.b"])` silently EMPTY (splits on `.`; list-path form works) — why §6.4b mangles | measured probe, awkward 2.12.0 (worklog 2026-07-30, r7) |
+| uproot RNTuple getitem splits on `.`; TTree writer joins nested fields with `.`; TTree lookup exact-first | uproot 5.7.5 `behaviors/RNTuple.py:1573-1576`, `writing/_cascadetree.py:1606`, `behaviors/TBranch.py:2098` (measured) |
+| CPython `**`-unpacking admits non-identifier tag strings (validation must be channel-independent) | measured, CPython 3.12.10 (worklog 2026-07-30, r7) |
 | Phase-2 parking being un-parked | `graphed-root-prompt.md:1262,1282,1286`, `ops_catalog.md:75` |
 
 ## Revision history
 
+- **r7 (2026-07-30)** — owner directive: tags must also admit **stringified floating-point
+  values** (μR/μF `"0.5"`/`"2.0"`, σ-scans `"-2"`…`"2"`). §1.1 gains the two-form grammar:
+  identifier tags (unchanged) + fixed-point numeric tags `-?\d+(\.\d+)?` (no exponent/`+`/
+  `inf`/`nan`), with numeric-equality duplicate rejection (`{"2","2.0"}`), name-safe collision
+  rejection, and channel-independent validation (CPython `**`-unpacking admits non-identifier
+  keys — measured). The r6 "every label is an identifier" invariant is rescoped: it holds for
+  identifier tags; numeric-tag labels reach disk through the §6.4b **name-safe form** (`.`→`p`,
+  leading `-`→`m`, the datacard `0p5`/`m2` convention). Grounded in a 3-agent measured
+  verification (2 probes + a full-plan dependency sweep): dotted names store byte-exact in both
+  file backends but are unreadable-by-name (`ak.from_parquet(columns=)` silently empty; uproot
+  RNTuple getitem splits on `.`; the TTree writer uses `.` itself as its nesting separator), so
+  on-disk names stay identifier-shaped and the §6.4e manifest becomes the sole label resolver.
+  §6.2 pins the sorted axis as lexicographic (determinism/combine-safety measured unaffected;
+  numeric ordering comes from §9.1, which now reports parsed values for numeric tags). m48
+  grammar anchor rewritten to the r7 rejections (the sweep's hard-block finding: the r6 wording
+  would have frozen the old rejections into read-only tests); m51 round-trip gains the
+  numeric-tag fixture. Anchors +4 measured rows.
 - **r6 (2026-07-30)** — collaborator-feedback respin (owner-relayed, three points). (1)
   **Functional surface**: reserved context attributes (`events.weights`, `events.vary`) were
   latent collisions with real branch names — replaced by ONE module verb

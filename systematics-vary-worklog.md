@@ -218,3 +218,31 @@ rationale paragraph + §4 skim-growth cost; anchors +9 rows; revision history r6
 
 Also: killed 2 zombie CI watchers (173a628/a1aaefd gh-run polls, 2 days stale — merges long
 settled; user flagged).
+
+## 2026-07-30 (cont.) — r7: stringified-float tags (owner directive)
+
+Directive: tags must also allow stringified floats ("0.5", "-2", "2.0" — μR/μF scales, σ-scans).
+Verification workflow (wf_c7b44dbe-0fb, 3 agents: parquet probe / uproot probe / full-plan
+identifier-dependence sweep), all headline results:
+- pyarrow 25.0.0: dotted/minus column+field names round-trip byte-exact; arrow schema stays FLAT;
+  pq column selection by dotted name works; KV metadata round-trips.
+- awkward 2.12.0 HAZARD: ak.from_parquet(columns=["murf_0.5"]) SILENTLY EMPTY (splits string
+  specs on '.'); list-path columns=[["murf_0.5"]] works.
+- uproot 5.7.5: accepts dotted/minus branch names silently (no validation anywhere in writer);
+  byte-exact on disk (RNTuple + TTree). HAZARDS: RNTuple __getitem__ splits on '.'
+  unconditionally (behaviors/RNTuple.py:1573-1576 → KeyInFileError 'murf_0'); TTree exact-lookup
+  works (TBranch.py:2098); writer joins nested-record subfields with '.' (_cascadetree.py:1606).
+- CPython 3.12.10: f(**{'0.5': 1}) ACCEPTED → tag validation must be channel-independent.
+- Sweep (36 sites): 4 blast zones — §1.1 grammar root; §6.4b/f stored-name interpolation (the
+  only place '.'/'-' meet systems that assign them meaning); §6.2 sorted axis (determinism/
+  combine-safety FINE — lexicographic ≠ numeric order is UX only); m48 grammar anchor would have
+  FROZEN the r6 rejections into read-only tests (hard block). New hazards the amendment itself
+  introduces: spelling multiplicity ("2"/"2.0"/"+2"/"2e0") → narrow grammar + numeric-equality
+  dup rejection; label→(name,tag) split on last '_' stays unambiguous.
+
+r7 binding: two-form tag grammar (identifier | fixed-point float -?\d+(\.\d+)?); raw labels in
+memory (bins/keys/manifest measured string-safe); NAME-SAFE form on disk only ('.'→'p',
+leading '-'→'m', datacard 0p5/m2 convention; identifier labels are their own name-safe form);
+manifest = sole label resolver; name-safe collision + numeric-equal dup rejected at vary time;
+§9.1 variations() reports parsed floats (ordering handle; §6.2 sorted axis pinned lexicographic);
+m48 anchor rewritten to r7 rejections; m51 adds numeric-tag round-trip fixture.
