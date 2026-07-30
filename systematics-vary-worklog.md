@@ -167,8 +167,54 @@ Reports split into systematics-vary-codebase-analysis.md (6 repo readers) + syst
   union = value ∪ ambient ∪ explicit, per-event→per-object weight broadcast witness, data guard),
   Part I rationale para, m48 +7 event-context anchors.
 
+## Collaborator feedback round (2026-07-30, → r6 in progress)
+
+Four points from collaborators via owner: (1) events.weights attribute collides with real tree
+branches → functional graphed.vary(events, name, ...) returning NEW contexts (overturns r5's
+method+mutation choices — easier provenance, no reserved attributes); (2) tags generalize beyond
+up/down (1/2/3-sigma) → bind kwarg-parseable identifier-string tags (collaborator lean; arbitrary
+hashables rejected); (3) NEW SCOPE: variation-aware WRITE-OUT (skim augmentation) — OR of varied
+selections determines written events; varied columns + cutflow masks stored compression-
+efficiently; appended to user-indicated columns (un-parks the §11 write-out item); (4) respin
+requirements + example.
+
+Compression probe (R0.11; float32, 1M elems, zlib-6, rng seed 42; synthetic jes-like pt ×1.03 w/
+0.5% spread + near-1 weight ratio; 5 masks flipping ~3% vs nominal):
+- values: raw=3.551MB ratio=2.883 delta=3.193 xor=3.280 (of 4.0MB) — ratio compresses best BUT
+  reconstruction NOT bit-exact (measured False); XOR bit-exact by construction; subtract-delta
+  bit-exact here but only data-dependently → bind bit-exact REQUIRED, exact-by-construction
+  default (XOR-delta candidate), lossy ratio = Phase-2 opt-in; re-measure on real skims at m51.
+- masks ×5: raw-bool 798KB / packbits 614KB / XOR-vs-nominal+packbits 169KB (~4.7×) → store
+  nominal mask + per-variation packed XOR-diff masks.
+write-seam-reader agent (opus) mapping write.py/parquet.py/uproot graphed_write seams.
+
 ## Pending (next session / owner call)
 
-- [ ] Formal §12.1 review cycle r6…rN (multi-lens, BLOCKER..NIT, until clean) before test-authoring
-      — §2.6/§6.1d are new surface and should get a dedicated design lens pass
-- [ ] On landing: R23 draft + un-park the 4 Phase-2 mentions (§12.3)
+- [ ] Formal §12.1 review cycle r7…rN (multi-lens, BLOCKER..NIT, until clean) before test-authoring
+      — §2.6 (functional respin), §6.1d, and NEW §6.4/m51 write-out all need the design lens
+- [ ] On landing: R23 draft + un-park the Phase-2 mentions (§12.3)
+
+## 2026-07-30 (cont.) — r6 respin EXECUTED (functional API + tag grammar + §6.4/m51 write-out)
+
+write-seam-reader report recovered from agent transcript (idle-without-delivering again) and ALL 7
+headline claims spot-verified against fresh clones: PartitionedSource write.py:83-97;
+_WritePart.__call__ awkward/io.py:111-127 (single-output evaluate, no metadata); NodeKey has NO
+write kind (node.rs:41-70); compile_ir variadic "EXACTLY the requested outputs" execute.py:54-70;
+numpy 1-D single-column cap numpy/io.py:163-171; graphed_write zero compile_ir/evaluate_ir hits
+(verbatim branch copy _graphed_write.py:59-64); KV metadata 0 hits repo-wide. Fork name verified:
+graphed-org/uproot5-graphed-mvp.
+
+Plan r5 → r6 (single edit pass): §1.1 tag grammar (kwarg tags; variations= escape for numeric
+families; label = valid identifier; hashables rejected); §2.1 ONE functional verb, 3 overloads
+(loose Array/Varied; context is_weight=True; context Collection={tag: record}), never mutates;
+§2.2 graphed.universe/labels/nominal module functions — also fixes r5's latent Varied[label] vs
+string-field-getitem collision; §2.6 rewritten functional (no reserved names on context; lineage
+= provenance; snapshot rule → immutability); §6.1d most-derived-context rule; NEW §6.4 (a-g:
+OR-superset rows, augmentation columns, bit-exact REQUIRED w/ measured XOR default + probe
+numbers, structure rule w/ object-level masks, parquet-KV manifest + reader, verified seam
+bindings, no-cost-when-unused); NEW m51 milestone (6 anchor groups; ROOT eval = larger half);
+§11 un-parks write-out, parks lossy ratio + per-universe fan-out + auto-symmetric; Part I §3
+rationale paragraph + §4 skim-growth cost; anchors +9 rows; revision history r6.
+
+Also: killed 2 zombie CI watchers (173a628/a1aaefd gh-run polls, 2 days stale — merges long
+settled; user flagged).

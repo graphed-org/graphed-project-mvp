@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r5).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r6).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -184,6 +184,26 @@ event context (attach-once, ambient thereafter) and §6.1d the fill inference; t
 tension — selection-dependent object SFs cannot be ambient on the root — is resolved by derived,
 registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
 
+**Why the context surface is functional, and why write-out enters scope (collaborator feedback,
+2026-07-30).** The r5 context reserved attribute names on the event record (`events.weights`,
+`events.vary`) — but that namespace belongs to the *tree*: branch names are analysis-controlled
+and open-ended, so ANY reserved name is a latent collision (a branch named `weights` is entirely
+plausible), and the mutable registry left no object identity for provenance to hang on. r6 respins
+the surface to one functional verb — `graphed.vary(...)` always returns a NEW context/container,
+never mutates — which (a) frees the record namespace completely (§2.6a), (b) makes each variation
+step an object with lineage, the provenance the collaborators asked for (§2.6b), and (c) turns
+r5's "fill-time registry snapshot" rule into plain immutability (§2.6c). The same principle
+resolved a latent r5 ambiguity: `Varied[label]` collided with awkward's string-getitem field
+access; extraction moves to module functions too (§2.2). The same feedback round surfaced the
+missing sink: skims. Two surveyed frameworks hit exactly this wall and bolted around it — RDF
+Snapshot needed a per-event validity bitmask bolt-on, mkShapesRDF re-implemented `Vary` wholesale
+for its Snapshot stage (suffixed columns + OR-of-cuts, Part I §2) — and graphed's write path is
+measured greenfield: zero variation machinery, zero metadata use, one seam method per backend
+(write-seam evidence rows, Anchors). §6.4 binds the native treatment: superset rows by
+OR-of-selections, appended exact-by-construction reconstruction columns (measured: XOR bit-delta
+exact by construction; the suggested "1+delta" float ratio NOT bit-exact — worklog probe,
+2026-07-30), packed varied-cutflow masks, and a manifest in existing metadata channels.
+
 ## 4. Honest costs (the requirements in PART II that mitigate each)
 
 - **Build-time cost**: expansion re-executes the user's downstream *recording* code per variation
@@ -201,6 +221,10 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
 - **Boundary interaction**: the m39/m40 plan builders consume exactly one Exchange/first Join
   (`shuffle.py:170,232`); v1 therefore restricts variations from crossing shuffle boundaries
   (§5.4) rather than silently miscompiling.
+- **Skim growth**: the §6.4 superset+augmentation write stores more rows (OR of selections) and
+  more columns than a nominal-only skim. Mitigated by exact-by-construction deltas that are zero
+  wherever a label agrees with nominal (maximally compressible) and packed masks (~4.7× measured,
+  §6.4c); bounded by the m51 report measurement on real skims.
 
 ---
 
@@ -210,9 +234,18 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
 
 - **§1.1** Verb `graphed.vary`; container `graphed.Varied`; concept "variation" everywhere (docs,
   APIs, tests, R23). The reserved central label is the string `"nominal"`; user variation labels
-  are `f"{name}_{tag}"` (e.g. `jes_up`); `vary` MUST reject a user label equal to `"nominal"`,
-  duplicate labels (within the container or colliding with inherited labels, §2.1), and empty tag
-  sets, at call time.
+  are `f"{name}_{tag}"` (e.g. `jes_up`). **Tag grammar (r6):** `up`/`down` are conventions, not
+  specials — σ-families (`sig1`, `sig2`, …), PDF member indices, and any other tag family are
+  first-class. Tags arrive as **kwarg names** (`up=…, sig2=…`) or via the `variations={tag: …}`
+  mapping (the escape hatch for tags that are not valid kwarg names, e.g. numeric PDF indices
+  `"1"…"102"`). A `name` MUST be a valid Python identifier; a tag MUST be a string matching
+  `[A-Za-z0-9_]+`; the full label `f"{name}_{tag}"` is then itself a valid identifier — every
+  label stays usable as a kwarg name, StrCategory bin (§6.2), result key, and column/branch-name
+  fragment (§6.4). Arbitrary hashables are REJECTED (labels serialize into specs, files, and
+  manifests; string-only). `vary` MUST reject, at call time: a label equal to `"nominal"`,
+  duplicate labels (within the call, within the container, or colliding with inherited labels,
+  §2.1), a tag supplied both as kwarg and in `variations=`, malformed or non-string tags, and
+  empty tag sets.
 - **§1.2** In the expansion/sibling-fill lowering (§4, §5, §6.1), variation labels are **frontend
   metadata, never structural identity**: a label MUST NOT enter `NodeKey` params, tokens, or
   content hashes. Two variations with structurally identical content intern to the same nodes
@@ -225,26 +258,49 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
 
 ## §2 Frontend semantics: `vary` and `Varied`
 
-- **§2.1 (API.)** `graphed.vary(nominal: Array | Varied, variations: Mapping[str, Array | Varied],
-  *, name: str) -> Varied` — a **neutral module verb** exported like `join`/`repartition`
-  (`shuffle.py:92-96` precedent; per the factorization rule it is not an `Array` method, not gak,
-  not numpy-idiom). Keys of `variations` are tags; the new labels are `name_tag`.
-  **Stacking**: when `nominal` is itself a `Varied`, the result inherits its labels (members pass
-  through unchanged) and adds the new labels; a new label's member is the provided value's central
-  universe (`.nominal` if the provided value is itself `Varied`, else the Array as given). Each
-  label therefore differs from `"nominal"` in exactly **one** knob — the one-at-a-time rule is
-  structural, and a weight variation layered on a shift-propagated weight (the corpus b-tag-on-JES
-  case, `systematics.py:74-76`) is expressible without cross products.
+- **§2.1 (API — ONE functional verb, three targets; always returns a NEW object.)**
+  `graphed.vary(target, name, /, nominal=None, *, is_weight=False, variations=None, **tags)` — a
+  **neutral module verb** exported like `join`/`repartition` (`shuffle.py:92-96` precedent; per
+  the factorization rule it is not an `Array` method, not gak, not numpy-idiom). It NEVER
+  mutates: the result is a new object of the target's kind and the target remains valid,
+  unchanged — provenance hangs on object lineage (§2.6b). Tag/member pairs come from `**tags`
+  and/or `variations=` under the §1.1 grammar. Three binding overloads:
+  (a) **Array | Varied target** (the loose primitive): members are Arrays;
+  `graphed.vary(jets, "jes", up=j_up, down=j_dn) -> Varied` with the target as `"nominal"`.
+  `is_weight=True` and `nominal=` are invalid here (a loose weight variation is just a `Varied`
+  used in a `weight=[…]` factor list, §4.2).
+  (b) **Event-context target, weight form** (`is_weight=True`): `nominal` (third positional) is
+  the central per-event weight factor and every member is a per-event weight Array —
+  `graphed.vary(events, "pu", pu_nom, is_weight=True, up=pu_up, down=pu_dn) -> new context` with
+  the factor registered into the returned context's ambient weight (§2.6b).
+  (c) **Event-context target, shift form** (no `is_weight`): each kwarg names a **collection**;
+  each value maps tags to varied records — `graphed.vary(events, "jes", Jet={"up": j_up, "down":
+  j_dn}, MET={…}) -> new context` with every named collection replaced by a `Varied` (all
+  collections in one call MUST share one tag set — the lockstep Jet+MET form; §2.6a).
+  **Stacking**: when the target (or a named collection on it) already carries variations, the
+  result inherits those labels (members pass through unchanged) and adds the new labels; a new
+  label's member is the provided value's central universe (`graphed.nominal(v)` if the provided
+  value is itself `Varied`, else the Array as given). Each label therefore differs from
+  `"nominal"` in exactly **one** knob — the one-at-a-time rule is structural, and a weight
+  variation layered on a shift-propagated weight (the corpus b-tag-on-JES case,
+  `systematics.py:74-76`) is expressible without cross products.
   All member Arrays MUST share one Session, have compatible forms (backend `op_form`-checked at
   construction), and root in the same partitioned-source set (checked at construction; the
   otherwise-deferred failure surface is `aggregate_plan`'s single-source check,
-  `aggregate.py:89-93`). Lockstep multi-column variation (jet pt+mass shifted together) is
-  expressed by varying a record Array — the corpus JES fixture already does this via
-  `ak.with_field` (`systematics.py:39-45`); no second verb.
-- **§2.2 (`Varied` is a mapping of universes.)** `Varied` holds `{label: Array}` with `"nominal"`
-  always present; exposes `.labels` (ordered: nominal first, then insertion order; inherited labels
-  before new ones under stacking), `.nominal`, `[label]` (KeyError on unknown label lists the valid
-  labels), and `.apply(fn)` — apply a record-time `Array -> Array` function per universe. (Named
+  `aggregate.py:89-93`). Lockstep multi-column variation within one collection (jet pt+mass
+  shifted together) is expressed by varying a record Array — the corpus JES fixture already does
+  this via `ak.with_field` (`systematics.py:39-45`); no second verb.
+- **§2.2 (`Varied` is a mapping of universes; extraction is functional.)** `Varied` holds
+  `{label: Array}` with `"nominal"` always present. Universe extraction and introspection are
+  **module functions** (the r6 namespace-collision principle, §2.6a): `graphed.labels(x)`
+  (ordered: nominal first, then insertion order; inherited labels before new ones under
+  stacking), `graphed.nominal(x)`, and `graphed.universe(x, label)` (KeyError on an unknown
+  label, listing the valid labels) — each accepting a `Varied` OR an event context (uniform
+  introspection, §9.1). String subscription `v["pt"]` is **field access** (broadcast per §2.3a,
+  Array-coherent), NEVER label lookup — r5's `[label]` indexing collided with awkward's
+  string-getitem field access and is removed. `Varied.apply(fn)` remains a method — apply a
+  record-time `Array -> Array` function per universe (attribute shadowing follows the awkward
+  precedent: real methods win; a field named `apply` stays reachable via string getitem). (Named
   `apply`, NOT `map`: `Array.map` is an execution-time data callable, `array.py:377-379`; the two
   contracts must not share a name.) `fn` MUST return an `Array`; if it returns a `Varied` (because
   it closed over another container), `.apply` raises with guidance to combine containers via
@@ -284,51 +340,64 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
   corpus reference semantics (`systematics.py:74-76`) and the universal exclusion convention
   (lit §pythonic-analyses).
 - **§2.5 (Validation over convention.)** Silent-drop failure modes from the survey become errors
-  or diagnostics: unknown label on `[label]` → KeyError listing valid labels; form-incompatible or
+  or diagnostics: unknown label on `graphed.universe(x, label)` → KeyError listing valid labels;
+  form-incompatible or
   cross-Session/cross-source member → construction-time error naming the label; `vary()` registers
   each container with its Session (weak reference), and `compile_ir` diagnostics report any
   registered label that reaches no marked output (DCE already prunes the work; the diagnostic
   prevents the mkShapesRDF silent-cost case).
-- **§2.6 (The event context — systematics attach to `events`; owner-directed semantics,
-  2026-07-30.)** The primary user idiom is not loose `Varied` threading but an **event context**:
-  a frontend wrapper over the root event record carrying (a) the collections and (b) an
-  **ambient event-weight registry**. Pure frontend sugar over §§2.1–2.5 — no IR change, §3.1
-  intact; the ambient weight *is* a `Varied` the registry maintains. Owner-selected idioms, all
-  binding:
-  (a) **Object shifts replace collections on the context**:
-  `events.vary(name, **{Collection: {tag: varied_record}})` — every named collection is replaced
-  per tag (all collections in one call MUST share the tag set: the lockstep form that shifts
-  `Jet` and `MET` together, the boostedhiggs collection-replacement semantic); thereafter
-  `events.<Collection>` is a `Varied` and §2.3 broadcast carries it. Repeated calls stack (§2.1).
-  (b) **Weight systematics register on the context**:
-  `events.weights.add(name, nominal, *, up, down)` and
-  `events.weights.add_multi(name, {tag: weight})` accumulate multiplicative per-event factors
-  into the ambient weight (M29 factor-list semantics). Explicit up AND down in v1
-  (auto-symmetric derivation from a lone `up` is Phase 2, §11).
-  (c) **Progressive + scoped registration**: registrations accumulate in program order; each fill
-  snapshots its context's registry **at fill time** (a later registration affects only later
-  fills — deterministic because recording order is program order). Derived contexts
-  (`events[mask]`) inherit the parent registry and MAY add selection-scoped weights
-  (`sel.weights.add("btag", …)` — the replacement for the exemplars' per-channel
-  `deepcopy(Weights)`); derivation never mutates the parent.
-  (d) **Data contexts refuse weight-systematic registration** (guard, not convention) and fill
-  nominal-only — the survey's universal data special-casing, structural.
-  Sketch (spellings of helper verbs pinned at m48 freeze; the shapes here are binding):
+- **§2.6 (The event context — systematics attach to `events`, functionally; owner semantics
+  2026-07-30, respun functional per collaborator feedback 2026-07-30.)** The primary user idiom
+  is not loose `Varied` threading but an **event context**: a frontend wrapper over the root
+  event record carrying (a) the collections and (b) an **ambient event-weight registry** (itself
+  a `Varied` of accumulated M29 factors). Pure frontend sugar over §§2.1–2.5 — no IR change,
+  §3.1 intact. Binding, in the r6 functional form:
+  (a) **The context reserves NO names.** Attribute and `[]` access on a context resolve ONLY
+  tree content (collections/branches); every graphed operation on a context is a module function
+  (`graphed.vary`, `graphed.labels`, `graphed.universe`, `graphed.variations` — §9.1). This is
+  load-bearing, not style: branch names are analysis-controlled and open-ended, so any reserved
+  attribute (r5's `events.weights`, `events.vary`) is a latent collision with real tree content.
+  (b) **Contexts are immutable; `graphed.vary` returns a NEW context** (§2.1 overloads b/c). The
+  shift form replaces the named collections with `Varied` members (thereafter
+  `events.<Collection>` is a `Varied` and §2.3 broadcast carries it; repeated calls stack,
+  §2.1); the weight form registers the factor into the returned context's ambient weight (M29
+  factor-list semantics; explicit tags in v1 — auto-symmetric derivation from a lone `up` is
+  Phase 2, §11). Each returned context links to its parent: variation history is **object
+  lineage** — the provenance handle the collaborators asked for; no hidden mutable registry.
+  (c) **Scoping is lineage.** A fill sees exactly the registrations present on the context its
+  inputs were read from (§6.1d) — r5's fill-time-snapshot rule re-bound as immutability: a fill
+  from a pre-`vary` context is unaffected by later `vary` calls *by construction*. Derived
+  contexts (`events[mask]`) inherit the ambient registry; selection-scoped weights are `vary` on
+  the derived context (`sel = graphed.vary(sel, "btag", …, is_weight=True, …)` — the replacement
+  for the exemplars' per-channel `deepcopy(Weights)`); the parent is never touched. Inputs whose
+  contexts lie on ONE ancestry chain unify to the most-derived one; contexts on divergent
+  branches are the §6.1d hard error.
+  (d) **Data contexts refuse the weight form** (`is_weight=True` on a data context is a guard
+  error, not a convention) and fill nominal-only — the survey's universal data special-casing,
+  structural.
+  Sketch (binding shapes; helper-verb spellings pinned at m48 freeze):
   ```python
-  events = gnano.events(src)                                  # MC event context
-  events.weights.add("pu", pu_nom, up=pu_up, down=pu_dn)      # event-level, ambient
-  events.weights.add_multi("pdf", {f"{i}": w_i for i in range(103)})
-  events.vary("jes", Jet={"up": j_up, "down": j_dn},
-                     MET={"up": m_up, "down": m_dn})          # lockstep collection shift
+  events = gnano.events(src)                                  # MC event context (immutable)
+  events = graphed.vary(events, "pu",                         # event-level weight
+                        pu_sf(events.Pileup.nTrueInt), is_weight=True,
+                        up=pu_sf(events.Pileup.nTrueInt, systematic="up"),
+                        down=pu_sf(events.Pileup.nTrueInt, systematic="down"))
+  events = graphed.vary(events, "pdf", lhe_w[:, 0],           # tags beyond up/down (§1.1)
+                        is_weight=True,
+                        variations={f"{i}": lhe_w[:, i] for i in range(1, 103)})
+  events = graphed.vary(events, "jes",                        # lockstep object shift
+                        Jet={"up": j_up, "down": j_dn}, MET={"up": m_up, "down": m_dn})
   jets = events.Jet[events.Jet.pt > 25]                       # universes flow (§2.3)
   sel  = events[gak.num(jets) >= 4]                           # derived context
-  sel.weights.add("btag", btag_nom(jets), up=b_up, down=b_dn) # selection-scoped
-  h.fill(pt=gak.flatten(jets.pt))                             # no weight= — see §6.1(d)
+  sel  = graphed.vary(sel, "btag", btag_sf(sel.Jet),          # selection-scoped weight
+                      is_weight=True,
+                      up=btag_sf(sel.Jet, "up"), down=btag_sf(sel.Jet, "down"))
+  h.fill(pt=gak.flatten(sel.Jet.pt))                          # ambient auto-applies (§6.1d)
   ```
-  The neutral context *mechanism* (registry, derivation, fill-inference seam) lives in `graphed`
-  proper; the nanoevents-flavored constructor is awkward-idiom and lives in `graphed.awkward`
-  (factorization rule preserved). The loose `graphed.vary` primitive remains public — the context
-  is built on it, not beside it.
+  The neutral context *mechanism* (lineage, ambient weight, fill-inference seam) lives in
+  `graphed` proper; the nanoevents-flavored constructor is awkward-idiom and lives in
+  `graphed.awkward` (factorization rule preserved). The loose `graphed.vary` on Arrays (§2.1a)
+  remains public — the context is built on it, not beside it.
 
 ## §3 IR and optimizer treatment
 
@@ -337,7 +406,8 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
   (`src/store.rs:73-88`); the m4 frozen scaling contract
   (`tests/frozen/core/m4/test_systematics.py`) continues to bind unchanged. Any future first-class
   node (introspection-driven) is Phase 2 and follows the full M40 checklist (cba §ir-rust §1).
-- **§3.2 (Determinism.)** Expansion order is deterministic: labels in `.labels` order, recording
+- **§3.2 (Determinism.)** Expansion order is deterministic: labels in `graphed.labels` order,
+  recording
   per §2.3. Two-run byte-identical compilation of a variation-expanded graph is a frozen m48
   anchor (§10) in the strong R22.3 form (fresh processes, differing `PYTHONHASHSEED`).
 - **§3.3 (Anti-quadratic guard gains a variation topology — in a NEW frozen file.)** A new frozen
@@ -374,8 +444,9 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
   differing only in the varied input ids — everything upstream interns. All siblings join the
   **same group plan**; the single-pass property is frozen-witnessed on the corpus run itself in
   m48 (§10), not only on a toy graph. With the §2.6 event context, weight variations typically
-  reach fills **ambiently** (registered once via `events.weights`, applied per §6.1d); the
-  explicit factor-list form remains the primitive underneath and stays public.
+  reach fills **ambiently** (registered once via `graphed.vary(events, …, is_weight=True)`,
+  applied per §6.1d); the explicit factor-list form remains the primitive underneath and stays
+  public.
 - **§4.3** Weight variations MUST NOT change selection. The frozen m48 anchor is **structural**,
   not only behavioral (equal counts is a tautology under §3's expansion — the selection nodes are
   the same interned ids by construction, an R0.10 trap flagged in review r0): the §3.4 impact set
@@ -431,7 +502,7 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
   carries a JER-SF-style fixture (§10) whose witnesses assert bidirectional migration and
   run-to-run byte-identity, never ordering (§5.1).
 
-## §6 Histogram integration
+## §6 Sinks: histogram fills (§6.1–§6.3) and variation-aware write-out (§6.4)
 
 - **§6.1 (MVP shape: sibling fills, named results.)** `Histogram.fill` accepting `Varied` axis
   values and/or `Varied` weight factors lowers per §4.2/§5.1 under the §2.4 rule. Binding result
@@ -450,16 +521,18 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
   the group API.
   (d) **Ambient-weight application (the §2.6 completion of register-then-forget).** `fill` walks
   its input Arrays' provenance to their event context and **auto-applies that context's ambient
-  weight** (the fill-time registry snapshot): the fill's label set is the §2.4 union of
-  value-borne labels, ambient-weight labels, and explicit `weight=[...]` factor labels — so a
-  plain Jet-pT fill yields the jes/jer universes AND the pileup/PDF universes with zero per-fill
-  bookkeeping (the owner's simultaneity requirement). `weight=[...]` *adds* factors;
-  `unweighted=True` opts out (counts histograms); inputs rooted in **two distinct contexts are a
-  hard error** naming both; context-free (loose) inputs alongside contexted ones adopt the unique
-  context; an all-loose fill is unweighted (the r4 primitive path, still supported). The
-  per-event ambient weight is **broadcast to the fill's object structure** (a per-jet fill gets
-  the event weight replicated across each event's jets before the existing jagged flatten) —
-  frozen-witnessed against a manually broadcast reference.
+  weight** (§2.6c lineage rule — contexts are immutable, so *which context* fully determines
+  *which registrations*): the fill's label set is the §2.4 union of value-borne labels,
+  ambient-weight labels, and explicit `weight=[...]` factor labels — so a plain Jet-pT fill
+  yields the jes/jer universes AND the pileup/PDF universes with zero per-fill bookkeeping (the
+  owner's simultaneity requirement). `weight=[...]` *adds* factors; `unweighted=True` opts out
+  (counts histograms); inputs whose contexts sit on one ancestry chain unify to the
+  **most-derived** context; contexts on **divergent branches are a hard error** naming both;
+  context-free (loose) inputs alongside contexted ones adopt the unified context; an all-loose
+  fill is unweighted (the r4 primitive path, still supported). The per-event ambient weight is
+  **broadcast to the fill's object structure** (a per-jet fill gets the event weight replicated
+  across each event's jets before the existing jagged flatten) — frozen-witnessed against a
+  manually broadcast reference.
   This reproduces the corpus reference layout (independent per-variation histograms — UHI, no
   invented formats).
 - **§6.2 (Scaling shape: the variation axis, m50 — weight labels only.)** An opt-in fill mode
@@ -483,6 +556,60 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
   r0): a **committed golden GIR blob** for an unvaried fill graph (the
   `core/m40/test_join_serialize.py:84-99` pattern) plus **params-key absence** (`assert
   "<new key>" not in node["params"]`, the `m29/test_multi_weight_fills.py:93-99` pattern).
+- **§6.4 (Variation-aware write-out — skim augmentation; NEW scope, collaborator-directed
+  2026-07-30.)** Writing varied data (`to_parquet`, the uproot fork's `graphed_write`) is a
+  first-class sink, not a Phase-2 parking: the surveyed frameworks each hit this wall and bolted
+  around it (RDF Snapshot's per-event validity bitmask; mkShapesRDF re-implementing `Vary` for
+  its Snapshot stage as suffixed columns + OR-of-cuts — Part I §2), and graphed's write path is
+  measured greenfield (zero variation machinery, zero metadata use, one seam method per backend —
+  Anchors, write-seam rows). Binding:
+  (a) **Row rule — OR of selections.** When the written rows pass through a varied selection, the
+  writer materializes the **superset**: rows passing ANY universe's selection, nominal included.
+  The OR is recorded as ordinary graph ops over the per-label masks (`getitem`/`gak.mask` — no
+  mask algebra exists in the IR and none is added); stored columns are evaluated on the superset
+  rows.
+  (b) **Column rule — augmentation.** The written record carries the user's fields evaluated in
+  the **nominal** universe (on superset rows), PLUS appended per-label reconstruction data: for
+  every stored field whose value differs per label, a same-shaped delta column; and per-label
+  selection masks (the varied cutflow) plus the nominal mask, so each universe's row set is
+  recoverable. Weight-only labels contribute no kinematic deltas — their varied factors, when
+  among the stored fields, augment like any other varied field. Appended names follow one bound
+  convention (`__vary_{label}__{field}`-shaped; exact spelling pinned at m51 freeze).
+  (c) **Bit-exact reconstruction is REQUIRED.** Reading the file back and applying the deltas
+  MUST reproduce every universe's post-selection values and row set bit-for-bit vs the in-memory
+  varied run. The default representation is therefore **exact by construction**: same-dtype XOR
+  bit-delta vs nominal for value columns (zero wherever a label equals nominal — maximally
+  compressible), `packbits` for masks stored as nominal + XOR-vs-nominal diffs. Measured basis
+  (R0.11; worklog 2026-07-30, float32/1M-value/zlib-6 probe): the suggested "1+delta" float
+  ratio compresses best (2.88 MB vs 3.55 raw) but is **NOT bit-exact** (measured false);
+  subtraction delta is bit-exact only data-dependently; XOR is exact by construction (3.28 MB);
+  XOR-diff+packbits masks are ~4.7× smaller than raw booleans (169 KB vs 798 KB, 5 labels).
+  Lossy ratio storage is a Phase-2 opt-in (§11); the representation is recorded per column in
+  the manifest; sizes are re-measured on real skims in the m51 implementer report.
+  (d) **Structure rule.** Deltas require same-shaped buffers: varied columns are stored at the
+  widest common structure (pre-object-cut values on the event-row superset), with per-label
+  validity masks at every selection level that varies — event-level AND object-level (a JES
+  shift moves jets across a per-jet pt cut, so per-label *inner* masks are part of the cutflow
+  data, not an edge case).
+  (e) **Manifest — invent no formats.** A manifest (labels → appended columns → representation)
+  travels in existing metadata channels: parquet key-value file metadata (measured unused today —
+  greenfield; the `ak.to_parquet` call is swapped for a metadata-capable arrow write), the
+  ROOT-side equivalent pinned at m51 freeze. A frontend reader (`graphed.read_varied(path)`-
+  shaped; spelling at freeze) reconstructs `{label: array}` per universe from the manifest — the
+  round-trip is the m51 frozen anchor.
+  (f) **Seam binding (write-seam evidence, verified).** Parquet: appended columns are extra
+  marked outputs of the SAME `compile_ir` (variadic by design, `execute.py:54-70`), so the M4
+  optimizer shares the pass with the primary expression — appended between the evaluate and
+  write steps of `_WritePart.__call__` (`awkward/io.py:111-127`); the read list widens at
+  `_evaluation_columns` (`awkward/io.py:157-185`) or projection starves the task. ROOT:
+  `graphed_write` today copies branches verbatim with NO IR evaluation
+  (`_graphed_write.py:59-64`; zero `compile_ir`/`evaluate_ir` hits) — adding evaluation is the
+  **larger half** of m51 and is scoped there explicitly. numpy backend: EXEMPT — it hard-caps
+  output at one 1-D column (`numpy/io.py:163-171`); varied writes refuse with a clear error
+  naming the awkward backend.
+  (g) **Single pass; no cost when unused.** The augmented write stays one plan / one read pass
+  (the §5.2b witness applies to the write run); an unvaried write is byte-identical to today's
+  output (golden + params-absence, the §6.3 patterns), and carries no manifest.
 
 ## §7 Execution, results, checkpoint
 
@@ -527,9 +654,11 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
 
 ## §9 Preservation and introspection
 
-- **§9.1** `Varied.labels`, the §3.4 impact API, and a plan-level listing of
-  `{output: [labels]}` constitute the introspection surface (RDF `GetVariations` analogue); the
-  listing is frozen-anchored inside m50's `inspect()` test (§9.2).
+- **§9.1** `graphed.labels`/`graphed.universe`/`graphed.nominal` (§2.2),
+  `graphed.variations(ctx)` (per-name listing of a context's registered variations, their tags
+  and kinds), the §3.4 impact API, and a plan-level listing of `{output: [labels]}` constitute
+  the introspection surface (RDF `GetVariations` analogue); the listing is frozen-anchored inside
+  m50's `inspect()` test (§9.2).
 - **§9.2** Preservation: a bundle built from a variation-expanded graph reproduces **all** labels
   from ONE bundle, in the m9 comparison form (per label,
   `np.array_equal(reproduce(bundle)[label], build_time[label])` — the genuinely bit-exact
@@ -537,11 +666,12 @@ registry-inheriting contexts rather than the exemplars' per-channel `deepcopy`.
   executing. This replaces the m9 fixture's one-bundle-per-config pattern *additively*: existing
   m9 frozen tests are untouched.
 
-## §10 Milestones (strictly ordered; m48 → m49 → m50)
+## §10 Milestones (strictly ordered; m48 → m49 → m50 → m51)
 
 Numbering: the executors repo froze m47 last. Frozen layouts by repo: consolidated `graphed` =
 `tests/frozen/<pkg>/m48…`; `graphed-executors` = flat `tests/frozen/m49…`;
-**`graphed-histogram` = flat `tests/frozen/m48…`** (its existing shape — `m23/`, `m29/`).
+**`graphed-histogram` = flat `tests/frozen/m48…`** (its existing shape — `m23/`, `m29/`);
+`uproot5-graphed-mvp` (m51 only) follows its existing frozen layout, pinned at m51 freeze.
 Each milestone runs the full §12 process. Frozen anchors listed here are the acceptance skeleton
 the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **binding and unchanged**.
 
@@ -559,18 +689,24 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     m05 equal-counts as sanity).
   - Single-pass read witness **on the reference-matrix run** (§5.2b applied to the weight matrix).
   - §3.2 determinism: same varied program compiled in two fresh processes under differing
-    `PYTHONHASHSEED` → byte-identical `compile_ir` output; `.labels` order pinned
+    `PYTHONHASHSEED` → byte-identical `compile_ir` output; `graphed.labels` order pinned
     (nominal-first + insertion order).
   - §6.3 goldens (committed GIR blob + params-key absence).
   - §2.3 dunder-parity and gak-classification exhaustiveness tests; §2 validation errors (§1.1,
     §2.5); §2.4 label-aligned combination on a Varied-meets-itself program.
   - §4.1 correctionlib single-payload multi-parameterization.
-  - §2.6/§6.1d event-context anchors: ambient fill on a per-object quantity (Jet-pT fill yields
-    value labels ∪ ambient labels, weight broadcast frozen against a manual-broadcast reference);
-    fill-time snapshot semantics (a registration between two fills affects only the second);
-    derived-context scoping (child sees parent's + own registrations; parent unaffected);
-    two-context fill → hard error; `unweighted=True`; data-context registration guard;
-    lockstep `events.vary(Jet=…, MET=…)` tag-set validation.
+  - §2.6/§6.1d event-context anchors (r6 functional form): ambient fill on a per-object quantity
+    (Jet-pT fill yields value labels ∪ ambient labels, weight broadcast frozen against a
+    manual-broadcast reference); lineage semantics (`graphed.vary` returns a NEW context and the
+    input context is unchanged — a fill from the pre-vary context carries no new label, a fill
+    from the returned context does; ancestor-chain inputs unify to the most-derived context);
+    selection-scoped weight via `vary` on a derived context (parent unaffected);
+    divergent-lineage fill → hard error; `unweighted=True`; data-context `is_weight` guard;
+    lockstep `graphed.vary(events, name, Jet=…, MET=…)` shared-tag-set validation; §1.1 tag
+    grammar (kwarg tags + `variations=` numeric-tag escape + every listed rejection); no
+    reserved names on the context (a tree branch named `weights` or `vary` stays reachable —
+    the collision that motivated r6); §2.2 `graphed.universe`/`labels`/`nominal` on both
+    `Varied` and contexts, string getitem = field access.
 - **m49 — shift path + impact + executor end-to-end** (repos: `graphed` + `graphed-executors`).
   Targets: §3.3, §3.4 (frozen anchor), §5, §7, §8. Frozen anchors:
   - The **full 15-reference matrix** through the frontend (fingerprint-exact, as m48) AND through a
@@ -612,6 +748,24 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
   - §9.2 one-bundle-N-labels preservation (m9 comparison form) + `inspect()` label listing (§9.1).
   - Docs: a "How variations work" design.rst section with **executed** examples (the docs-sweep
     rule) covering §7.3's limitation explicitly.
+- **m51 — variation-aware write-out (skim augmentation)** (repos: `graphed` +
+  `uproot5-graphed-mvp`). Targets: §6.4. Frozen anchors:
+  - Superset-row anchor: a varied selection writes exactly the OR-of-selections row set — every
+    universe's rows present, no row outside the union (frozen vs per-label in-memory row sets).
+  - Bit-exact round-trip: write an augmented skim → the §6.4e reader reconstructs every
+    universe's post-selection values and row set bit-for-bit vs the in-memory varied run (the m9
+    comparison form) — covering a shift with object-level migration (per-label inner masks,
+    §6.4d), a weight-only label, and a label structurally equal to nominal (all-zero delta).
+  - Representation anchors, structural (R0.10a — no size thresholds in frozen tests): appended
+    columns land in the bound exact representation (XOR-delta values, packed masks — verified by
+    reading the raw file schema + manifest); the compression WIN is an R0.11 implementer-report
+    measurement on a real skim (methodology stated), NOT a frozen gate.
+  - Manifest: parquet KV metadata lists exactly the appended labels/columns/representations and
+    reads back; an unvaried write carries NO manifest and is byte-identical to today (§6.4g
+    golden).
+  - ROOT half: `graphed_write` gains IR evaluation (derived columns in ROOT skims — the §6.4f
+    larger half) with the same round-trip anchor; numpy-backend refusal test (§6.4f).
+  - Single-read witness on the augmented write run (§5.2b form).
 
 Definition of Done per milestone = the standard checklist (root `CLAUDE.md` §E.0): targets exactly
 as specified, frozen suite green and unmodified since freeze, ≥90% diff coverage from the frozen
@@ -623,8 +777,11 @@ CI green at the pinned revision (R0.5), attempts log + reviewer APPROVE recorded
 Declarative nuisance registry / config layer (mkShapesRDF-style `{name, type, kind, samples}`);
 correlation/decorrelation metadata, envelope/RMS/symmetrize post-aggregation ops; dataset-level
 variation automation (separate-sample variations stay a partition-metadata pattern, documented);
-variation-aware materialize/write-out (OR-of-selections masks — RDF Snapshot's bitmask cautionary
-tale); per-variation monitor/dashboard axis; stage-granular checkpoint task ids (the §7.3 fix);
+lossy/ratio ("1+delta") storage for §6.4 reconstruction columns (measured NOT bit-exact — worklog
+2026-07-30; any opt-in must leave §6.4c's exact default intact); per-variation file fan-out (one
+file per universe — §6.4 appends columns instead; the `part_path` prefix/suffix seam exists,
+`write.py:77-79`); auto-symmetric weight derivation from a lone `up` (§2.6b);
+per-variation monitor/dashboard axis; stage-granular checkpoint task ids (the §7.3 fix);
 variations crossing Exchange/Join boundaries (§5.4); implicit variation cross products; weight
 clamping/validation hooks (narf `theory_weight_truncate` precedent); growth category axes;
 **per-sample divergence of the variation-label set** (merging outputs across samples whose label
@@ -696,10 +853,38 @@ helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 | Exemplar dask-era: hand-written CSE in the processor; build-vs-compute timing | `ewkcoffea@63abb06 analysis/wwz/wwz4l.py:808-865`; `run_wwz4l.py:302-313` |
 | Exemplar dask-era: unserializable variation-expanded graph ("Does not work") | `ewkcoffea@63abb06 analysis/wwz/run_wwz4l.py:259-261` |
 | Teaching strip removes physics, variation scaffolding survives intact | `FNALLPC/wwz4l@cc71718 analysis/analysis_processor.py:395-400,408-759,711-718` (private; lit §ewkcoffea-confirmed addendum) |
+| Write path: `_WritePart.__call__` — single-output evaluate → record-vs-column → write, no metadata | `python/graphed/awkward/io.py:111-127` |
+| `compile_ir` variadic outputs ("EXACTLY the requested outputs", M22) — the §6.4f sharing lever | `python/graphed/execute.py:54-70` |
+| Write read-list (`_evaluation_columns`) — must widen for appended columns | `python/graphed/awkward/io.py:157-185,113` |
+| No write/sink NodeKey — write is driver-side Python only | `src/node.rs:41-70`; write-seam report §3 |
+| Parquet KV metadata unused today (greenfield for the §6.4e manifest) | grep 0 hits across `G/python`+`U/src` (write-seam report §1) |
+| `graphed_write` copies branches verbatim — zero IR evaluation (§6.4f ROOT half) | `uproot5-graphed-mvp src/uproot/writing/_graphed_write.py:59-64` |
+| numpy write hard-caps one 1-D column (§6.4f exemption) | `python/graphed/numpy/io.py:163-171` |
+| `part_path` prefix/suffix seam (per-universe file fan-out parked, §11) | `python/graphed/write.py:77-79` |
+| Compression probe: ratio NOT bit-exact; XOR exact by construction; packed XOR masks ~4.7× | worklog 2026-07-30 (R0.11, methodology stated) |
 | Phase-2 parking being un-parked | `graphed-root-prompt.md:1262,1282,1286`, `ops_catalog.md:75` |
 
 ## Revision history
 
+- **r6 (2026-07-30)** — collaborator-feedback respin (owner-relayed, three points). (1)
+  **Functional surface**: reserved context attributes (`events.weights`, `events.vary`) were
+  latent collisions with real branch names — replaced by ONE module verb
+  `graphed.vary(target, name, …)` with three overloads (§2.1: loose Array/Varied; context weight
+  form `is_weight=True`; context shift form `Collection={tag: record}`), ALWAYS returning a new
+  object; contexts reserve NO names (§2.6a); registry mutation → object lineage (§2.6b/c;
+  fill-time snapshot re-bound as immutability; §6.1d most-derived-context rule); r5's
+  `Varied[label]` (collided with string field access) → `graphed.universe`/`graphed.labels`/
+  `graphed.nominal` module functions (§2.2, §9.1). (2) **Tag grammar beyond up/down** (§1.1):
+  kwarg-name tags + `variations=` mapping escape for numeric families; label must be a valid
+  identifier; arbitrary hashables rejected. (3) **NEW scope — §6.4 variation-aware write-out
+  (skim augmentation) + milestone m51**: OR-of-selections superset rows; appended
+  exact-by-construction reconstruction columns + packed varied-cutflow masks with bit-exact
+  round-trip REQUIRED (the suggested "1+delta" ratio measured NOT bit-exact → Phase-2 opt-in,
+  §11); object-level masks for jagged migration (§6.4d); parquet-KV manifest + reader (§6.4e);
+  seams bound to the measured-greenfield write path (all verified: variadic `compile_ir`
+  sharing, `_WritePart` append point, read-list widening, ROOT `graphed_write` needs IR
+  evaluation — the larger half; numpy exempt). Part I §3 rationale paragraph + §4 skim-growth
+  cost added; anchors appendix +9 rows.
 - **r5 (2026-07-30)** — owner semantic correction + three owner-selected decisions (context
   methods / inferred ambient fills / progressive+scoped registration): systematics attach to the
   **event context**, not to per-fill threading. New §2.6 (events.vary collection replacement incl.
