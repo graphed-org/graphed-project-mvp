@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r2).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r3).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -119,11 +119,17 @@ semantics but forced the analyst to hand-write CSE inside the physics processor
 not be saved, shipped, or inspected. No dask-era version of the analysis ever carried an object
 shift (falsified as a migration casualty: the empty `obj_correction_systs` predates the branch),
 and a latent `hout = {}`-inside-the-shift-loop bug would silently keep only the last shift the
-moment one is added — the dask-era shift-loop cost is therefore UNVERIFIED there. **[OPEN — the
-owner also named `FNALLPC/wwz4l` (modern coffea); that repo is not visible to this GitHub account
-(404 authenticated; absent from FNALLPC's 46 public repos — likely private). The `coffea2023`
-branch stands in as the same analysis/author-org dask-era port. Needs access or a corrected URL;
-if it is a distinct port, re-check whether it carries object shifts.]**
+moment one is added — the dask-era shift-loop cost is therefore UNVERIFIED there.
+**`FNALLPC/wwz4l` — resolved (access granted 2026-07-30; lit §ewkcoffea-confirmed addendum):**
+named as a modern-coffea version, it is **measured to be neither** — a coffea-0.7-era CMS-DAS
+teaching derivative of `ewkcoffea@main` (`main@cc71718`; 522 identical processor lines;
+byte-identical `ApplyJetSystematics`; zero dask/`dataset_tools`/`hist.dask` surface repo-wide,
+independently re-verified). It carries the full weight+shift treatment (27 labels) and adds no
+dask-era evidence, so `coffea2023@63abb06` remains the sole modern-coffea exemplar and the
+no-dask-era-object-shift finding extends to it. Its distinct value: the teaching strip removed
+every piece of *physics* (BDT, EFT, 54→14 categories) while the **variation scaffolding survived
+completely intact** — the loops, deepcopies, exclusion rule, growth axes, and suffix generator are
+irreducible accidental complexity by construction, which is precisely what `vary` deletes.
 Universal conventions across all four surveyed: `"nominal"` reserved; `Up`/`Down`-suffixed labels;
 **shift × weight cross products never produced** (under a kinematic shift, only the central weight
 fills — evaluated on that shift's selection); one histogram with a `systematic` StrCategory axis;
@@ -591,10 +597,17 @@ helper (§4.1's normalization gap); a first-class Rust `Vary` NodeKey.
 | Exemplar 0.7-era: exclusion rule; impact-partitioned Weights | `ewkcoffea@063e8d7 analysis/wwz/wwz4l.py:1204-1207,396-397` (lit §ewkcoffea-confirmed) |
 | Exemplar dask-era: hand-written CSE in the processor; build-vs-compute timing | `ewkcoffea@63abb06 analysis/wwz/wwz4l.py:808-865`; `run_wwz4l.py:302-313` |
 | Exemplar dask-era: unserializable variation-expanded graph ("Does not work") | `ewkcoffea@63abb06 analysis/wwz/run_wwz4l.py:259-261` |
+| Teaching strip removes physics, variation scaffolding survives intact | `FNALLPC/wwz4l@cc71718 analysis/analysis_processor.py:395-400,408-759,711-718` (private; lit §ewkcoffea-confirmed addendum) |
 | Phase-2 parking being un-parked | `graphed-root-prompt.md:1262,1282,1286`, `ops_catalog.md:75` |
 
 ## Revision history
 
+- **r3 (2026-07-30)** — the r2 OPEN item resolved with its conclusion inverted: access to
+  `FNALLPC/wwz4l` granted; measured to be a coffea-0.7-era CMS-DAS teaching derivative of
+  `ewkcoffea@main` (not modern coffea as framed) carrying the full weight+shift treatment; the
+  no-dask-era-object-shift finding extends to it and `coffea2023` remains the sole modern-coffea
+  exemplar. Addendum appended to lit §ewkcoffea-confirmed (era/lineage claims independently
+  re-verified); teaching-strip anchor row added. **No requirement changes** — PART II unchanged.
 - **r2 (2026-07-30)** — Kelci's analysis confirmed by the owner as `cmstas/ewkcoffea` and
   integrated as the canonical exemplar (deep-dive appended to the litsearch as
   §ewkcoffea-confirmed, both eras pinned: `main@063e8d7`, `coffea2023@63abb06`; headline claims

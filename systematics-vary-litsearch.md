@@ -513,3 +513,66 @@ The migration is the more interesting artifact. It changed **none** of the syste
 Everything else in PART II that this evidence touches — §1.1/§1.2 label rules, §2.4 label-aligned union with no cross products, §3.1 no-new-NodeKey, §3.4 impact sets, §4.3 selection invariance, §5.1 shift-before-selection, §6.1(a), §6.3 goldens — is **reinforced as bound; no change warranted**.
 
 **One open item requiring you or the owner:** `FNALLPC/wwz4l` access. If it is a distinct modern-coffea WWZ (not the `coffea2023` branch), the C.4 finding — that no dask-era version of this analysis has ever carried an object shift — may not hold there, and the shift-path-under-laziness evidence would be worth re-running.
+
+## Addendum (2026-07-30, same agent resumed): FNALLPC/wwz4l — access granted, premise corrected
+
+Lead independently re-verified the era/lineage claims before integration (zero dask/dataset_tools/
+hist.dask hits repo-wide; dict_accumulator :141; Weights(len(events)) :339; shifts :395-400;
+set-based line overlap 503 vs main / 308 vs coffea2023; sole remote branch = main).
+
+# ADDENDUM — `FNALLPC/wwz4l` deep-dive (resolves the C.4 open item)
+
+**Pinned: `FNALLPC/wwz4l@cc71718a1b9f1f488f84f802c0e341f9ac6f9ed4`, 2026-04-08, author Kelci Mohrman, "Update readme", branch `main`, private.** Cloned authenticated to `/private/tmp/claude-501/prior-art/wwz4l`. 223 tracked files; 3,832 Python lines; main processor `analysis/analysis_processor.py` (764 lines). Short quotes only (private repo).
+
+## HEADLINE — the premise is wrong, corrected plainly
+
+**`FNALLPC/wwz4l` is NOT a modern-coffea version. It is coffea 0.7-era, the same generation as `cmstas/ewkcoffea@main`.** Measured, not inferred:
+
+- `processor.dict_accumulator` (`analysis_processor.py:141`), `self._accumulator` returned (`:759`);
+- `coffea.analysis_tools.Weights(len(events), storeIndividual=True)` (`:339`) — **eager length**, exactly main's form, not the port's `Weights(None)`;
+- `processor.Runner` + `futures`/`iterative`/`work_queue` executors and `NanoAODSchema` (`analysis/run_analysis.py:10,156-161`), `topcoffea.modules.remote_environment` (`:13`);
+- `events.caches[0]` 0.7 lazy cache (`:443`); `copy.deepcopy(weights_obj_base)` per shift (`:411`);
+- **zero modern-coffea surface**: `grep -rn 'dask|hist.dask|hda|dataset_tools|apply_to_fileset|preprocess('` over all `*.py` returns **nothing**.
+
+So the repo named as the modern exemplar does not supply dask-era evidence. The substitute (`ewkcoffea@coffea2023`) remains the **only** located modern-coffea version of this analysis.
+
+## Relationship — derivative of `ewkcoffea@main`, measured
+
+Its own README says it is a **CMS DAS long exercise** "based on the SMP-24-015 analysis code" (linking `cmstas/ewkcoffea`). Line-overlap confirms the parent:
+
+| Comparison | Identical lines |
+|---|---|
+| `analysis_processor.py` ↔ `ewkcoffea@main:analysis/wwz/wwz4l.py` | **522** |
+| `analysis_processor.py` ↔ `ewkcoffea@coffea2023:analysis/wwz/wwz4l.py` | 313 |
+| `wwz4l/modules/corrections.py` (663 ln) ↔ `ewkcoffea@main` equivalent (665 ln) | **545** |
+
+`ApplyJetSystematics` is **byte-identical** to main's (`diff` of both function bodies → no output). Package renamed `ewkcoffea`→`wwz4l`, path helper `wwz4l_path`; teaching-stripped (no BDT, no EFT, no `siphon_bdt_data`, no `split_by_lepton_flavor`; 14 categories / 14 `selections.add` vs main's 54 / 55; 57 dense-axis defs, **55 filled**). Ships Run-3 skims only (`input_samples/cfgs/wwz_analysis/4lskim_{2022,2023}.cfg`).
+
+## VERIFIED FACTS — systematics treatment
+
+**Q4, the key question — does this dask-era version carry object shifts? Wrong frame: it is not dask-era. It IS 0.7-era, and it DOES carry object shifts.** `obj_correction_systs = [CMS_scale_j_{year}, CMS_res_j_{year}, CMS_scale_met_unclustered_energy_{year}]` (`:395-400`), `append_up_down_to_sys_base` → **6 shift labels**, applied via the identical `ApplyJetSystematics` (`:444`) and `CorrectedMETFactory` (`:449`), gated by `skip_obj_systematics` (`:52,156,403`).
+
+- **Weights**: same 10 combine-style bases as main's common list (`:378-382`) → **20 labels** for this repo's Run-3 samples; the R2-only `+["CMS_l1_ecal_prefiring", f"CMS_btag_fixedWP_incl_light_uncorrelated_{year}"]` branch (`:385-386`) is **dead code** given the shipped 2022/2023-only cfgs. Registration mirrors main including the `1/wgt_btag_nom` anti-double-count (`:513,521`). **Axis labels per MC sample: 27** = 1 + 20 + 6.
+- **Execution**: shift loop `:408-759` (AST-verified; 352 of ~590 body lines), weight loop `:728-759`, category loop `:740-759` — same variable→fluctuation→category nesting. **Nominal-only exclusion rule preserved verbatim** (`:711-718`): under a shift, `wgt_var_lst = [obj_corr_syst_var]`, and `:730-736` takes `weight(None)` — no cross products, central weight re-evaluated in the shift's universe.
+- **Histogram schema**: unchanged — three growth `StrCategory` axes `process`/`category`/`systematic` + dense axis, `storage="weight"` (`:131-137`); scalar label per fill (`:756`).
+- **Naming/bookkeeping**: `append_up_down_to_sys_base` at both call sites (weights `:388`, shifts `:400`); combine-style year-suffixed names; `nSumOfLheWeights` metadata with the same 9-vs-8 LHE index branch (`:196-199`).
+- **Data**: `["nominal"]` only (`:711`); no `Weights` content (`:340`). One simplification vs main — the golden-JSON mask is folded into the preselection (`:265-268` with `lumi_mask = pass_through` for MC, used at `:655`) instead of being appended per fill.
+- **Failure modes**: **two** declared-but-never-filled histograms, `mt2` and `nbtagsm` (set-difference verified) vs main's one; the README instructs `conda env create -f environment.yml` but **no `environment.yml` is tracked** (`git ls-files | grep -c environment.yml` → 0); fills wrap both value and weight in `ak.fill_none(..., -999)` (`:753-754`), i.e. a sentinel would enter as a *weight* if any None survived.
+
+## ASSESSMENT
+
+The teaching fork is quietly the strongest evidence in the whole survey for the plan's premise. Kelci stripped this analysis to a classroom exercise — BDT gone, EFT gone, 54 categories down to 14 — and the **systematics scaffolding survived completely intact**: the same two-level loop, the same deepcopy, the same exclusion rule, the same growth axes, the same escape hatch, the same suffix generator. Everything that is *physics* was removable; nothing that is *variation bookkeeping* was. That is what an irreducible-by-construction accidental complexity looks like, and it is precisely what `vary` deletes.
+
+It also means the dask-era pain points in PART B stand alone: `ewkcoffea@coffea2023` is still the only place where the lazy layer's costs (hand-rolled `masked_val_cache` CSE, `Weights(None)`, `copy` + "TODO do we need copy here?", the unserializable graph marked "Does not work") are recorded, and it still has zero object shifts.
+
+## Corrections to the earlier report
+
+1. **PART C.5 / the closing open item**: resolved — `FNALLPC/wwz4l` is not modern coffea, so **C.4 stands unchanged and now extends to it**: no version of this analysis in any reachable repo has ever carried an object shift under dask-awkward. The dask-era shift-loop cost remains **UNVERIFIED**, and there is currently no artifact anywhere that would verify it.
+2. The scope-addition brief's framing ("a version using MODERN coffea (not 0.7)") is **not supported by the repo** — flagged so the plan does not inherit it. If a different artifact was meant (an unpushed working copy; only `main` exists on the remote), that needs a new pointer; `main@cc71718` is unambiguous.
+3. Everything else in the prior report is unaffected — no PART A or PART B claim depended on this repo.
+
+## Plan deltas vs `systematics-vary-plan.md` r2
+
+**None.** r2 already absorbed all evidence-driven deltas, and this repo contributes no requirement change: its systematics treatment is a verbatim 0.7-era copy of the exemplar already integrated. The dead R2 weight branch is another instance of per-sample label-set divergence, already parked in §11; the dead histograms and the sentinel-weight `fill_none` are analysis hygiene, not plan-relevant; §6.2's scalar-labeled shift siblings are reinforced again (`:756` fills shift and weight labels onto one shared axis from separate passes).
+
+**One bookkeeping correction to r2, not a requirements delta:** the r2 OPEN item is resolved with its conclusion inverted — access granted 2026-07-30; `FNALLPC/wwz4l@cc71718` measured to be a 0.7-era CMS-DAS teaching derivative of `ewkcoffea@main` (522 identical processor lines; zero dask/dataset_tools surface), not a modern-coffea port — it carries the full weight+shift treatment and adds no dask-era evidence; `coffea2023@63abb06` remains the sole modern-coffea exemplar. Worth an anchor row: it is the one artifact showing the variation scaffolding surviving a teaching-strip intact.
