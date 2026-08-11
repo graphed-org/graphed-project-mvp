@@ -311,3 +311,29 @@ completion; round 1 (4 agents) fully journal-cached.
 3. On clean: commit final plan + all review/notes files, set status "review-clean", update
    memory, then proceed toward m48 test-authoring (gated pipeline).
 4. Verify readme-sync CI green on the pause commit (docs-only; 9-for-9 green today).
+
+## 2026-08-11 — RESUMED; review round 2 done (r10 → r11)
+
+Resume after 12-day pause: readme-sync on b3518e6 verified green (--limit+headSha pattern).
+/private/tmp wiped by reboot → ALL 14 verification roots re-cloned at exact pinned SHAs
+(graphed ff7c607, executors 201ea42, histogram 211cbbe, uproot5 393ecef@graphed-mvp, corpus
+49650e4; prior-art pins recovered from litsearch evidence tables: ewkcoffea 063e8d7,
+coffea2023 63abb06, wwz4l cc71718 private, WRemnants c5be6c6, narf 7d73361, mkShapesRDF
+b89a71f, PocketCoffea b29e33b, boostedhiggs a33dca8, topeft bbb23ca). Script untouched so
+round-1 journal cache stayed valid; resume replayed round 1, round-2 reviewers restarted fresh.
+
+Round 2 on r10: 1 BLOCKER / 7 HIGH / 16 MID / 16 LOW / 3 NIT (design 1B/5H/10M/5L, tests
+1H/5M/5L/1N, facts 1H/1M/6L/2N). Character: ~60% second-order fallout from r10's own new
+surface (BLOCKER = §6.4d demands cutflow data no bound API supplies; §6.2 plan-time axis
+declaration vs record-time identity; §6.1d "already-unified handle" false at the fill; §2.3e
+plain-attribute impossible on today's Array), ~40% deeper excavation of pre-r10 surface
+(m48 headline anchor unbuildable; §2.1 stacking wrong for weight form; §2.6 sketch
+lhe_w[:, i] measured TypeError). Zero re-raises of round-1 items.
+
+Reviser → r11 (1803 lines, +415): 39 applied (40 merged to 39 on the §6.1a-axis-mode dup),
+0 rejected, 0 deferred, no owner-locked reversals, no OPEN ITEMS. Reviser's own measurement:
+working inner-index spelling gak.firsts(w[gak.local_index(w) == i]) replaces the broken
+lhe_w[:, i] sketch line. Note: r11 history entry says 2026-07-30 (script's hard-coded date;
+kept to preserve the round-1 cache — cosmetic only, real date 2026-08-11).
+
+Round 3 (fresh isolated reviews of r11) launches automatically.
