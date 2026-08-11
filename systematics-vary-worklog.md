@@ -337,3 +337,22 @@ lhe_w[:, i] sketch line. Note: r11 history entry says 2026-07-30 (script's hard-
 kept to preserve the round-1 cache — cosmetic only, real date 2026-08-11).
 
 Round 3 (fresh isolated reviews of r11) launches automatically.
+
+## 2026-08-11 — OWNER RULING (binds next plan-writing phase, NOT this review cycle)
+
+Partition plan execution into commit-sized steps: each commit ≤1-2k LOC MAX (smaller fine) =
+one bounded "thought"; use the partition to separate concerns so the whole stays well
+factored. Applies from the m48+ decomposition/plan-writing phase after the current §12.1
+review cycle reaches clean. Recorded in memory (commit-sized-thoughts.md). The plan doc is
+NOT edited mid-cycle for this; fold it into the milestone decomposition structure when the
+cycle closes (each milestone → named commit sequence with concern + rough size per commit).
+
+## 2026-08-11 — review round 3 done (r11 → r12)
+
+Round 3 on r11: 0 BLOCKER / 8 HIGH / 13 MID / 15 LOW / 3 NIT (tests 4H/5M/4L, design
+4H/7M/4L, facts 1M/7L/3N). Blocker class gone; facts lens essentially clean (nearly every
+anchor resolves exactly against the pinned roots) — HIGH mass concentrated in tests+design
+stress of the r11 anchor/contract rework. Reviser → r12 (2204 lines, +505/-104): 30 applied
+(32 raw, two cross-lens dup pairs merged: §6.2(i-bis) axis-slicing, §6.2 declaration hedge),
+0 rejected, 0 deferred, no owner-locked tensions. Anchors appendix +11 measured rows, 7
+rewritten. Round 4 (fresh isolated reviews of r12) launches automatically.
