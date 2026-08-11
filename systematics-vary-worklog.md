@@ -356,3 +356,31 @@ stress of the r11 anchor/contract rework. Reviser → r12 (2204 lines, +505/-104
 (32 raw, two cross-lens dup pairs merged: §6.2(i-bis) axis-slicing, §6.2 declaration hedge),
 0 rejected, 0 deferred, no owner-locked tensions. Anchors appendix +11 measured rows, 7
 rewritten. Round 4 (fresh isolated reviews of r12) launches automatically.
+
+## 2026-08-11 — review round 4 done (r12 → r13); PAUSED (owner laptop close)
+
+Round 4 on r12: 0 BLOCKER / 5 HIGH / 12 MID / 11 LOW / 4 NIT (design 3H/5M/4L/1N, tests
+2H/4M/4L, facts 3M/3L/3N — facts lens: "strongest substrate in this review series", every
+load-bearing measurement reproduced exactly). HIGH trend across rounds: 8 → 7 → 8 → 5.
+Reviser → r13 (2511 lines, +307): 24 applied (28 raw, cross-lens merges: §2.3d
+exhaustiveness, §10 m49 move, §4.3 fill-node channel + "_fill_nodes is private" fold-in),
+0 rejected, 0 deferred, no owner-locked tensions. CI note: bb20579 readme-sync failed once
+on a transient runner TLS error (submodule clone cert verification) — rerun green.
+
+PAUSED at the round-4 boundary: workflow wb3qid1p1 STOPPED after the reviser; all 16 agent
+results (rounds 1–4) journal-cached; round-boundary monitor stopped; no watchers left.
+
+## RESUME INSTRUCTIONS (updated 2026-08-11)
+
+1. DO NOT auto-resume: the owner will give an explicit go-ahead before round 5 starts.
+2. On go-ahead: verify the 14 verification roots still exist at pinned SHAs (reboot wipes
+   /private/tmp — re-clone recipe + pins in the 2026-08-11 RESUMED entry above), then
+   Workflow({scriptPath: "~/.claude/projects/-Users-lgray-vibe-coding-graphed-workdir/
+   8f54f531-a6e8-4340-a81d-efa35f73b6f6/workflows/scripts/vary-plan-review-cycle-wf_c45b3140-382.js",
+   resumeFromRunId: "wf_c45b3140-382"}) — rounds 1–4 replay from cache; round 5 reviews r13
+   live. Round 5 is the LAST before the cap (script cap = 6 rounds; round 6 reports
+   max-rounds instead of revising).
+3. Standing owner ruling for AFTER the cycle: commit-sized thoughts — plan steps as commits
+   ≤1-2k LOC each (memory: commit-sized-thoughts.md); apply in the m48+ decomposition.
+4. Per-round pattern: commit r-review files + revised plan + notes + worklog, push, bounded
+   CI check (--limit+headSha, never --commit; rerun once on transient infra failures).
