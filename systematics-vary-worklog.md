@@ -526,3 +526,10 @@ Round 16 on r24: 0 BLOCKER / 2 HIGH / 8 MID / 8 LOW (tests 0H/4M/4L, design 2H/3
 facts 1M/2L/2N). Reviser → r25 (6036 lines, +194): 13 applied, 0 rejected, 0 deferred.
 Series has settled into 0-2H oscillation with ~8M/8L tail for 4 rounds. Round 17 (last
 revising round before cap-18 report) launches on r25.
+
+## 2026-08-12 — review round 17 done (r25 → r26)
+
+Round 17 on r25: 0 BLOCKER / 1 HIGH / 9 MID / 8 LOW (tests 1H/2M/6L, design 0H/7M/2L,
+facts CLEAN — 3 NITs). Reviser → r26 (6250 lines, +214): 17 applied, 0 rejected, 0
+deferred. Round 18 = cap round: reviews r26, reports. Structural assessment due at the
+report.
