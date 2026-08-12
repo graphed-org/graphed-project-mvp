@@ -533,3 +533,17 @@ Round 17 on r25: 0 BLOCKER / 1 HIGH / 9 MID / 8 LOW (tests 1H/2M/6L, design 0H/7
 facts CLEAN — 3 NITs). Reviser → r26 (6250 lines, +214): 17 applied, 0 rejected, 0
 deferred. Round 18 = cap round: reviews r26, reports. Structural assessment due at the
 report.
+
+## 2026-08-12 — review round 18 (cap round) done on r26; STRUCTURAL DECISION POINT
+
+Round 18 on r26: 0 BLOCKER / 4 HIGH / 6 MID / 8 LOW / 1 NIT (design 1H/3M/6L, tests
+3H/3M/1L, facts 1L/1N — facts clean 3 of last 4 rounds). Workflow returned max-rounds a
+third time. Series data (severe B+H+M+L per round): 37/40/36/28/33/29/29/25/25/24/19/14/
+19/21/18/18/18/18 — plateau ~18 since round 12. Plan grew 1388 → 6250 lines over the
+cycle. Run totals: 71 agents, ~8.08M subagent tokens, 0 errors. Diagnosis: each revision
+(+200-350 lines) mints findings on its own new text at roughly the rate old findings are
+retired; zero-B/H/M/L is not reachable by iteration alone while the document grows.
+Round-18 HIGHs are still genuine (e.g. r26's §8.2(i) producer clause cannot produce the
+set-valued map §8.2 itself binds — the composition's image only contains marked fill
+nodes, measured). Escalated to owner with three options (continue loop / adjudicated
+closure / ledger-and-stop).
