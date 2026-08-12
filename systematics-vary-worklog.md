@@ -519,3 +519,10 @@ Round 15 on r23: 0 BLOCKER / 1 HIGH / 9 MID / 8 LOW (tests 0H/3M/4L, design 0H/5
 facts 1H/1M/1L — the HIGH: r23's "exactly one construction exists" claim for the two-label
 shared-node fixture measured false). Reviser → r24 (5842 lines, +237): 16 applied, 0
 rejected, 0 deferred. Round 16 launches on r24.
+
+## 2026-08-12 — review round 16 done (r24 → r25)
+
+Round 16 on r24: 0 BLOCKER / 2 HIGH / 8 MID / 8 LOW (tests 0H/4M/4L, design 2H/3M/2L,
+facts 1M/2L/2N). Reviser → r25 (6036 lines, +194): 13 applied, 0 rejected, 0 deferred.
+Series has settled into 0-2H oscillation with ~8M/8L tail for 4 rounds. Round 17 (last
+revising round before cap-18 report) launches on r25.
