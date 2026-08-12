@@ -420,3 +420,11 @@ m48's own new exports. Workflow returned status=max-rounds (script cap). Per own
 directive (continue until clean), cap raised 6 → 12 in the script — LOOP CONTROL ONLY,
 no agent prompt changed, all 22 cached results stay valid; resume runs the r14→r15
 reviser live, then round 7. Round-6 artifacts = 3 review files only (no reviser at cap).
+
+## 2026-08-11 — round-6 reviser done (r14 → r15)
+
+Reviser → r15 (3171 lines, +334): 26 applied entries / 23 distinct after cross-lens merge
+(compile_ir defect = ALL THREE lenses; §5.2c design+tests; §5.2a span+discriminator one
+paragraph), 0 rejected, 0 deferred, no owner-locked tensions. Reviser re-measured the r14
+annotation-wide rule: discovers exactly 8 verbs, NOT compile_ir — fix landed per the
+triple-lens cluster. Round 7 (fresh isolated reviews of r15) launches automatically.
