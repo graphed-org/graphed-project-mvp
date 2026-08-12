@@ -428,3 +428,11 @@ Reviser → r15 (3171 lines, +334): 26 applied entries / 23 distinct after cross
 paragraph), 0 rejected, 0 deferred, no owner-locked tensions. Reviser re-measured the r14
 annotation-wide rule: discovers exactly 8 verbs, NOT compile_ir — fix landed per the
 triple-lens cluster. Round 7 (fresh isolated reviews of r15) launches automatically.
+
+## 2026-08-11 — review round 7 done (r15 → r16); sharp convergence
+
+Round 7 on r15: 0 BLOCKER / 4 HIGH / 13 MID / 12 LOW / 2 NIT (design 2H/6M/4L, tests
+2H/7M/4L, facts 0H/0M/4L/2N — facts CLEAN above LOW for the first time, "all pointer
+hygiene"). HIGH trend: 8/7/8/5/10/9/4 — the compile_ir/discovery cluster fix broke the
+plateau. Reviser → r16 (3516 lines, +345): 29 applied, 0 rejected, 0 deferred, no
+owner-locked tensions. Round 8 (fresh isolated reviews of r16) launches automatically.
