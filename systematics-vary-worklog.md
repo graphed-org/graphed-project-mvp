@@ -466,3 +466,12 @@ series (6M/8L). Reviser → r19 (4545 lines, +336): 19 unique applied (22 post-N
 cross-lens dup pairs merged: T-property blocker, N+1 image, unpack/MODE), 0 rejected,
 0 deferred. Round 11 launches on r19. Trend: revision-seam regressions now dominate;
 work lists shrinking (39/33/29/24/22/19 applied per round).
+
+## 2026-08-11 — review round 11 done (r19 → r20)
+
+Round 11 on r19: 0 BLOCKER / 4 HIGH / 8 MID / 7 LOW (tests 1H/3M/2L, design 3H/5M/5L,
+facts FULLY CLEAN — 2 NITs only, first zero-findings-above-NIT lens report of the series).
+No new blockers: the r18 seam-regression cycle did not repeat. Reviser → r20 (4841 lines,
++296): 17 applied, 0 rejected, 0 deferred. Applied trend: 39/33/29/24/22/19/17. Round 12
+= NEW CAP round: reviews r20, reports max-rounds if dirty (no revision) — if dirty, raise
+cap again and resume (same loop-control-only edit).
