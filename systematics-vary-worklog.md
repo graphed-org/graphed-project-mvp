@@ -445,3 +445,12 @@ one substantive failure: §7.3). HIGH trend: ...10/9/4/2. Reviser → r17 (3857 
 24 applied, 1 REJECTED (first rejection of the series — facts LOW claiming a stale
 checkpoint test line span; reviser re-measured and refuted it), 0 deferred. Round 9
 launches on r17.
+
+## 2026-08-11 — review round 9 done (r17 → r18)
+
+Round 9 on r17: 1 BLOCKER / 5 HIGH / 11 MID / 8 LOW (design 1B/2H/4M/3L, tests 3H/7M/3L,
+facts 0H/0M/2L/1N — essentially clean two rounds running). BLOCKER = r17-introduced drift:
+§6.1a bound a NESTED group-result dict ("combine BRANCHES") while r17's §6.1c bound a FLAT
+slot-keyed mapping ("combine needs no branch") — same frozen object, mutually exclusive
+shapes. Reviser → r18 (4209 lines, +352): 22 applied, 0 rejected, 0 deferred. Round 10
+launches on r18.
