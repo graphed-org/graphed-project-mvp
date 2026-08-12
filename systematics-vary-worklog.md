@@ -475,3 +475,18 @@ No new blockers: the r18 seam-regression cycle did not repeat. Reviser → r20 (
 +296): 17 applied, 0 rejected, 0 deferred. Applied trend: 39/33/29/24/22/19/17. Round 12
 = NEW CAP round: reviews r20, reports max-rounds if dirty (no revision) — if dirty, raise
 cap again and resume (same loop-control-only edit).
+
+## 2026-08-11 — review round 12 (cap round) done on r20; cap raised 12 → 18
+
+Round 12 on r20: 0 BLOCKER / 2 HIGH / 7 MID / 5 LOW / 1 NIT (tests 0H/4M/1L — cleanest
+tests report yet; design 2H/3M/2L; facts 2L/1N, clean 4th round running). CLEANEST ROUND
+OF THE SERIES: 14 severe (trend 37/40/36/28/33/29/29/25/24/24/19/14). Both HIGHs = two
+halves of ONE defect: the r19/r20 aggregate_plan seam — §7.2 binds "node id → position
+from the compiled output list" which is measurably not computable frontend-side (compiled
+list lives in REDUCED id space; record→reduced map doesn't exist until m49's accessor;
+compile_ir never calls mark_output on the record store — probe evidence in the round-12
+design review), and seam half (β) takes a parameter only computable from the artifact the
+same call produces. Suggested fix already in the finding: derive positions from the
+frontend's OWN dedup-ordered requested-id list (= evaluate_ir return order, measured).
+Workflow returned max-rounds again; cap raised 12 → 18 (loop control only, cache intact);
+resume runs reviser r20 → r21 live, then round 13.
