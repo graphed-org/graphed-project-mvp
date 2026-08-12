@@ -512,3 +512,10 @@ tail.
 Round 14 on r22: 0 BLOCKER / 1 HIGH / 8 MID / 12 LOW (design 1H/5M/3L, tests 0H/2M/4L/1N,
 facts 0H/1M/5L/1N). Single HIGH across all lenses. Reviser → r23 (5605 lines, +249): 19
 applied, 0 rejected, 0 deferred. Round 15 launches on r23.
+
+## 2026-08-12 — review round 15 done (r23 → r24)
+
+Round 15 on r23: 0 BLOCKER / 1 HIGH / 9 MID / 8 LOW (tests 0H/3M/4L, design 0H/5M/3L,
+facts 1H/1M/1L — the HIGH: r23's "exactly one construction exists" claim for the two-label
+shared-node fixture measured false). Reviser → r24 (5842 lines, +237): 16 applied, 0
+rejected, 0 deferred. Round 16 launches on r24.
