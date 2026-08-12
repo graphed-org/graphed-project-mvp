@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r26).** Anchoring doc for the work, structured like the root prompt:
+Status: **review-clean (r27, adjudicated closure).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -536,12 +536,20 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `graphed.reindex_to` sees a value already carrying the target handle and re-indexes nothing, and
   the mismatch survives recording — measured, `Session.record_op` validates only the backend's
   `op_form`, never lengths or row spaces, `python/graphed/session.py:142-168`, the same measurement
-  §2.1(b) r20 cites. m48's `context_of` fixture note already declines to freeze that program as
-  constructible precisely to keep this check open): **every member MUST live in ONE row space — the
+  §2.1(b) r20 cites. m48's `context_of` fixture pins the `vary`-IDENTITY-link spelling instead —
+  **r27: for row-space stability and §6.4a(2a) proximity, NOT to keep a construction check open,
+  since this clause decides the mask-derived case by RE-INDEXING it**): **every member MUST live in ONE row space — the
   TARGET context's in overloads (b)/(c), the container's most-derived handle's in overload (a) — an
   ANCESTOR-handled member being re-indexed across the intervening links per §6.1d kinds (1)-(3)
-  exactly as a §2.1(b) factor is** (a `Varied` produced by that re-index is then reduced to its
-  central universe by this section's member rule for (a)/(c)), **and a member reached across a link
+  exactly as a §2.1(b) factor is** (**the two rules are ORDERED, r27**: a `Varied` SUPPLIED as a
+  member of (a)/(c) is reduced to its central universe AS SUPPLIED, and the resulting member is then
+  re-indexed to the target handle **LABEL-ALIGNED per §2.4** — each label's member by that label's
+  mask, nominal's by nominal's — the identical operation §2.6c already binds for the ambient
+  registry. Reducing AFTER the re-index would land every member at nominal's row count while
+  `graphed.context_of` answers a handle whose reads are per-label (§2.6c: a `Varied`-mask-derived
+  context's ROW SET DIFFERS PER LABEL), and §6.1d(B)'s identity clause would then repair nothing.
+  Read this section's row-space invariant per label accordingly: every member answers in the
+  container handle's PER-LABEL row spaces), **and a member reached across a link
   no re-indexing can invert — a DESCENDANT handle, e.g. a selection-scoped record assigned to a
   collection on the ROOT context in overload (c) — is a construction-time error naming both contexts
   and the DIRECTION**, the §2.1(b) r20 shape. m48's `vary`-construction divergence anchor carries the
@@ -649,7 +657,13 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   string-getitem field access and is removed. **`x[L]` in this document's PROSE — §2.1's
   `old_ambient[L] × factor[L]`, §2.4's fold notation, m48's stacking anchor — denotes
   `graphed.universe(x, L)` and is NEVER a literal subscript, r26**: transcribed literally into a
-  frozen test it records a `field` op named `"jes_up"`, the very hazard the removal above closes. `Varied.apply(fn)` remains a method — apply a
+  frozen test it records a `field` op named `"jes_up"`, the very hazard the removal above closes.
+  **Its sibling rule, r27: `==` between two RECORDED expressions in this document's prose denotes
+  STRUCTURAL IDENTITY (`.node_id` equality, sound by interning), never a Python `assert` on the
+  recorded comparison** — measured, `Array.__eq__` returns an `Array` (`array.py:236`) and `Array`
+  defines no `__bool__`, so `bool(a == b)` is unconditionally `True` and such an assertion is vacuous
+  for every operand pair. A frozen test transcribes it as `.node_id` equality or materializes both
+  sides (`session.py:291-301`) and compares elementwise. `Varied.apply(fn)` remains a method — apply a
   record-time `Array -> Array` function per universe (attribute shadowing follows the awkward
   precedent: real methods win; a field named `apply` stays reachable via string getitem). (Named
   `apply`, NOT `map`: `Array.map` is an execution-time data callable, `array.py:377-379`; the two
@@ -861,7 +875,10 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `Array`s (the `evaluate_ir` treatment, r14); both are disposed here so the m48 gate does not
   discover `reindex_to` unclassified.
   `graphed.awkward.to_parquet` and `graphed_histogram.Histogram.fill` **accept** — a fifth
-  disposition class, bound below: `to_parquet` takes `select=` per §6.4a, `fill` takes `Varied`
+  disposition class, bound below: `to_parquet` takes a `Varied` RECORD and/or a `Varied` `select=`
+  per §6.4a (r27 — §6.4's canonical skim is `to_parquet(events.Jet, select=…)` where `events.Jet` is
+  itself a `Varied` after a shift-form `vary`, §2.6b, so the record arm is the headline case and the
+  keyword arm alone under-covers it), `fill` takes `Varied`
   values/weights/`sample` per §6. **`to_parquet` carries NO disposition until m51 and is NOT in
   m48's table at all** (r18 — r17 classified it *refusing* at m48 and *accepting* at m51 while
   naming it in m48's floor list and justifying the classification on the grounds that "the gate
@@ -964,7 +981,10 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   routing through `_replay`, whose first statement is `session = array.session`, `:65-68`), the
   other package functions taking a `Session`/`Partition` rather than an `Array`
   (`from_awkward`/`from_parquet`/`read_parquet_partition`) or being disposed at m51 (`to_parquet`).
-  Binding: both **expand**, per-label results, exactly as their numpy twin above.
+  Binding: both **expand**, per-label results — **each returning its OWN return type per label, r27:
+  `project` to `{label: Projection}` and `project_buffers` to `{label: BufferProjection}`** (measured,
+  `BufferProjection` is a distinct frozen dataclass whose field is `read_buffers`, not `Projection`'s
+  `read_columns`, `python/graphed/projection.py:34-44,60-72`; the numpy twin above is `project` only).
   m48's gate runs the identical dynamic enumeration over `graphed.numpy.__all__` AND
   `graphed.awkward.__all__`, in the same repo and the same anchor. **The FLOOR is asserted over the
   UNION of the enumerations, never per enumeration, r26** (measured, neither idiom package hosts any
@@ -992,11 +1012,17 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   verb whose signature mentions no `Array` and which is not named above (`evaluate_ir`) is out of
   scope by construction.
   **The m49 verbs this plan itself adds enter the table *expanding* when they land, r20** — §3.4's
-  impact helper and §5.3's per-label projection-stats verb (§9.1) both answer PER LABEL over `Array`
-  operands, so any annotation mentioning `Array` makes the m48 frozen gate discover them one
-  milestone after the freeze. Nothing reds: the gate's self-repair rule puts each new function's
-  classification in `src` (never in a frozen test) and every floor is a containment floor, so the
-  only thing at stake is which class the m49 implementer picks — and this sentence picks it. m49's
+  impact helper and §5.3's per-label projection-stats verb (§9.1) both answer PER LABEL. **Their
+  r27 operand `Sequence[Varied] | Mapping[str, Sequence[Array]]` MENTIONS `Array`, so the
+  annotation-wide filter DOES discover them one milestone after the m48 freeze** (r27 corrects the
+  ground twice over: r20 presumed bare `Array` operands, r26's narrowing to bare `Sequence[Varied]`
+  would indeed have hidden them, and r27's widening restores r20's original prediction under the
+  §2.3d filter's own "unions" clause above. Measured against `graphed-latest@ff7c607`, where neither
+  verb exists yet, the filter over `graphed.__all__` keyed on the literal string `Array` in a
+  parameter annotation yields exactly `['aggregate_plan','apply','join','join_plan','pack_key',
+  'read_columns','repartition','shuffle_plan']`). Nothing reds either way,
+  since the gate's self-repair rule puts each new function's
+  classification in `src` (never in a frozen test) and every floor is a containment floor. m49's
   own anchors assert their per-verb shapes (§5.3's `{label: …}` mapping; §3.4's impact sets).
   (e) **Context-tag propagation** (the §6.1d substrate; NEW in r10 — it was previously implied,
   and mis-named "provenance"). Every `Array`/`Varied` produced from a contexted input carries a
@@ -1272,8 +1298,11 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   branches are the §6.1d hard error (raised at the op, §2.3e).
   **Varied contexts (per-label row sets) are first-class.** When the derivation mask is itself
   `Varied` — the central idiom of the sketch below, `sel = events[gak.num(jets) >= 4]` with a
-  JES-varied `jets` — the derived context's ROW SET DIFFERS PER LABEL. Binding: its collections are
-  `Varied` per §2.6b; `graphed.labels(ctx)` **INCLUDES** the mask's labels (the full answer is
+  JES-varied `jets` — the derived context's ROW SET DIFFERS PER LABEL. Binding: its collections
+  READ as `Varied` (§2.4-aligned per label) — **an implicit property of the derivation, NOT a
+  shift-form registration, so §2.2's `graphed.labels` term (b) does not count them (r27, resolving
+  the reading against term (b)'s own exclusion at its definition site); the mask's own labels enter
+  through term (c)**; `graphed.labels(ctx)` **INCLUDES** the mask's labels (the full answer is
   §2.2's union — ambient-weight labels ∪ varied-collection labels ∪ the derivation mask's labels;
   r13: "reports the mask's labels" was a strict subset of what a §6.1d fill from that context
   produces — on this section's own sketch, `sel` carries 104 ambient weight labels the mask does
@@ -1406,7 +1435,12 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   operand and no return type, unlike every other new surface here, while m49 freezes behaviour
   through it and §4.3 offers it as an optional m48 cross-check (the same unwritable-as-stated defect
   r15 fixed for §2.5's diagnostic channel and r16 for §5.3's projection-stats verb): it is a
-  **read-only `graphed` module verb over the per-label output CONTAINERS — `Sequence[Varied]`, the
+  **read-only `graphed` module verb over the per-label output CONTAINERS —
+  `Sequence[Varied] | Mapping[str, Sequence[Array]]`, the labelled mapping being what this plan's
+  primary sink already returns (widened r27: §9.1's per-label fill-node accessor is
+  `fill_nodes_by_label(h) -> dict[str, Array]`, so on a real varied histogram program the caller
+  holds a mapping, and re-assembling a `Varied` from it would need the name/tag decomposition §2.2
+  r20 measures as unreliable; §4.3's optional cross-check names that same mapping as its operand)** — the
   LABELLED analogue of `read_columns`' first operand, and NOT its `source_nid` (r26 corrects r25's
   `Sequence[Array]`: measured, `read_columns(arrays: Sequence[Array], source_nid: int)`
   (`python/graphed/projection.py:109`) and `Array` is `__slots__ = ("_node_id", "_session")`
@@ -1420,7 +1454,7 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   (`tuple(sorted(...))` is the house shape, `python/graphed/projection.py:147`) — **listed
   in §9.1, exact spelling pinned at m49 freeze**. The element type is load-bearing, not defensive
   typing: `session.walk` exposes ids only through caller-supplied handlers and returns the root's
-  value (`python/graphed/session.py:245-255`), so the return shape is otherwise a free
+  value (`python/graphed/session.py:245-255,288`), so the return shape is otherwise a free
   implementation choice, and m49's anchor asserts MEMBERSHIP in the per-label value — an assertion
   written one way for node ids and another for `Array`s. It is **NOT an id watermark** (interleaved broadcast recording makes watermark
   bracketing order-dependent and wrong for labels sharing derived nodes, review r0). The result is
@@ -1602,8 +1636,17 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `GraphStore` scaling benchmark only.
 - **§5.3 (Projection.)** Column projection is the union over all requested outputs — correct today
   with zero changes (`read_columns` takes `Sequence[Array]`, `projection.py:109-147`); m49 pins a
-  test where a shift needs an extra column (e.g. binned SF needing `Jet.eta`) and the union grows by
-  exactly that field. Per-label projection stats make the read-width cost of a
+  test where a shift needs an extra column and the union grows by exactly that field.
+  **The FIXTURE SHAPE is pinned here, r27, because the granularity makes the obvious spelling
+  unsatisfiable**: measured, `read_columns` counts a `field`/`fields` op only when its input IS the
+  source node (`python/graphed/projection.py:129-141`, `reads_source = any(… x[1] == source_nid …)`),
+  so it reports only fields read DIRECTLY off the source record — on a nested record
+  `read_columns([events.Jet.pt], src)` and `read_columns([events.Jet.pt, events.Jet.eta], src)` are
+  BOTH `('Jet',)` (measured, awkward 2.12.0). The m49 fixture's source is therefore **FLAT**
+  (branch-per-column, `Jet_pt`/`Jet_eta`/`Muon_pt`) and the shift's extra column is a distinct
+  TOP-LEVEL field, `Jet_eta` (measured on that shape: `('Jet_pt',)` → `('Jet_eta','Jet_pt')`). The
+  r0–r26 `Jet.eta` example is WITHDRAWN as not expressible through this verb; buffer-level
+  projection is not what §5.3 binds. Per-label projection stats make the read-width cost of a
   shift visible — **and that exposure is anchored in the same m49 test** (r12; it was binding
   but unanchored, and §3.4's own anchor covers impact sets, not read widths, so it could have
   shipped unimplemented with every m49 anchor green): the same test asserts the stats report the
@@ -1613,13 +1656,17 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   unlike every other new surface here (`graphed.context_of`, `graphed.weight`, `graphed.selection`,
   the per-label fill-node accessor, `graphed.broadcast_like`, `read_varied`, §2.5's diagnostic
   channel): it is a **read-only `graphed` module verb over the per-label output CONTAINERS —
-  `Sequence[Varied]` plus `read_columns`' own `source_nid` (r26 corrects r16/r17's "the same operands
+  `Sequence[Varied] | Mapping[str, Sequence[Array]]` (widened r27, §3.4 — the labelled mapping is
+  what §9.1's fill-node accessor returns, and a weight-borne shift column is read at the per-label
+  FILL node, which that accessor is what hands out) plus `read_columns`' own
+  `source_nid` (r26 corrects r16/r17's "the same operands
   as `read_columns`": measured, that first operand is `Sequence[Array]`, `projection.py:109`, and
   `Array` is `__slots__ = ("_node_id", "_session")`, `array.py:127-128`, so it carries no label
   attribution to key a `{label: …}` return on; `source_nid` stays, because this verb CALLS
   `read_columns` per label) — returning `{label: tuple[str, ...] | None}`** — per label, that
   label's SORTED read set, computed by applying `read_columns` (`projection.py:109-147`) to
-  `graphed.universe(v, L)` of each operand — **listed in §9.1,
+  each label's members (`graphed.universe(v, L)` for a `Varied` operand, the mapping's own entry for
+  a labelled mapping) — **listed in §9.1,
   exact spelling pinned at m49 freeze**. **The `| None` is load-bearing, not defensive typing**
   (r17): measured, `read_columns(arrays, source_nid) -> tuple[str, ...] | None` and `None` is a
   live, semantically INVERTED answer — "read every column", returned on whole-record consumption or
@@ -1635,8 +1682,14 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   union ("`None` if ANY member's read set is `None`"). With the conservative label inside the SAME
   varied program the union collapses to `None` and the "union grows by exactly that field" half is
   either vacuous (`None == None`) or red against a correct implementation. Equivalently, half (i)
-  MAY be restated per label through the stats verb (`stats[jes_up] == stats[nominal] +
-  ("Jet.eta",)`), which is immune to the interaction.
+  MAY be restated per label through the stats verb, **order-insensitively, r27**:
+  `set(stats["jes_up"]) - set(stats["nominal"]) == {"Jet_eta"}` AND
+  `set(stats["nominal"]) - set(stats["jes_up"]) == set()` (the second conjunct keeps it from
+  degenerating to a containment test). **Plain CONCATENATION — r22's `stats[nominal] +
+  ("Jet_eta",)` — is RED**, because both returns are SORTED (`return tuple(sorted(needed))`,
+  `projection.py:147`) and on the r27 flat fixture the extra column sorts FIRST (measured,
+  `('Jet_eta','Jet_pt')`); `stats["jes_up"] == tuple(sorted(stats["nominal"] + ("Jet_eta",)))` is
+  the acceptable concatenation form.
   Per-variation partition-level projection splitting is Phase 2.
 - **§5.4 (Boundary restriction, explicit.)** v1 REFUSES (clear `NotImplementedError` naming the
   label and the boundary) a variation whose cone crosses an `Exchange`/`Join` node — the m39/m40
@@ -2548,7 +2601,12 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   (r22** — "the record's own offsets at that depth" is not single-valued for a
   mixed-depth or multi-collection record; the entry names the field precisely so this check and the
   packed per-label mask both have one operand**)**, and the packed per-label mask is stored against
-  that field. That is
+  that field. **The stored mask's ROW SPACE is bound here too, r27, since §6.4c requires a reader to
+  reproduce each universe's row set from the stored data alone**: every stored per-label mask — level
+  0 and every level k ≥ 1 — is stored on the **SUPERSET rows** (level-0-OR-restricted), so a reader
+  applies it directly to the stored buffers; the level-≥1 structural predicate above runs against the
+  record's offsets AS EVALUATED (pre-restriction, which is the operand `_WritePart` holds when it
+  raises), and the restriction is then applied to mask and buffers alike. That is
   predicate (1)'s comparison at the same level, so it costs nothing extra, runs per partition, and
   shares (1)'s raiser and error shape.
   Each predicate has its own error message, and the m51 anchors name which predicate decides which
@@ -2755,9 +2813,18 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   entry is a `(field path, depth)` PAIR — §6.4a r22/r24 — and m51's manifest anchor asserts the
   entry's value against the levels the fixture supplied, so an unbound shape leaves the test-author
   inventing and freezing a serialization, the unwritable-as-stated class r15/r16 repaired for §2.5's
-  channel and §5.3's verb): the entry is a **SORTED list whose elements are either an integer depth
+  channel and §5.3's verb): the entry is a **list whose elements are either an integer depth
   or a two-element `[field_path, depth]` array**, `field_path` spelled as the `_`-flattened path
-  §6.4b already binds for stored names; exact key spelling pinned at m51 freeze. Readers resolve labels
+  §6.4b already binds for stored names. **The TOTAL ORDER is bound with it, r27, because "sorted"
+  names no computable predicate over a heterogeneous element space**: order by the key
+  `(depth, field_path or "")` — bare-depth entries before field-scoped entries of the same depth,
+  field-scoped entries by flattened field path — so the list is a pure function of the supplied
+  `select=` keys and the manifest bytes stay `PYTHONHASHSEED`-independent. Measured, `sorted()` over
+  the raw mixed elements is a `TypeError` (`sorted([0, ["Jet", 1]])`, CPython 3.12) and
+  `json.dumps(…, sort_keys=True)` sorts mapping keys only, never a list's element order
+  (`{"levels": [0, ["Jet", 1]]}` round-trips unchanged), so neither the house serializer
+  (`python/graphed/preserve/manifest.py:20-22`) nor a bare `sorted()` supplies this order. Exact key
+  spelling pinned at m51 freeze. Readers resolve labels
   **through the manifest**, never by parsing stored names (names embed labels for human inspection, not as
   the machine channel). A frontend reader (**`graphed.awkward.read_varied(path)`-shaped**; spelling
   at freeze) reconstructs `{label: array}` per universe from the manifest — the round-trip is the m51
@@ -2796,7 +2863,16 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   (`_graphed_write.py:59-64`; zero `compile_ir`/`evaluate_ir` hits) — adding evaluation is the
   **larger half** of m51 and is scoped there explicitly. numpy backend: EXEMPT — it hard-caps
   output at one 1-D column (`numpy/io.py:163-171`); the numpy-idiom write function refuses a varied
-  write with a clear error naming the awkward backend, **and the numpy idiom exposes no
+  write with a clear error naming the awkward backend. **The TRIGGER and the ENTRY POINT are pinned,
+  r27, because neither was decidable from this sentence**: the function is
+  `graphed.numpy.io.to_parquet` (measured, `hasattr(graphed.numpy, "to_parquet")` is `False` — it is
+  reachable only through the module, and is absent from `graphed.numpy.__all__`), and the refusal
+  triggers on a **`Varied` first positional**, raised as a graphed error naming the awkward backend
+  instead of §2.2's reserved-name `AttributeError`. It gains **NO `select=` keyword** (measured, the
+  signature is `to_parquet(array, destination, *, steps_per_file, compute, executor, prefix,
+  column)`, `python/graphed/numpy/io.py:182-191`), so a `select=` call stays an ordinary `TypeError`
+  and no m51 anchor may freeze a graphed error for it; exact message spelling pinned at m51 freeze.
+  **And the numpy idiom exposes no
   `read_varied` counterpart** (r14, symmetry with §6.4e's awkward-idiom reader).
   (g) **Single pass; no cost when unused.** The augmented write stays one plan / one read pass
   (the §5.2b witness applies to the write run); an unvaried write is byte-identical to today's
@@ -3194,8 +3270,19 @@ docstring, corrected r15). The
   **The PRODUCER of `variation_labels` is named here, r26, because the field had a declared type, a
   transport and a carrier but no bound owner**: the association list is computed by the HOOK SUPPLIER
   — `graphed-histogram`'s group-plan builder (`plan()`, `src/graphed_histogram/boost.py:256-295`),
-  the sole owner of the `(output, label) → record node id` map (§7.2 r18) — by composing that map
-  with the m49 core accessor, and returned through §7.2's (β) channel. `graphed` itself never
+  the sole owner of the `(output, label) → record node id` map (§7.2 r18) — and the COMPUTATION is
+  bound with it, r27, because composition over that map ALONE cannot produce the content this
+  section binds: per label, take that entry's record CONE (the record ids reachable from that
+  label's marked output via `session.walk` — the same computation §3.4's impact verb performs; the
+  `(output, label)` map supplies the cone ROOTS, and `plan()` holds those fill nodes hence a
+  `Session`), map every reached id through the m49 core accessor, and UNION the labels per resulting
+  `(reduced_node_id, member_index)` key — which is what makes the map SET-VALUED. Composition over
+  the roots alone is single-valued by construction (distinct labels have distinct fill nodes,
+  §6.1b's `1 + |S| + |W|`) and carries no entry for the node a failure actually raises at: measured,
+  an `External` fill is a stage BOUNDARY (`is_boundary` is `!matches!(self, NodeKey::Op { .. })`,
+  `src/node.rs:100-104`), so a universe's compute chain fuses into a different stage whose key is
+  never a fill-node key, and (iii)'s op-dispatch lookups would all miss. Returned through §7.2's
+  (β) channel. `graphed` itself never
   produces it: §2.3d bindingly makes `compile_ir`/`aggregate_plan` REFUSE a `Varied` output, so no
   `graphed`-side program has labels to associate. Consequence for §10: `graphed`'s m49 anchor
   witnesses the ACCESSOR (and the set-valuedness its key space must support); the LABEL association
@@ -3328,12 +3415,14 @@ docstring, corrected r15). The
   (`graphed-histogram src/graphed_histogram/boost.py:218-219` — staged-fill order, no label
   attribution, and nothing in this plan pairs that order with `graphed.labels` order). Read-only),
   **the §3.4 impact API** (`{label: tuple[int, ...]}` of that label's sorted record node ids, over
-  the per-label output CONTAINERS — `Sequence[Varied]`, WITHOUT `source_nid`, r26 correcting r25's
+  the per-label output CONTAINERS — `Sequence[Varied] | Mapping[str, Sequence[Array]]` (r27: the
+  labelled mapping is what the fill-node accessor above returns), WITHOUT `source_nid`, r26 correcting r25's
   `Sequence[Array]`, §3.4; read-only; m49, spelling pinned at m49 freeze — shaped in r24 for the
   reason r16 shaped the projection-stats verb below),
   **the §5.3 per-label projection-stats verb** (`{label: tuple[str, ...] | None}` of that label's
   sorted read set — `None` meaning "read every column", `read_columns`' own conservative answer,
-  §5.3 r17 — over `Sequence[Varied]` plus `read_columns`' `source_nid` (r26); read-only; m49, spelling pinned at m49 freeze — added
+  §5.3 r17 — over `Sequence[Varied] | Mapping[str, Sequence[Array]]` (r27) plus `read_columns`'
+  `source_nid` (r26); read-only; m49, spelling pinned at m49 freeze — added
   r16, because §5.3 bound the exposure and anchored it while naming no surface, the same
   unwritable-as-stated defect r15 fixed for §2.5's diagnostic channel), and a
   plan-level listing of `{output: [labels]}` **(m50; spelling pinned at m50 freeze; its own frozen
@@ -3710,8 +3799,17 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     assertion reads, in the bound surface (r26 — `x[L]` is this document's PROSE for
     `graphed.universe(x, L)`, §2.2; transcribed literally it records a `field` op named `"jes_up"`,
     and the inner operand is TWO-level per §2.1 r24 since `jes_up` is new to the factor container),
-    `graphed.universe(graphed.weight(sel2), "jes_up") == old_ambient_jes_up *
-    graphed.universe(graphed.nominal(factor), "jes_up")`,
+    `graphed.universe(graphed.weight(sel2), "jes_up").node_id == (old_ambient_jes_up *
+    graphed.universe(graphed.nominal(factor), "jes_up")).node_id`
+    — **`.node_id` equality, r27, NEVER a bare `assert` on the recorded comparison**: measured
+    against `graphed-latest@ff7c607`, `Array.__eq__` RECORDS an elementwise op (`array.py:236`) and
+    `Array` defines no `__bool__`/`__len__` (`__slots__ = ("_node_id","_session")`, `:127-128`), so
+    `bool(a == b)` is `True` for every operand pair — the one-level wrong answer included — and the
+    assertion additionally records a stray node. Node-id equality is sound by interning
+    (`src/store.rs:73-88`; measured, two independently recorded `a * 2.0` expressions share
+    `node_id == 1` while being distinct objects) and frontend-observable, which is why this anchor
+    stays in `graphed`'s half; materializing both through `Session.materialize`
+    (`python/graphed/session.py:291-301`) and comparing elementwise is the equally acceptable form —
     naming the ONE-LEVEL answer (the factor's own `"nominal"` member: the b-tag SF on unshifted jets)
     as the wrong result it discriminates against. Without the nesting the anchor is satisfiable by a
     FLAT factor (e.g. a factor built from `events2.MET.pt`, a plain `Array` when only `Jet` was
@@ -3848,8 +3946,9 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     `graphed-latest@ff7c607`, six numpy verbs (`apply_gufunc`, `empty_like`, `full_like`,
     `ones_like`, `project`, `zeros_like`) and two awkward ones (`project`, `project_buffers`) —
     each asserted to carry its §2.3d classification (the four `*_like` verbs and `apply_gufunc`
-    **broadcast**; `project`/`project_buffers` **expand**, returning `{label: Projection}` and NOT
-    `read_columns`' union, §2.3d r26). **The floor is asserted over the UNION of the three
+    **broadcast**; `project`/`project_buffers` **expand**, returning `{label: Projection}` and
+    `{label: BufferProjection}` RESPECTIVELY (r27 — each verb's own return type; measured,
+    `projection.py:105,119`) and NOT `read_columns`' union, §2.3d r26). **The floor is asserted over the UNION of the three
     enumerations, never per enumeration** (measured, neither idiom package hosts a member of the
     named floor list, and the discovered idiom verbs are only *broadcast*/*expanding*, so a
     per-enumeration floor is red against a correct implementation), and stays a containment floor.
@@ -3908,14 +4007,12 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     `events2 = graphed.vary(events, "pu", …, is_weight=True)` then
     `v = graphed.vary(events.Jet, "jes", up=events2.Jet)`, asserting `graphed.context_of(v) is
     events2` — **not to a MASK-derivation link** (`up=sel.Jet`): both discriminate identically
-    against the nominal-member reading, which answers `events`, but the mask-derived spelling builds
-    a container whose members sit in DIFFERENT row spaces, and freezing it read-only would pin such a
-    container as CONSTRUCTIBLE for three milestones — foreclosing any §2.1 construction check of the
-    kind §2.1(b) r20 just added for the analogous weight-factor mis-spelling (measured, `record_op`
-    validates only the backend's `op_form`, never lengths or row spaces,
-    `python/graphed/session.py:142-168`, which is why such programs record cleanly and die at
-    execution). The identity link keeps the row space fixed and is also closer to what §6.4a(2a)'s
-    predicate consumes.
+    against the nominal-member reading, which answers `events`. **The r21 rationale is REPLACED, r27**
+    (it argued the mask-derived spelling must stay unfrozen to keep a §2.1 construction check open;
+    §2.1's r26/r27 clause has since DECIDED that case the other way — the ancestor-handled member is
+    RE-INDEXED, label-aligned, not refused — so the program is legal and the spelling discriminates
+    nothing extra): the identity link is chosen because it keeps the row space fixed and matches what
+    §6.4a(2a)'s predicate consumes.
   - **§6.1a result shapes** — **in SIBLING mode** (§6.2 axis mode is m50 and has its own shape,
     §6.2(i-bis); word the anchor so it does not freeze a general rule m50 must contradict), **worded
     over §6.1a's bound UNPACK verb (`graphed_histogram.unpack`-shaped, spelling pinned at freeze) and
@@ -4435,7 +4532,8 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     §3.4 rejects is still red on this fixture (it hands the second label an impact set missing `u`).
     **The FIXTURE is built through the public `graphed.vary` surface, r26** — the raw-`GraphStore`
     construction above is the EXISTENCE measurement, not the fixture (the one-liner §5.2a r14 and
-    §5.2c already carry, needed here more sharply still: §3.4's verb takes `Sequence[Varied]`, which
+    §5.2c already carry, needed here more sharply still: §3.4's verb takes labelled containers
+    (`Sequence[Varied] | Mapping[str, Sequence[Array]]`, r27), which
     a raw `GraphStore` cannot supply at all — no Session, no `Array`s, no labels). The frontend
     spelling is cheap: `k = src * 2.0`, two different expressions over `(src, k)` as the two varied
     members, the unvaried target as `"nominal"`.
@@ -4445,7 +4543,12 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     nodes (axis mode's `1 + |S|` is m50, §6.2; word the anchor so it does not freeze a general rule
     m50 must contradict — r12 applies to this line the scoping r11 gave the m48 §6.1a anchor and
     §6.1b's own prose).
-  - §5.3 projection-union test — **including the per-label projection stats** reporting the shifted
+  - §5.3 projection-union test — **over a FLAT source, r27** (branch-per-column
+    `Jet_pt`/`Jet_eta`/`Muon_pt`, the shift's extra column being the top-level `Jet_eta`): measured,
+    `read_columns` counts a `field` op only when its input IS the source node
+    (`projection.py:129-141`), so on a NESTED record both `[events.Jet.pt]` and
+    `[events.Jet.pt, events.Jet.eta]` report `('Jet',)` and the r0–r26 `Jet.eta` example is
+    unsatisfiable against a correct implementation — **including the per-label projection stats** reporting the shifted
     label's extra column (§5.3 r12; the union-growth assertion alone leaves the stats surface
     unanchored), **read through the §9.1 verb whose shape §5.3 r16 pins**
     (`{label: tuple[str, ...] | None}`, sorted per label; spelling pinned at m49 freeze) — **with a
@@ -4458,7 +4561,10 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     conservative label inside the SAME varied program collapses the union to `None` and the
     union-growth half degenerates to `None == None` (vacuous) or goes red against a correct
     implementation. Equivalently, state the growth half per label through the stats verb
-    (`stats[jes_up] == stats[nominal] + ("Jet.eta",)`), which is immune to the interaction;
+    **order-insensitively (r27)**: `set(stats["jes_up"]) - set(stats["nominal"]) == {"Jet_eta"}` AND
+    `set(stats["nominal"]) - set(stats["jes_up"]) == set()` — NOT r22's plain concatenation, which is
+    red because both returns are sorted (`projection.py:147`) and on this fixture `Jet_eta` sorts
+    FIRST (measured: `('Jet_eta','Jet_pt')`);
     §5.4 refusal + positive control.
   - §3.3 NEW frozen variation benchmark file (exact `stages == N+1`, `reduced == 2N+2`, linear
     bound).
@@ -4558,7 +4664,10 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     `importorskip`): over a varied program, `gh.plan({…})`'s shipped closure carries a
     `variation_labels` entry whose label tuple is SORTED and, for a `(reduced_node_id,
     member_index)` key two labels' cones both reach, carries BOTH labels — the set-valued half the
-    `graphed` accessor anchor can only witness as a key collapse.
+    `graphed` accessor anchor can only witness as a key collapse. **The fixture's shared node is
+    UPSTREAM of the label fork (the §3.4 r24 shape), r27**: distinct labels have distinct FILL nodes
+    by §6.1b's `1 + |S| + |W|` count, so no fill-node key is ever reached by two labels and the
+    witness exists only under §8.2(i)'s bound cone-walk producer.
   - §8.2 cross-process labeled StageError (incl. §7.4 dead-letter label) **plus the shared-node
     multi-label RENDERING half** (r14 — §8.2 states it inline as a required m49 anchor and this
     skeleton list dropped it; without it the single-label anchor passes under a
@@ -4713,7 +4822,14 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     held constant) — NOT a frozen gate.
   - §9.2 one-bundle-N-labels preservation (m9 comparison form, on the r10-bound varied
     `build_bundle`/`reproduce` surface — with the backward-compat control that an unvaried bundle
-    still returns a BARE array) + `inspect()` label listing (§9.1).
+    still returns a BARE array) + `inspect()` label listing (§9.1) — **plus the `FORMAT_VERSION`
+    bump, r27** (two cheap assertions on fixtures this anchor already builds: the varied bundle's
+    manifest carries `format_version == <the bumped value>` and the unvaried control still carries
+    `1`, `python/graphed/preserve/manifest.py:17`). Without it §9.2's bound bump is invisible to
+    every anchor here — the label map is exercised behaviourally whether or not the version moves —
+    while the bundle fingerprint is the SHA-256 of the canonical manifest (`manifest.py:20-26`), so
+    an unbumped varied bundle is indistinguishable by version from a v1 bundle a v1 reader
+    mis-parses.
   - **§9.1's plan-level `{output: [labels]}` listing, its OWN anchor** (r16 — it was anchored
     "inside m50's `inspect()` test", which takes a `Bundle` and returns a `str`,
     `python/graphed/preserve/bundle.py:268-288`, and cannot exercise a plan-level mapping): **in
@@ -4902,11 +5018,17 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     byte-identity anchor is on the manifest-FREE unvaried path and can never observe it — the same
     invisible-violation shape r13 caught for §8.2(i) and closed with an m49 plan-byte anchor): the
     same varied write performed in two fresh processes under differing `PYTHONHASHSEED` yields
-    byte-identical manifest bytes; minimally, the serialized key order is asserted sorted.
+    byte-identical manifest bytes; minimally, the serialized MAPPING-key order is asserted sorted and
+    the levels LIST is asserted in §6.4e's r27 `(depth, field_path or "")` order (r27 — "sorted" is
+    not a computable predicate over that list's heterogeneous elements, and `sort_keys=True` never
+    reorders list elements).
   - Manifest: parquet KV metadata reads back and matches a **literally spelled expected KEY SET —
     which INCLUDES §6.4e's r24 selection-LEVELS entry — with one assertion that the levels entry's
-    value equals the set of levels the fixture supplied through `select=`** (both levels for the
-    object-migration item, `{0}` for the weight-only one; r25 on both halves: r24's bare "lists
+    value equals the literally spelled expected LIST, in §6.4e's r27 bound order** (`[0, ["Jet", 1]]`
+    for the object-migration item, `[0]` for the weight-only one — **r27: r25/r26 spelled this as a
+    SET while §6.4e binds a JSON list of ints and two-element arrays, so a literal transcription
+    compared a Python set against a list read back from parquet KV metadata and failed for a reason
+    unrelated to the requirement**; r25 on both halves: r24's bare "lists
     exactly the appended labels/columns/representations" is the exact-content wording this plan
     already repaired for §6.3's params key set (r17), §7.2's schema key sets (r19) and §2.3d's
     containment floors (r18) — frozen as written it reds the moment the bindingly required levels
@@ -4939,13 +5061,18 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
   - **§2.3d table entry for `to_parquet`** (r17; re-worded r18 — it carries NO m48 disposition and is
     absent from m48's table and floor list, so nothing frozen has to change here): with §6.4's
     `select=` landed, `graphed.awkward.to_parquet` ENTERS the table as *accepting* and joins the
-    named floor list — the m51 entry asserts the accepting behaviour, i.e. a `Varied` `select=` is
-    consumed internally and no per-label result is returned to the caller.
+    named floor list — the m51 entry asserts the accepting behaviour, i.e. a `Varied` RECORD and/or a
+    `Varied` `select=` (r27, both arms) is consumed internally and no per-label result is returned to
+    the caller.
   - ROOT half: `graphed_write` gains IR evaluation (derived columns in ROOT skims — the §6.4f
     larger half) with the same round-trip anchor.
   - **numpy-backend refusal (§6.4f), in `graphed`'s `tests/frozen/numpy/m51`** (r26 — it is
     `graphed`-side source (`python/graphed/numpy/io.py`), not ROOT-side, and was grouped under the
-    ROOT half with no pinned directory; unique basename per §10's rule).
+    ROOT half with no pinned directory; unique basename per §10's rule). **The anchor is worded over
+    §6.4f's r27 trigger**: `graphed.numpy.io.to_parquet(<a Varied>, …)` raises a graphed error naming
+    the awkward backend (measured, `graphed.numpy.to_parquet` is not a package attribute, so the
+    module path is the entry point). Do NOT freeze a `select=` arm — that keyword is bindingly not
+    added to the numpy idiom and stays a plain `TypeError`.
   - Docs: the §7.3 checkpoint paragraph gains m51's write-path scope (r17, correcting r13): widening
     `_WritePart` (§6.4f) churns **no shipped journal** — `write_plan` builds a plain-callable
     `Plan` (`write.py:32-43`) and the checkpoint runner takes a `DurablePlan`
@@ -5009,6 +5136,12 @@ ambient factor alone); a first-class Rust `Vary` NodeKey.
   design / integrity / mutation three-lens pattern (m46/m47 precedent) at the same severity terms,
   cycling until clean, empowered to send work back to planning. R0.5 pins DONE to full-matrix CI
   green. R0.10/R0.10a govern every witness; R0.11 governs every number in every report.
+- **§12.1a (Adjudicated closure, r27.)** The §12.1 cycle ran 18 rounds; substance converged (no
+  BLOCKER for eight rounds, the facts lens clean) while each revision's NEW text minted a fresh
+  ~18-finding tail. The owner elected ADJUDICATED CLOSURE: round 18's findings were fixed under a
+  strict no-new-surface discipline (prefer deletion or weakening; descope to §12.4 rather than write
+  new specification) and the review cycle TERMINATES here. Residual sharpening happens in m48
+  decomposition against the §12.4 ledger, not in further plan rounds.
 - **§12.2 (Worklogs.)** `systematics-vary-worklog.md` continues as the dual memory; per-milestone
   `.graphed/<mX>/attempts.md` as always.
 - **§12.3 (Bookkeeping amendments, on landing.)** (a) Draft **R23** for the root prompt binding
@@ -5018,6 +5151,21 @@ ambient factor alone); a first-class Rust `Vary` NodeKey.
   root `CLAUDE.md` Part F likewise; (d) un-park `ops_catalog.md:75` into a milestone-tagged
   Section-C row (`test_catalog.py` lock-step preserved — verified text-presence-only, review r0);
   (e) memory-file update.
+- **§12.4 Closure ledger (deferred to m48 decomposition), r27.** Items the adjudicated closure
+  deliberately did NOT specify further; the decomposition pins each one before the milestone that
+  consumes it. Nothing here is a new requirement — each is a naming/normalization choice inside an
+  already-bound rule.
+  - (1) **§3.4/§5.3 two-form operand.** r27 widened both verbs to
+    `Sequence[Varied] | Mapping[str, Sequence[Array]]` so the primary sink (§9.1's
+    `fill_nodes_by_label`) is reachable. The exact annotation, and how a mixed/ill-formed operand is
+    rejected, are pinned at m49 freeze with the rest of each verb's spelling.
+  - (2) **§6.4f numpy refusal.** The trigger (a `Varied` first positional) and entry point
+    (`graphed.numpy.io.to_parquet`) are bound; the error CLASS and message wording are pinned at m51
+    freeze. The numpy idiom bindingly gains no `select=` keyword, so no m51 anchor freezes that arm.
+  - (3) **§8.2(i) producer cost.** The bound recipe walks one record CONE per label inside
+    `plan()`. Its cost is bounded by the per-label cone size (the same traversal §3.4's verb
+    performs) and is a driver-side, once-per-plan walk; m49 decomposition confirms it against §3.3's
+    budget and states the measurement (R0.11) rather than assuming it here.
 
 ---
 
@@ -5148,6 +5296,52 @@ ambient factor alone); a first-class Rust `Vary` NodeKey.
 
 ## Revision history
 
+- **r27 (2026-08-12)** — **ADJUDICATED CLOSURE of review round 18** (three independent r26 reviews:
+  facts / design / tests, `systematics-vary-plan-review-r26-{facts,design,tests}.md`; 18 severe
+  findings, 17 unique after merging the §8.2(i) producer pair the design and tests lenses each
+  raised). The §12.1 cycle terminates here per §12.1a: every finding was verified against the pinned
+  roots and fixed under a no-new-surface discipline (deletion/weakening preferred; three items
+  descoped to the new **§12.4 closure ledger** rather than written as new specification). Nothing
+  was refuted; no owner-locked decision was touched. Audit trail:
+  `systematics-vary-plan-revision-r27-notes.md`.
+  **HIGH** — **§8.2(i)'s r26 producer could not produce what §8.2 binds** (composing the
+  `(output, label) → record id` map with the m49 accessor is single-valued and keys only FILL nodes,
+  while an `External` fill is a stage BOUNDARY — `src/node.rs:100-104` — so (iii)'s op-dispatch
+  lookups all miss): the recipe is now the per-label record-CONE walk unioned per
+  `(reduced_node_id, member_index)` key, and m49's population bullet puts the shared node UPSTREAM of
+  the label fork. **m48's §2.1 stacking anchor spelled its discriminating assertion as `==` between
+  two recorded expressions, which is unconditionally green** (measured: `Array.__eq__` returns an
+  `Array`, `array.py:236`, and `Array` defines no `__bool__`, `:127-128`): the anchor now compares
+  `.node_id` (sound by interning, `src/store.rs:73-88`) and §2.2 gains the general prose rule beside
+  its r26 `x[L]` sibling. **§5.3's `Jet.eta` union-growth example is unsatisfiable** (measured:
+  `read_columns` counts a `field` op only when its input IS the source, `projection.py:129-141`, so
+  a nested `Jet.pt`/`Jet.eta` pair both report `('Jet',)`): the example is withdrawn and the m49
+  fixture pinned FLAT (`Jet_pt`/`Jet_eta`/`Muon_pt`).
+  **MID** — §3.4/§5.3/§9.1 widen to `Sequence[Varied] | Mapping[str, Sequence[Array]]` (the primary
+  sink hands out `fill_nodes_by_label(h) -> dict[str, Array]`, not a `Varied`); §2.1's row-space rule
+  ORDERS reduce-as-supplied before label-aligned re-index (§2.6c makes a `Varied`-mask-derived
+  context's row set per-label, so reducing after re-index lands every member at nominal's rows);
+  §6.4f pins the numpy refusal's trigger and entry point (measured: `graphed.numpy.to_parquet` is not
+  a package attribute and `to_parquet` has no `select=`, `numpy/io.py:182-191`) and bindingly adds no
+  `select=` arm; r22's `stats[nominal] + ("Jet.eta",)` restatement is replaced by an order-insensitive
+  set difference (both returns are sorted, `projection.py:147`, and the extra column sorts first);
+  §6.4e binds the levels list's total order `(depth, field_path or "")` (measured: `sorted()` over the
+  mixed elements is a `TypeError` and `sort_keys=True` never reorders list elements); m50's §9.2
+  anchor gains the `FORMAT_VERSION` assertions that make the bound bump visible.
+  **LOW** — §2.3d classifies `project_buffers` as `{label: BufferProjection}` (its own frozen
+  dataclass, `projection.py:60-72`); §2.3d's r20 discovery justification is corrected (the widened
+  r27 operand mentions `Array`, so the filter does reach the m49 verbs once they land — see r27);
+  §6.4a binds stored per-label masks to the SUPERSET rows and orders the level-≥1 structural check
+  before the OR restriction; m48's `context_of` fixture rationale is re-grounded (§2.1 r26/r27 makes
+  the mask-derived spelling legal); §2.3d/m51 extend `to_parquet`'s accepting disposition to a
+  `Varied` RECORD as well as `select=`; §2.6c cross-references §2.2's term-(b) exclusion at its own
+  site; m51's manifest anchor asserts the levels LIST (not a set); the `session.walk` anchor becomes
+  `session.py:245-255,288` (the "returns the root's value" half lives at `:288`).
+  **Repair pass** (round-18 re-check of r27's own new text) — the first r27 wording of §2.3d's m49
+  discovery clause was wrong in the opposite direction: it said the widened operand hides the verbs
+  from the annotation-wide filter, while `Sequence[Varied] | Mapping[str, Sequence[Array]]` mentions
+  `Array` and the filter above explicitly covers unions. Corrected in place; the discovery
+  prediction is r20's original one and still reds nothing (containment floor).
 - **r26 (2026-07-30)** — review round 17 (three independent r25 reviews: facts / design / tests,
   `systematics-vary-plan-review-r25-{facts,design,tests}.md`; 18 findings after NIT exclusion, 17
   unique after merging the numpy-gate pair — §2.3d's floor scoping (design) and §10/m48's missing
@@ -5267,7 +5461,7 @@ ambient factor alone); a first-class Rust `Vary` NodeKey.
   `read_columns`' operands, `{label: tuple[int, ...]}` of sorted record node ids, spelling pinned at
   m49 freeze, listed with that shape in §9.1) — the §5.3 r16 treatment, applied to the one new
   surface that still lacked it while m49 freezes assertions through it (`session.walk` returns the
-  root's value and exposes ids only through handlers, `python/graphed/session.py:245-255`).
+  root's value and exposes ids only through handlers, `python/graphed/session.py:245-255,288`).
   **MID** — **§6.1c's `.plan()` refusal is re-keyed on the MODE**: it raises on a `Histogram` that is
   VARIED *or* in axis mode (equivalently, whose staged fills' spec differs from the `__init__`-time
   `self._spec` — **the "equivalently" half is CORRECTED in r25: it holds for the AXIS-MODE arm only**),

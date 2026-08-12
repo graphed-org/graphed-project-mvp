@@ -547,3 +547,27 @@ Round-18 HIGHs are still genuine (e.g. r26's §8.2(i) producer clause cannot pro
 set-valued map §8.2 itself binds — the composition's image only contains marked fill
 nodes, measured). Escalated to owner with three options (continue loop / adjudicated
 closure / ledger-and-stop).
+
+## 2026-08-12 — ADJUDICATED CLOSURE done (r26 → r27); §12.1 REVIEW CYCLE CLOSED
+
+Owner selected adjudicated closure over continued looping (AskUserQuestion, after 18
+rounds plateaued ~18 severe/round; H/M classification: ~60-65% code-facing structural,
+~20% self-referential anchor bookkeeping, ~15% hybrid). Closure workflow
+(wf_d1253631-f20, 4 agents, ~465k tokens, 26 min): closure reviser fixed all 18 round-18
+findings under strict no-new-surface discipline (5 pure deletions/replacements; 2
+suggested fixes DECLINED as too additive; 2 unnamed mirror sites swept) → verify pass 1:
+17/18 (one LOW respell) → bounded repair → verify pass 2: 18/18 RESOLVED, every
+measurement re-run independently. 3 items descoped to NEW §12.4 Closure ledger (operand
+normalization pinning at m49 freeze; §6.4f error class/wording at m51 freeze; §8.2(i)
+producer cost measurement under R0.11). §12.1a records the closure decision. Plan r27,
+6444 lines, status "review-clean (r27, adjudicated closure)".
+
+Key closure fixes: §8.2(i) producer respelled as per-label record-CONE walk (the
+composition-over-roots defect measured at src/node.rs:100-104); m48 stacking anchor
+respelled over .node_id equality (bool(a==b) unconditionally True — vacuity killed);
+§5.3 union-growth fixture pinned FLAT (read_columns granularity measured);
+Sequence[Varied] operand widened to include Mapping[str, Sequence[Array]].
+
+NEXT (owner-gated): m48 decomposition via the gated pipeline, working from the §12.4
+ledger, under the commit-sized-thoughts ruling (steps ≤1-2k LOC). Implementation
+explicitly NOT started per owner directive.
