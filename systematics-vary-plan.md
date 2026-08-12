@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r20).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r21).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -276,7 +276,14 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   rejected with the magnitude message. The accepted half is the discriminating one — the naive sum
   rejects it — and r19's own claim that "the cap boundary is precisely where m48 freezes the
   magnitude message" was false of m48's anchor list, which named only `"1e40"`, a value the naive
-  computation also rejects); r18: the input grammar states no magnitude
+  computation also rejects); **and the quantity compared against the cap is the RENDERED CANONICAL
+  LENGTH — that digit count PLUS 1 when the value is NEGATIVE, r21**, because the `m` sign marker is
+  a character of the canonical tag but not a digit: without the `+1` the two bounds disagree by one
+  for negative values — `"-1.5e31"` has a normalized digit count of 32, passes the magnitude test,
+  then renders as `m` + 32 digits = 33 characters and is refused by the generic 32-character
+  tag-sanity rule with the WRONG message class, while its positive twin `"1.5e31"` (32 digits, 32
+  characters) is ACCEPTED and is exactly the boundary pair m48 freezes, so the diagnostic would
+  otherwise depend on the SIGN, which no clause stated and no anchor covered; r18: the input grammar states no magnitude
   bound, so `"1e1000000000"` is legal input and a render-then-measure implementation must
   materialize a one-billion-digit string before the cap can refuse it) — chosen for its
   uniformly parseable numeric
@@ -506,7 +513,11 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   said nothing at all about a root context carrying only weight registrations; a "uniform"
   introspection verb answering less than the sink produces is the §2.5 confidently-wrong class):
   `graphed.labels(ctx)` is the **§2.4-ordered union** of (a) the ambient weight registry's
-  labels, (b) the labels of any `Varied` collections on the context, and (c) the labels of
+  labels, (b) the labels of any `Varied` collections the context CARRIES — the collections a
+  shift-form `vary` replaced, inherited ones included, **NOT the implicitly-varied reads §2.6c
+  produces through a `Varied`-mask-derived context (scoped, r21**: under the wide reading every read
+  through such a context is `Varied`, so (b) would subsume (c) everywhere and (c) would be dead
+  text — the term-(c) discrimination m48 anchors depends on this scoping) — and (c) the labels of
   **`graphed.selection(ctx)` in §9.1's sense — the selection reached by skipping over any number of
   `vary` IDENTITY links and answering as of the first non-identity link, `None` for a root context;
   on a universe/nominal-derived context that answer is a single label's unvaried member and
@@ -518,7 +529,14 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   that is a property of the program, not a rule, and a uniform introspection verb answering less
   than the sink produces is the §2.5 confidently-wrong class this clause was written to close. The
   definitional reference does not move `graphed.selection`'s own milestone: §9.1 keeps it at m51,
-  and its per-link-kind ANSWER is bound there independently of when the verb is exported) — by
+  and its per-link-kind ANSWER is bound there independently of when the verb is exported. **Term (c)
+  itself gains an m48 program that isolates it, r21** — a context derived by a LOOSE-`vary`-varied
+  mask, where (a) and (b) are both empty — **while the r20 `vary`-link-walking HALF is knowingly left
+  UNANCHORED**: on a `Varied`-mask-derived context every read through the context is `Varied`
+  (§2.6c), so a weight registered onto a `vary`-derived child lands the mask's labels in term (a) and
+  a shift-form `vary` stacks them into term (b), leaving no m48–m51-scoped program in which the two
+  readings differ. It stays binding for the verb's correctness, on §1.1's `"1e1000000000"`
+  precedent) — by
   construction the SUPERSET of the
   CONTEXT-BORNE half of any §6.1d fill's label set from that context, `"nominal"` first. **The
   superset property is scoped to context-borne sources, and that scoping is binding** (r14 — stated
@@ -723,8 +741,15 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `Varied` whose labels are the §2.4 union, per label broadcasting that label's members (r14 — it is
   discoverable by any `Array`-annotation rule and was undisposed, so the exhaustiveness gate below
   would have gone red against a correct m48 implementation).
-  **`graphed.reindex_to` (the §6.1d lineage seam, NEW in m48, r20) BROADCASTS** — a `Varied` value
-  gives a `Varied` with the same labels, each member re-indexed by that label's own mask per §2.4 —
+  **`graphed.reindex_to` (the §6.1d lineage seam, NEW in m48, r20) BROADCASTS** — the result's
+  labels are the **§2.4 UNION of the value's labels and the intervening masks' labels**, each member
+  re-indexed by that label's own mask, so an UNVARIED value re-indexed across a `Varied`-mask link
+  BECOMES a `Varied` carrying that mask's labels (**r21 — the r20 "a `Varied` with the SAME labels"
+  contradicted §6.1d(B)'s "label-aligned per §2.4" and is false of m48's own link-kind-(1) anchor,
+  whose value `events.MET.pt` is a plain `Array` re-indexed into `sel`'s per-label row spaces; the
+  narrow reading silently drops the mask's labels, the §2.5 confidently-wrong class, and the plan's
+  own precedent is the other way — `broadcast_like` is classified *broadcasting* with §2.4-UNION
+  labels**) —
   and **`graphed.unify_contexts` carries NO disposition**, taking context handles rather than
   `Array`s (the `evaluate_ir` treatment, r14); both are disposed here so the m48 gate does not
   discover `reindex_to` unclassified.
@@ -1514,7 +1539,16 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   fixture buys nothing discriminating. The split is observable only in AXIS mode, whose arity
   `1 + |S|` counts `S` and collapses `W`: **m50's equality anchor carries a label borne ONLY by a
   `Varied` `sample=`, asserting it lowers as a SIBLING (it counts in `S`) and that the axis-mode
-  result still equals its sibling-fill decomposition.** Without it an implementation classing a
+  result still equals its sibling-fill decomposition.** **That fixture MUST use a `Mean` or
+  `WeightedMean` STORAGE and per-label sample values that DIFFER, r21**: measured, boost_histogram
+  1.8.0 rejects `sample=` on the default `Double()` storage AND on `Weight()`
+  (`TypeError: Keyword(s) sample not expected`) and accepts it on `Mean()`/`WeightedMean()`, while
+  `graphed-histogram`'s evaluator passes `sample` straight through to `h.fill`
+  (`src/graphed_histogram/boost.py:60-71`) — so on the default storage the anchor dies at EVALUATION,
+  after the freeze, against a correct implementation; and with a storage that discards the sample the
+  two classifications are indistinguishable, i.e. the anchor is vacuous. (`_spec.py:19-27`'s
+  `_STORAGES` carries both mean storages, and the variation-axis spec round-trips and adds on them —
+  verified this session.) Without it an implementation classing a
   sample-only label into `W` passes every m48-m49 anchor and, at m50, folds it into the evaluator's
   weight loop — which re-fills with different weights against a FIXED sample column, i.e. a silently
   WRONG histogram no frozen test would see.
@@ -1544,13 +1578,16 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `reduce`; `mark_output` de-dups, `src/store.rs:147-156`; `execute.py:126` returns one value per
   DISTINCT output). Binding: **`layout` carries per-slot output INDICES**, not counts —
   `tuple[tuple[str, tuple[int, ...], str], ...]` (or `{(output, label): [indices]}` for the
-  two-level shape) — derived frontend-side from the compiled output list per §7.2, so a shared
-  node id **replicates** into every slot that needs it instead of shifting positions. **That list
-  is obtained through §7.2's bound `aggregate_plan` seam, r19** — measured, `aggregate_plan`
-  compiles INTERNALLY (`python/graphed/aggregate.py:95`) and takes `reduce`/`empty` as pre-built
-  closures (`:68-108`), while `plan()` builds `layout` before calling it
-  (`graphed-histogram src/graphed_histogram/boost.py:282,286-291`), so the indices are not
-  computable at the site r18 assumed.
+  two-level shape) — derived frontend-side per §7.2 as **the index of each marked record id's FIRST
+  OCCURRENCE in `plan()`'s OWN ordered `fill_nodes` list**, so a shared node id **replicates** into
+  every slot that needs it instead of shifting positions. **The operand is that list, NOT the
+  compiled output list, and NOT §7.2's `aggregate_plan` seam (r21, correcting r18/r19)**: measured,
+  the compiled artifact's `outputs()` are POST-REDUCTION ids that cannot be joined to the record ids
+  `plan()` owns (§7.2 r21 probe), while `fill_nodes` is built at
+  `graphed-histogram src/graphed_histogram/boost.py:281` — one line BEFORE `layout` at `:282` and
+  five before the `aggregate_plan` call at `:286` — and `evaluate_ir` returns one value per distinct
+  requested id in exactly that first-occurrence order. The seam stays an m48 target for §7.2's merge
+  refusal and m49's `variation_labels`; this layout needs nothing from it.
   **The AXIS-MODE slot is bound here too — and it is scoped to m50, with §6.2** (r15; scoping added
   r16, mirroring §6.1a/§6.1b's sibling-mode scoping: axis mode does not exist until m50, so leaving
   this source in m48's "§6.1" target lands it with zero m48 frozen coverage — the DoD's ≥90%
@@ -1595,7 +1632,17 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `provenance.py:26-33,66-79`, and NOT `Session._provenance`/`sourcemap()`) and **auto-applies that
   context's ambient weight** (§2.6c lineage rule — contexts are immutable, so *which context* fully
   determines *which registrations*): the fill's label set is the §2.4 union of value-borne labels,
-  ambient-weight labels, and explicit `weight=[...]` factor labels — so a plain Jet-pT fill
+  ambient-weight labels, and explicit `weight=[...]` factor labels — **computed on the inputs AFTER
+  the lineage step below (unification + re-indexing/projection), not before it, r21**, so a value
+  reached across a universe/nominal PROJECTION link (kind (3)) contributes NO labels, having been
+  projected to one label's unvaried member. Nothing sequenced the two before, and for kind (3) the
+  order changes the answer (kinds (1) and (2) are label-preserving, so it is immaterial there): on
+  m48's own anchored fixture `h.fill(graphed.nominal(sel).MET.pt, sel.MET.pt)` the unified context is
+  `graphed.nominal(sel)` — whose ambient weight is that label's member and whose `graphed.selection`
+  is an unvaried `Array` (§2.2) — so the ancestor value is the ONLY label source, and the two orders
+  give a labelled result with per-universe-identical content versus a wholly unvaried one. Under
+  this rule that fill is UNVARIED and §6.1a's bare-`hist` shape applies; m48's anchor says so, which
+  is also its discriminator against a "labels kept, contents identical" implementation. So a plain Jet-pT fill
   yields the jes/jer universes AND the pileup/PDF universes with zero per-fill bookkeeping (the
   owner's simultaneity requirement). **The union's ORDER is bound here too**, because §2.4 binds
   only a BINARY combination while this is three-way (and a fill may carry several varied axis
@@ -1665,8 +1712,8 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `ctx`'s nor an ancestor of it (the §2.1(b) direction rule, r20).
   With those two, the fill's entire lineage step is `unify_contexts` over its inputs' `context_of`s
   followed by `reindex_to` per input, and `graphed-histogram` imports nothing private. §2.3d
-  dispositions: `reindex_to` **broadcasts** (a `Varied` value gives a `Varied` with the same labels,
-  exactly like `graphed.broadcast_like`); `unify_contexts` takes context handles rather than
+  dispositions: `reindex_to` **broadcasts** (the result's labels are the §2.4 union of the value's
+  and the intervening masks', exactly like `graphed.broadcast_like`, r21 — §2.3d); `unify_contexts` takes context handles rather than
   `Array`s, so — like `evaluate_ir` (§2.3d r14) — it is outside the `Array`-consuming surface and
   carries NO disposition. m48 anchors them where each is observable: `graphed`'s half asserts (A)'s
   most-derived answer plus its divergence refusal and (B)'s identity and wrong-direction refusals,
@@ -2092,12 +2139,23 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   raised by `_WritePart` before any buffer is stored, exactly like predicate (1) (r14 — r13 bound it
   inside the record-time clause, contradicting this section's own "offsets are data" argument three
   paragraphs below, and left it with no raiser and no site).
+  **(2c) LEVEL-0 DEPTH, record-time, r21** — a mask supplied at level 0 MUST be FLAT over the
+  record's row axis (depth 0); a JAGGED level-0 mask is refused at the `to_parquet` call, naming the
+  level and the per-level channel. Neither (2a) nor (2b) constrains depth, and a per-OBJECT mask read
+  through the record's own context (`select=(events.Jet.pt > 25)` instead of an event-level mask)
+  passes BOTH: (2a) by §2.3e ORIGINATION — the same property that makes r20's fifth positive control
+  `select=(events.MET.pt > 50)` legal — and (2b) because a jagged boolean over the record's own
+  structure has the record's OUTER length. The writer would then apply it as the level-0 OR, and
+  jagged-boolean indexing filters INNER elements while keeping every row, silently violating this
+  section's superset-row contract and §6.4d's "inner cuts are never applied" rule with no error
+  anywhere. m51 carries it as a negative control alongside (2a)'s.
   **Levels ≥ 1** — lineage is not the available handle, so the check is STRUCTURAL:
   each per-label member of the mask must carry the record's own offsets at that depth. That is
   predicate (1)'s comparison at the same level, so it costs nothing extra, runs per partition, and
   shares (1)'s raiser and error shape.
   Each predicate has its own error message, and the m51 anchors name which predicate decides which
-  positive control. **Where each runs is bound below** (predicate (2)'s level-0 LINEAGE half (2a) is
+  positive control. **Where each runs is bound below** (predicate (2)'s level-0 LINEAGE half (2a)
+  **and its level-0 DEPTH half (2c), r21,** are
   record-time; predicate (1), predicate (2a)'s row-count twin (2b) and predicate (2)'s level-≥1
   structural half are execution-time, per partition).
   **Writing from a context (§2.6 idiom).** In the owner-locked context idiom the user holds a
@@ -2113,8 +2171,9 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   and typetracer forms, not per-label offsets, and the write is evaluated **per partition inside
   the worker**: `_WritePart.__call__` reads the partition, calls `evaluate_ir`, then writes one
   part (`python/graphed/awkward/io.py:111-127`; the per-partition task graph is built by
-  `python/graphed/write.py:32-43`). Binding: predicate (2a)'s **level-0 lineage** half IS a
-  record-time check and raises from the `to_parquet` call; predicate (1) (offsets), **predicate
+  `python/graphed/write.py:32-43`). Binding: predicate (2a)'s **level-0 lineage** half **and (2c)'s
+  level-0 DEPTH half (r21 — depth is a FORM property, known at record time)** ARE
+  record-time checks raised from the `to_parquet` call; predicate (1) (offsets), **predicate
   (2b)'s level-0 row-count equality** **and predicate
   (2)'s level-≥1 structural half** are **execution-time, per-partition checks raised by `_WritePart`
   BEFORE any buffer is stored**, surfacing through the
@@ -2246,9 +2305,24 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   reason. `ak.to_parquet` has
   no metadata parameter (signature verified), so the swap genuinely is required for the manifest.
   Binding: an **unvaried write keeps `ak.to_parquet` untouched** (preserving the §6.4g golden); a
-  **varied write** takes the `ak.to_arrow_table` + `pq.write_table` path and MUST reproduce
+  **varied write** MUST reproduce
   awkward's own KV entries alongside the graphed manifest, with `ak.from_parquet` round-tripping
-  the augmented file as a frozen m51 anchor. The
+  the augmented file as a frozen m51 anchor.
+  **The ROUTE is bound too, r21, because the outcome is otherwise reachable only through another
+  distribution's PRIVATE module**: measured in `graphed-latest`'s own environment (awkward 2.12.0),
+  the dropped key is defined ONCE, as
+  `AWKWARD_INFO_KEY = b"awkward_array_metadata"` in `awkward/_connect/pyarrow/table_conv.py:16`, and
+  written only by `convert_awkward_arrow_table_to_native` there (`:19-40`); `ak.to_parquet` reaches
+  it solely by importing that private helper
+  (`awkward/operations/ak_to_parquet.py:14`, called at `:417`), while `ak.to_arrow_table` never adds
+  it. Binding: **the varied write MUST NOT import `awkward._connect.*`** (the §2.3e/§6.1d
+  package-boundary rule, here against a package where `graphed` cannot add a seam), and its route is
+  the PUBLIC composition — build the file awkward's own writer would (`ak.to_parquet` to the part
+  path or an in-memory sink), then re-read the table and re-write it with the graphed manifest merged
+  into the schema metadata (`Table.replace_schema_metadata` + `pq.write_table`), which is the same
+  merge point `ak.to_parquet` itself uses for `attrs` (`ak_to_parquet.py:424-431`). The second write
+  is the accepted cost of the varied path; the unvaried path is untouched (§6.4g). A future revision
+  MAY bind a cheaper route, but never one that imports awkward's private package. The
   ROOT-side equivalent pinned at m51 freeze. The manifest maps each label to its stored
   column/branch names and per-column representation, **serialized with SORTED keys** (r13 — a
   manifest serialized in set/dict-iteration order would make the written bytes depend on
@@ -2320,9 +2394,23 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   re-execution and is explicitly not such a loop). §5.2b's single-read witness is the mechanism
   witness for this requirement.
 - **§7.2** The frontend owns `(output, label) → **node id**` — NOT `→ position` — and derives
-  `node id → position` from the compiled output list, so **many labels MAY resolve to one position
-  and the unpacker replicates that value**. This is forced by content dedup, measured:
-  `GraphStore::mark_output` de-duplicates (`src/store.rs:152-153`) and `evaluate_ir` returns
+  `node id → position` as **the index of that record id's FIRST OCCURRENCE in the frontend's OWN
+  ordered list of marked record ids** (the list it passes to `compile_ir`), so **many labels MAY
+  resolve to one position and the unpacker replicates that value**.
+  **The operand is bound to that list, r21, because "derived from the compiled output list"
+  (r18–r20) names one that cannot be joined to it**: measured against `graphed-latest@ff7c607`, the
+  compiled artifact's `outputs()` are POST-REDUCTION ids, and the record→reduced map does not exist
+  until m49's §8.2(i) accessor. Probe: record ids `src 0, dead 1, b 2, e 3, c 2` (`c` interning with
+  `b`) → `compile_ir(s, b, e, c)` gives `GraphStore.deserialize(ir).outputs() == [1, 2]` — neither
+  value a record id — while `evaluate_ir` returns TWO values, `b`'s then `e`'s, i.e. exactly
+  first-occurrence order over the DISTINCT record ids. The frontend's own ordered list is therefore
+  the exact operand for every program m48 admits: the two orders can only disagree when the
+  OPTIMIZER merges distinct record ids, which is precisely what the m48 shortfall guard below
+  refuses. This is forced by content dedup, measured:
+  `GraphStore::mark_output` de-duplicates (`src/store.rs:147-156`) — **on the REDUCED store, which
+  `from_reduced` marks (`src/store.rs:185-200`, the `mark_output(map[o])` at `:197`); `compile_ir` never marks the RECORD store at all
+  (measured: `s._store.outputs() == []` after the probe above — it passes the ids as
+  `reduce(outputs=ids)`/`serialize(outputs=ids)`, `python/graphed/execute.py:70-80`), r21** — and `evaluate_ir` returns
   `[vals[o] for o in store.outputs()]` (`execute.py:126`), so compiling two structurally identical
   outputs returns ONE value — re-measured this session against `graphed-latest`: `compile_ir(s, b,
   c)` with `b`/`c` structurally identical returns 1 value, `compile_ir(s, b, d)` with distinct
@@ -2330,12 +2418,15 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   end of `_GroupReduce`'s `fills` list or mis-assign labels (`boost.py:102-117`) on exactly the case
   §1.2 mandates and §5.2a/m51 put in scope (a label structurally equal to nominal). The frontend
   unpacks into the §6.1 named mapping through §6.1a's bound unpack verb (r18).
-  **THE SEAM THAT MAKES THIS DERIVATION POSSIBLE IS BOUND HERE, AND IT IS AN m48 IMPLEMENTATION
-  TARGET (r19)**, because three binding requirements need the compiled artifact at a site that does
-  not have it: §6.1c's index-based `layout` is "derived frontend-side from the compiled output list"
-  yet is a constructor argument of `_GroupReduce`/`_GroupZero`, which are passed INTO
-  `aggregate_plan`; this section's own m48 optimizer-merge refusal must compare distinct compiled
-  outputs against distinct marked record ids inside the group-plan builder; and m49's §8.2(i)
+  **THE SEAM THAT MAKES THE COMPILED ARTIFACT REACHABLE IS BOUND HERE, AND IT IS AN m48
+  IMPLEMENTATION TARGET (r19)**, because TWO binding requirements need that artifact at a site that
+  does not have it — **r21 removes the third**: §6.1c's index-based `layout` needs only the
+  frontend's OWN ordered marked-id list above, which `plan()` already holds as `fill_nodes`
+  (`graphed-histogram src/graphed_histogram/boost.py:281`, one line before it builds `layout` at
+  `:282`), so it never needed the compiled artifact and its "derived from the compiled output list"
+  rationale is withdrawn. The two that remain: this section's own m48 optimizer-merge refusal must
+  compare the number of DISTINCT compiled outputs against the number of distinct marked record ids
+  inside the group-plan builder; and m49's §8.2(i)
   `variation_labels` is a FIELD of `_PartitionReduce` keyed on POST-REDUCTION ids from the same
   compile. Measured against `graphed-latest@ff7c607`: `aggregate_plan(*outputs, reduce, combine,
   empty, externals, backend, steps_per_file, partitions)` compiles internally
@@ -2345,9 +2436,22 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `src/graphed_histogram/boost.py:282` — BEFORE its `aggregate_plan` call at `:286`. Binding:
   **`aggregate_plan` gains ONE pinned seam (exact spelling pinned at m48 freeze) that (α) lets the
   caller see the COMPILED ARTIFACT — the `CompiledGraph` itself, not merely a list of output ids —
-  before the worker closure is finalized, and (β)
-  accepts per-plan variation metadata to be carried as an additive field on the shipped closure
+  before the worker closure is CONSTRUCTED, and (β)
+  carries per-plan variation metadata onto that closure as an additive field
   (m49's `variation_labels`, §8.2(i)).**
+  **(β) IS THE HOOK'S RETURN CHANNEL, NOT A CALL-TIME PARAMETER, r21**, and the direction is binding
+  because as an input parameter (β) is unsatisfiable: §8.2(i) keys `variation_labels` on
+  POST-REDUCTION ids obtained through the m49 accessor "for the reduction that produced a given
+  compiled artifact", and that artifact is produced INSIDE the call — measured,
+  `compiled = compile_ir(session, *outputs)` at `python/graphed/aggregate.py:95`, one line before
+  `_PartitionReduce` is constructed from the parameters at `:96-104` — while this section forbids
+  compiling twice (below) and §8.2(i) declares the field an IMMUTABLE sorted tuple, so no caller-side
+  value and no mutable holder filled by a see-only callback can carry it. Binding: **the hook is
+  called with the `CompiledGraph` before the worker closure is constructed, and its RETURN VALUE (the
+  per-plan variation metadata, or `None`) is attached to the shipped closure as the additive §8.2(i)
+  field.** m48's (α) anchor asserts that a returned payload reaches the closure (with a dummy value),
+  so an m48 implementer cannot freeze a see-only spelling m49 is then blocked by — the same trap this
+  paragraph closes on the artifact axis.
   **The seam is ADDITIVE and the artifact is the `CompiledGraph`, both bound in r20.**
   *Additive*: the contracts of the existing `reduce`/`combine`/`empty` parameters are UNCHANGED —
   they are plain callables and frozen m5 passes them that way
@@ -2358,15 +2462,20 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   implementable only by breaking a frozen test (§B.6) or filing a Test Dispute. The seam is a NEW
   optional keyword/hook — `on_compiled(compiled)`-shaped — beside the existing parameters, the same
   additivity discipline §8.1, §8.2(i) and §9.2 already take on shipped surfaces.
-  *`CompiledGraph`, not ids*: §6.1c's layout and this section's own merge refusal need only
-  `node id -> position`, which `outputs()` would give, but the seam's THIRD named consumer does not
+  *`CompiledGraph`, not ids*: this section's own merge refusal needs only the COUNT of distinct
+  compiled outputs, which `outputs()` would give, but the seam's OTHER named consumer does not
   — m49's `variation_labels` keys on `(reduced_node_id, member_index)` obtained from the m49 core
   accessor, which answers "for the reduction that produced a given compiled artifact" (§8.2(i)), and
   a bare id list cannot produce that. An m48 implementer choosing the narrower spelling would ship a
   seam m49 cannot use, and m49 could then only re-open an m48-frozen surface or compile twice, which
   the next sentence forbids. `plan()` MUST NOT compile a second time: the §3.3
   anti-quadratic budget is written for ONE reduction of the variation-expanded graph, and a
-  frontend-side `compile_ir` before `aggregate_plan`'s own would double it. The seam is a function
+  frontend-side `compile_ir` before `aggregate_plan`'s own would double it. **That rule is knowingly
+  left UNANCHORED and rides an R0.11 implementer-report measurement instead (the measured compile
+  count for one `gh.plan({…})` call), r21** — its violation is silent (correct results, doubled
+  reduction cost), m48's (α) anchor observes only the hook's own firing INSIDE `aggregate_plan` and
+  says nothing about a compile that preceded it, and §3.3's frozen budget is a gate on a different
+  fixture; the same treatment §1.1 gives its `"1e1000000000"` rule. The seam is a function
   signature, not a schema, so m48's §7.2 schema-absence anchor (worded over `ExecResult`/`Plan`/
   monitor) is untouched by it.
   **Each half is anchored in the repo whose source it is, r20** (the seam is new source in
@@ -2456,12 +2565,19 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `variation_labels`, the exact defect it exists to catch — and a `from_ref` fixture's `process` is a
   hand-written module-level callable over a hand-built IR, exercising no varied lowering. **The
   fixture's closure operands (the `PartitionedSource`, the reduce/combine/empty callables) MUST be
-  module-level definitions in an importable module**, for the converse reason: measured this session
-  (cloudpickle 3.1.2, `PYTHONHASHSEED` ∈ {1, 7, 12345}) an importable frozen dataclass carrying a
-  SORTED TUPLE of labels digests identically across all three seeds (`80e8024dc8f3b77d` ×3) while the
+  module-level definitions in an importable module**, for the converse reason: re-measured r21
+  (cloudpickle 3.1.2, CPython 3.12.10, `PYTHONHASHSEED` ∈ {1, 7, 12345}) an importable frozen
+  dataclass carrying a
+  SORTED TUPLE of labels digests identically across all three seeds while the
   same dataclass carrying a `frozenset` gives three distinct digests — but the SAME dataclass defined
   in `__main__` (pickled by value) gives three distinct digests for BOTH forms, i.e. the anchor would
-  be red against a correct implementation. The same clause governs the §8.2(i) plan-byte determinism
+  be red against a correct implementation. **The r18–r20 literal `80e8024dc8f3b77d` is WITHDRAWN,
+  r21**: cloudpickle bytes for an importable class embed its module, qualname and field names, none
+  of which that row named, so the digest is not re-runnable and fails this document's own r14
+  reproducibility standard — the standard that withdrew the r12 §6.4e digest pair. The QUALITATIVE
+  shape above is what reproduces (a module-level dataclass of one's own gives one digest ×3 for the
+  sorted tuple and three distinct for each of the other two cases); §8.2(i)'s digest triple, which
+  DOES name its payload, was re-run in r21 and reproduces exactly. The same clause governs the §8.2(i) plan-byte determinism
   anchor (§10/m49). Across plan revisions, adding/removing a variation changes the IR and
   therefore **every** `task_id` (`plan.py:164-176,286-301`) — no cross-revision reuse. This
   limitation MUST be documented in the user docs and design.rst — naming the canonical
@@ -2792,7 +2908,9 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
   only the sibling `{(output, label): [indices]}` layout its anchors exercise), **§7.2** (r12 — m48 freezes the §7.2 schema-absence anchor, and §6.1a/§6.1c
   cannot be implemented without §7.2's `(output, label) -> node id` map and the indices-based
   `_GroupReduce.layout` it feeds; **including §7.2's r19 `aggregate_plan` SEAM**, without which the
-  compiled output list is not available where §6.1c's layout and §7.2's own merge refusal need it —
+  COMPILED ARTIFACT is not available where §7.2's own merge refusal needs it (**r21 — §6.1c's layout
+  is NO LONGER a consumer: it is derived from `plan()`'s own ordered `fill_nodes` list,
+  `graphed-histogram src/graphed_histogram/boost.py:281`**) —
   measured, `aggregate_plan` compiles internally at `python/graphed/aggregate.py:95` and takes
   pre-built closures; §7.1/§7.3/§7.4 stay m49), §6.3, **§9.1 partially —
   `graphed.labels`/`universe`/`nominal`/`weight`, `graphed.context_of` (r15),
@@ -3003,14 +3121,23 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     seam is an m48 Implementation Target in `graphed`'s `python/graphed/aggregate.py` and every
     requirement consuming it is fill-shaped and lives in `graphed-histogram`, whose frozen suite
     does not count toward `graphed`'s ≥90% diff-coverage-from-the-frozen-suite gate; measured, no
-    other `graphed` m48 anchor calls `aggregate_plan`, and `graphed`'s only existing coverage of it
-    is m5's): over an UNVARIED multi-output program in the m5 call shape
+    other `graphed` m48 anchor calls `aggregate_plan`, and `graphed`'s existing frozen coverage of it
+    is m5's positive path plus m39's two-source-rejection control
+    (`tests/frozen/frontend/m39/test_shuffle_plan_builder.py:58-64` — r21 corrects r20's "only m5's";
+    neither exercises a seam that does not yet exist): over an UNVARIED multi-output program in the
+    m5 call shape
     (`tests/frozen/frontend/m5/test_aggregate_plan.py:77`), the new hook fires EXACTLY ONCE and
-    receives the `CompiledGraph` — its `outputs()` readable BEFORE the worker closure exists — and
+    receives the `CompiledGraph` (its `outputs()` readable inside the hook) and
     the resulting `Plan` runs to the same value as the same program built WITHOUT the hook (m5's own
     assertion as the positive control), with the existing `reduce`/`combine`/`empty` parameters
     passed as the plain callables m5 freezes (§7.2 r20: the seam is ADDITIVE — those contracts are
-    unchanged). Seam half (β) is anchored at m49 with §8.2(i).
+    unchanged). **Plus the RETURN-CHANNEL assertion, r21** (§7.2's (β) is the hook's return value):
+    a value returned from the hook — a dummy at m48 — is carried onto the SHIPPED closure and is
+    readable there (`plan.process`), so a see-only spelling cannot be frozen here and block m49's
+    `variation_labels`. **"before the worker closure exists" is NOT asserted** — the hook receives
+    only the `CompiledGraph` and has no handle on the closure, so a test has no operand for that
+    ordering; the return-channel assertion is what makes the ordering observable at all. Seam half
+    (β)'s own per-plan metadata is anchored at m49 with §8.2(i).
   - **§6.1d's r20 LINEAGE SEAMS, in `graphed`'s `tests/frozen/frontend/m48`** (new `graphed` source
     whose only consumers are fill-shaped and live in `graphed-histogram`, the same per-repo coverage
     argument as the seam above): `graphed.unify_contexts`-shaped answers the MOST-DERIVED handle for
@@ -3112,7 +3239,18 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     ancestor-handled nominal member and a MORE-DERIVED non-nominal member answers with the
     more-derived handle (§2.3e r20 — the container's, not the nominal member's; §2.1 accepts exactly
     such a container and only DIVERGENT handles are refused, and §6.4a(2a)'s handle-equality
-    predicate reads this answer).
+    predicate reads this answer). **The FIXTURE is pinned to a `graphed.vary` IDENTITY link, r21** —
+    `events2 = graphed.vary(events, "pu", …, is_weight=True)` then
+    `v = graphed.vary(events.Jet, "jes", up=events2.Jet)`, asserting `graphed.context_of(v) is
+    events2` — **not to a MASK-derivation link** (`up=sel.Jet`): both discriminate identically
+    against the nominal-member reading, which answers `events`, but the mask-derived spelling builds
+    a container whose members sit in DIFFERENT row spaces, and freezing it read-only would pin such a
+    container as CONSTRUCTIBLE for three milestones — foreclosing any §2.1 construction check of the
+    kind §2.1(b) r20 just added for the analogous weight-factor mis-spelling (measured, `record_op`
+    validates only the backend's `op_form`, never lengths or row spaces,
+    `python/graphed/session.py:142-168`, which is why such programs record cleanly and die at
+    execution). The identity link keeps the row space fixed and is also closer to what §6.4a(2a)'s
+    predicate consumes.
   - **§6.1a result shapes** — **in SIBLING mode** (§6.2 axis mode is m50 and has its own shape,
     §6.2(i-bis); word the anchor so it does not freeze a general rule m50 must contradict), **worded
     over §6.1a's bound UNPACK verb (`graphed_histogram.unpack`-shaped, spelling pinned at freeze) and
@@ -3330,7 +3468,20 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     passes; the discriminating case is a shift-varied collection with an UNVARIED derivation mask,
     where the collection is the only source of the shift labels — assert `graphed.labels(ctx)` still
     reports them, and that it remains a superset of the context-borne half of a fill's label set,
-    §2.2); `graphed.universe(ctx, label)`/`graphed.nominal(ctx)` return a context that is a CHILD of
+    §2.2) — **plus a THIRD program that discriminates the union's THIRD TERM ITSELF, r21** (neither
+    program above can: in the first the mask's labels are covered by term (a), in the second by term
+    (b), so an implementation computing only (a) ∪ (b) passes both while term (c) is the one §2.2
+    rebound in r20): a context derived by a mask varied through the LOOSE §2.1a primitive —
+    `mask = gak.num(graphed.vary(events.Jet, "jes", up=j_up, down=j_dn)) >= 4`, `sel = events[mask]`,
+    with NO weight registered and NO shift-form `vary` on the context — for which terms (a) and (b)
+    are both EMPTY and `graphed.labels(sel)` MUST still report the JES labels.
+    **§2.2's r20 half — that term (c) SKIPS OVER `vary` identity links — is knowingly left
+    UNANCHORED, r21**, because no m48–m51-scoped program isolates it: on a `Varied`-mask-derived
+    context every read through the context is `Varied` (§2.6c), so a weight registered onto it lands
+    in term (a) carrying the mask's labels, and a shift-form `vary` on it stacks onto an
+    already-`Varied` collection (§2.1) and lands them in term (b) — either way the answer is right
+    under both readings. The clause stays binding for correctness of the verb, on §1.1's
+    `"1e1000000000"` precedent; `graphed.universe(ctx, label)`/`graphed.nominal(ctx)` return a context that is a CHILD of
     the argument in the lineage chain (§2.2 r14), so a fill mixing it with a read from the argument
     unifies instead of diverging — **asserted over the resulting VALUE, not merely over the absence
     of the divergence error** (r15): the ancestor-context value is PROJECTED to that label per
@@ -3339,7 +3490,13 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     `h.fill(graphed.nominal(sel).MET.pt, sel.MET.pt)`, **both axis values PER-EVENT for the reason
     §6.1d states, r19** (the r15–r18 `graphed.nominal(sel).Jet.pt` mixes a per-object with a
     per-event axis and cannot execute: bh requires equal flattened lengths across axes, measured
-    `ValueError: spans must have compatible lengths`); **`unweighted=True` in §6.1d's r19
+    `ValueError: spans must have compatible lengths`) — **and the RESULT SHAPE is asserted too, r21:
+    that fill's output is a BARE `hist`** (§6.1a's unvaried shape), because §6.1d r21 computes the
+    label set AFTER projection and the projected value carries none, while the unified context
+    `graphed.nominal(sel)` contributes none either; without this the fixture has two defensible
+    result shapes (`{label: hist}` with per-universe-identical contents being the other) and the
+    test-author's pick is frozen read-only. It is also the discriminator against an implementation
+    that keeps the labels and projects only the contents; **`unweighted=True` in §6.1d's r19
     bound form** — it suppresses the AMBIENT weight AND any explicit `weight=[…]` (a contexted fill
     with registrations yields counts equal to an unweighted eager reference), and
     `fill(x, weight=[w], unweighted=True)` is a RECORD-TIME error naming both; data-context guard for
@@ -3379,7 +3536,11 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     tag-length error, alongside the existing `"1e-8"` → `eps_1em8` positive; **plus the CAP-BOUNDARY
     PAIR that pins r19's digit-count NORMALIZATION, r20** — `"1.5e31"` is ACCEPTED and yields the
     canonical 32-digit tag (`15` followed by 30 zeros, exactly at the cap) while `"1.5e32"`
-    (33 plain digits) is REJECTED with the magnitude message. The ACCEPTED half is the discriminating
+    (33 plain digits) is REJECTED with the magnitude message **and its NEGATIVE twin `"-1.5e31"` is
+    REJECTED with the SAME magnitude message, r21** (§1.1's cap is compared against the rendered
+    canonical LENGTH, so the `m` sign marker counts: a digit-only comparison lets the negative value
+    through the magnitude test and into the generic 32-character tag-sanity refusal, making the
+    message class depend on the sign). The ACCEPTED half is the discriminating
     one: the naive "mantissa digits + exponent" the normalization exists to replace computes
     2 + 31 = 33 and rejects a legal tag, and `"1e40"` alone cannot catch that (the naive sum rejects
     it too, 1 + 40 = 41), so freezing only `"1e40"` leaves §1.1's normalization unwitnessed. (The
@@ -3595,9 +3756,11 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     closure operand (the `PartitionedSource`, reduce/combine/empty) is a MODULE-LEVEL definition in
     an importable module**, since a by-value-pickled `__main__` class makes the plan bytes
     seed-dependent regardless of `variation_labels` and would make the anchor red against a correct
-    implementation (measured r18, cloudpickle 3.1.2, `PYTHONHASHSEED` ∈ {1, 7, 12345}: importable
-    dataclass + sorted tuple → one digest `80e8024dc8f3b77d` ×3; + `frozenset` → 3 distinct;
-    `__main__`-defined dataclass + sorted tuple → 3 distinct).
+    implementation (re-measured r21, cloudpickle 3.1.2 / CPython 3.12.10, `PYTHONHASHSEED` ∈
+    {1, 7, 12345}: importable dataclass + sorted tuple → ONE digest ×3; + `frozenset` → 3 distinct;
+    `__main__`-defined dataclass + sorted tuple → 3 distinct. The r18–r20 literal
+    `80e8024dc8f3b77d` is withdrawn — it named no module/class/field names and so is not
+    re-runnable, §7.3 r21; the qualitative shape is what binds here).
   - §8.2 cross-process labeled StageError (incl. §7.4 dead-letter label) **plus the shared-node
     multi-label RENDERING half** (r14 — §8.2 states it inline as a required m49 anchor and this
     skeleton list dropped it; without it the single-label anchor passes under a
@@ -3634,7 +3797,13 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     evaluator's weight loop re-fills with different weights against a FIXED sample column — and the
     axis-mode result still equals its sibling-fill decomposition. Without it an implementation
     classing a sample-only label into `W` passes every m48–m49 anchor and silently produces one
-    sample column reused across universes. **Plus the per-fill CARRIER witness** (§6.2 r15):
+    sample column reused across universes. **The fixture MUST use a `Mean`/`WeightedMean` storage
+    and per-label sample values that DIFFER (§6.1b r21)** — measured, bh 1.8.0 raises
+    `TypeError: Keyword(s) sample not expected` for `sample=` on `Double()` and `Weight()`, and the
+    evaluator passes `sample` straight to `h.fill`
+    (`graphed-histogram src/graphed_histogram/boost.py:60-71`), so a default-storage fixture dies at
+    evaluation against a correct implementation and a sample-discarding storage makes the equality
+    vacuous. **Plus the per-fill CARRIER witness** (§6.2 r15):
     in the mixed program the `1 + |S|` axis-mode fill nodes carry **distinct External
     `content_hash`es and resolve to distinct evaluators** — without it every sibling resolves to the
     one evaluator registered last (measured: the registry is keyed on `content_hash(self._spec)`
@@ -3844,7 +4013,12 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     performed THROUGH the record's own context (`select=(events.MET.pt > 50)` rather than
     `graphed.selection(sel)`) carries the record's handle by §2.3e's ORIGINATION rule and derived no
     context, so r19's binding handle-equality predicate ACCEPTS it and it round-trips; the r15–r19
-    wording froze a REFUSAL for it, hard-blocking a legal skim spelling read-only (§6.4a(2a) r20); **(2b) row-count equality between the record and that mask — EXECUTION-time, per
+    wording froze a REFUSAL for it, hard-blocking a legal skim spelling read-only (§6.4a(2a) r20);
+    **(2c) level-0 DEPTH, record-time (r21)** — a JAGGED level-0 mask read through the record's own
+    context (`select=(events.Jet.pt > 25)`) is REFUSED at the `to_parquet` call naming the level and
+    the per-level channel, with the flat event-level mask over the same context as the positive
+    control: it passes (2a) by ORIGINATION and (2b) by outer length, so without (2c) the writer
+    applies it as the level-0 OR and silently filters OBJECTS instead of rows; **(2b) row-count equality between the record and that mask — EXECUTION-time, per
     partition from `_WritePart`** like (1), NOT a record-time raise (r14: row counts are data);
     at **levels ≥ 1** the check is structural (the mask's per-label offsets equal the
     record's at that depth) and raises per partition from `_WritePart` like (1) — a lineage test is
@@ -3997,6 +4171,9 @@ Rust `Vary` NodeKey.
 | StageError is built ONLY driver-side today (M6 debug runner); the worker closure has no provenance/error wrapping — §8.2's transport is NEW work | `python/graphed/debug/runner.py:6-7,37,57-69`; `python/graphed/aggregate.py:44-65,95-97`; executors translate only: `graphed-executors src/graphed_executors/submit/engine.py:381-396` |
 | DCE compacts + remaps node ids; pipeline rebuilds into a fresh interned store (why §8.2 keys post-reduction) | `src/optimizer/mod.rs:1-11,88-116` |
 | `mark_output` de-duplicates; `evaluate_ir` returns one value per DISTINCT output (why §7.2 keys node ids, not positions) | `src/store.rs:152-153`; `python/graphed/execute.py:126` (re-measured 2026-07-30) |
+| The dedup runs on the REDUCED store; `compile_ir` never marks the RECORD store, and compiled `outputs()` are POST-REDUCTION ids (why §7.2's r21 derivation uses the frontend's OWN marked-id list) | `src/store.rs:185-200` (`from_reduced`; `mark_output(map[o])` at `:197`), `python/graphed/execute.py:70-80` (ids passed as `reduce(outputs=ids)`/`serialize(outputs=ids)`); measured r21 vs `graphed-latest@ff7c607`: record ids `src 0, dead 1, b 2, e 3, c 2` → `GraphStore.deserialize(ir).outputs() == [1, 2]`, `evaluate_ir` returns 2 values (b's then e's, first-occurrence order over distinct record ids), `s._store.outputs() == []` |
+| `awkward_array_metadata` is written ONLY by awkward's PRIVATE `_connect` helper (why §6.4e binds a public route + a no-private-import rule, r21) | `awkward/_connect/pyarrow/table_conv.py:16` (`AWKWARD_INFO_KEY`), `:19-40` (`convert_awkward_arrow_table_to_native`); `ak.to_parquet` imports it at `awkward/operations/ak_to_parquet.py:14` and calls it at `:417`; the same file's public merge point for `attrs` is `table.replace_schema_metadata(merged_metadata)` `:424-431`; `ak.to_arrow_table` never adds the key (measured, awkward 2.12.0 in `graphed-latest`'s venv) |
+| `boost_histogram` REJECTS `sample=` on `Double()`/`Weight()` and accepts it on `Mean()`/`WeightedMean()` (why m50's `sample=`-only-label fixture pins its storage, r21) | measured r21, bh 1.8.0 in `graphed-histogram-latest`'s venv: `Double`/`Weight` → `TypeError: Keyword(s) sample not expected`; `Mean().fill(x, sample=…)` and `WeightedMean().fill(x, weight=…, sample=…)` succeed; the evaluator passes `sample` straight through, `graphed-histogram src/graphed_histogram/boost.py:60-71`; `_spec.py:19-27` carries both mean storages |
 | The OPTIMIZER also merges DISTINCT record ids — record-time identity cannot see it (why §7.2 binds an m48 refusal, r17) | rule set `src/optimizer/engine.rs:22-31` (`SYMMETRIC_OPS`, `IDENTITY_TOKENS` `x+0.0`/`x*1.0`), `:67-80` (rule construction), `:89-110` (saturate + quotient). Measured r17 vs `graphed-latest@ff7c607`: `nom, m1, m2, mh = w, w*1.0, w*2.0, w*0.5` → record ids `0,1,2,3`, `compile_ir(s, nom, m1, m2, mh)` → `outputs() == [0,1,2]`, `evaluate_ir` returns 3 values; on the fill path (graphed-histogram@211cbbe) two `Histogram.fill`s with `weight=[w]` vs `weight=[w*1.0]` → fill node ids `2`,`4` → `outputs() == [2]` |
 | Non-growth `StrCategory` silently overflows an undeclared label (why §6.2 binds the declaration) | measured, boost_histogram 1.7.2 (2026-07-30): `sum 2.0` vs `sum(flow=True) 3.0`, `Traits(overflow=True, growth=False)` |
 | `FillEvaluator` flattens each input INDEPENDENTLY (why §6.1d's per-object fill stays unflattened) | `graphed-histogram src/graphed_histogram/boost.py:39-47,60-71` |
@@ -4085,6 +4262,57 @@ Rust `Vary` NodeKey.
 
 ## Revision history
 
+- **r21 (2026-07-30)** — review round 12 (three independent r20 reviews: facts / design / tests,
+  `systematics-vary-plan-review-r20-{facts,design,tests}.md`; 13 findings after NIT exclusion, no
+  cross-lens duplicates — 2 HIGH, 6 MID, 5 LOW). Every finding re-verified in-session against the
+  pinned verification roots before acting; audit trail in
+  `systematics-vary-plan-revision-r21-notes.md`. **Nothing rejected, nothing deferred** — no
+  finding's resolution required reversing an owner-locked decision.
+  **HIGH** — **§7.2's `node id → position` derivation is re-bound to the operand that exists**: the
+  frontend derives it as the index of each marked record id's FIRST OCCURRENCE in its OWN ordered
+  marked-id list, not "from the compiled output list" — measured probe vs `graphed-latest@ff7c607`
+  (record ids `0/1/2/3/2`, `compile_ir(s, b, e, c)` → `outputs() == [1, 2]`, two values in
+  first-occurrence order of the DISTINCT record ids, `s._store.outputs() == []`): the compiled
+  outputs are POST-REDUCTION ids that cannot be joined to record ids until m49's §8.2(i) accessor,
+  and `compile_ir` never marks the record store (the `mark_output` dedup runs when `from_reduced`
+  builds the reduced store, `src/store.rs:185-200`). Consequently **§6.1c's layout is REMOVED from
+  the seam's consumer list** — `plan()` already holds the list as `fill_nodes`
+  (`graphed-histogram src/graphed_histogram/boost.py:281`, one line before `layout` at `:282`) — and
+  m48's target line follows; the seam remains an m48 target for §7.2's merge refusal and m49's
+  `variation_labels`. **§7.2's seam half (β) is bound as the hook's RETURN CHANNEL**, not a call-time
+  parameter: `variation_labels` keys on post-reduction ids from the artifact the call itself produces
+  (`compile_ir` at `python/graphed/aggregate.py:95`, `_PartitionReduce` built at `:96-104`), the plan
+  forbids compiling twice, and §8.2(i) declares the field an immutable sorted tuple — so a see-only
+  hook has no path into the shipped closure; m48's (α) anchor gains a return-payload assertion.
+  **MID** — §6.1d ORDERS label-set inference AFTER the lineage step, so a value reached across a
+  universe/nominal PROJECTION link contributes no labels; m48's `graphed.nominal(sel)` fixture
+  accordingly asserts a BARE `hist` (two defensible shapes before, both frozen read-only). §2.3d's
+  `graphed.reindex_to` labels corrected from "the SAME labels" to the §2.4 UNION with the intervening
+  masks' — an unvaried value re-indexed across a `Varied` mask BECOMES `Varied`, which is exactly
+  m48's own link-kind-(1) anchor (`h.fill(events.MET.pt, sel.MET.pt)`). §6.4e binds the ROUTE, not
+  only the outcome: measured, `awkward_array_metadata` is produced ONLY by
+  `awkward/_connect/pyarrow/table_conv.py:16,19-40` via a PRIVATE helper `ak.to_parquet` imports
+  (`ak_to_parquet.py:14,417`), so the varied write MUST NOT import `awkward._connect.*` and takes the
+  public write-then-re-write-with-`replace_schema_metadata` composition. m50's `sample=`-only-label
+  anchor MUST use a `Mean`/`WeightedMean` storage with differing per-label samples (measured, bh
+  1.8.0: `TypeError: Keyword(s) sample not expected` on `Double()` AND `Weight()`; the evaluator
+  passes `sample` through at `boost.py:60-71`) — otherwise it dies at evaluation post-freeze, or is
+  vacuous. m48's `context_of`-on-a-`Varied` fixture is pinned to a `vary` IDENTITY link (not a
+  mask-derivation one), so it does not freeze a row-space-mismatched container as constructible.
+  §2.2 SCOPES union term (b) to vary-REPLACED collections and gains an m48 program isolating term (c)
+  (a loose-`vary`-varied mask, (a) and (b) empty), while r20's `vary`-link-walking half is marked
+  knowingly unanchored with its measured reason.
+  **LOW** — §1.1's magnitude pre-check compares the rendered canonical LENGTH (digits + 1 when
+  negative), so `"-1.5e31"` gets the magnitude message rather than the generic cap error, with the
+  case added to m48's boundary pair. The unreproducible `80e8024dc8f3b77d` digest is WITHDRAWN from
+  §7.3 and m49's anchor (it named no module/class/field names; re-measured r21, the qualitative shape
+  reproduces and §8.2(i)'s named triple reproduces exactly). §6.4a gains predicate **(2c)**: a
+  level-0 `select=` mask must be FLAT (a jagged one passes (2a) by ORIGINATION and (2b) by outer
+  length, then filters objects instead of rows), with an m51 negative control. §7.2's "MUST NOT
+  compile a second time" is marked knowingly unanchored against an R0.11 compile-count measurement,
+  and m48's (α) anchor drops the unassertable "before the worker closure exists". §10/m48's
+  `aggregate_plan`-coverage claim corrected: `graphed`'s existing frozen coverage is m5's plus m39's
+  (`tests/frozen/frontend/m39/test_shuffle_plan_builder.py:58-64`).
 - **r20 (2026-07-30)** — review round 11 (three independent r19 reviews: facts / design / tests,
   `systematics-vary-plan-review-r19-{facts,design,tests}.md`; 19 findings after NIT exclusion, 17
   unique after merging two cross-lens duplicate pairs — 3 HIGH, 8 MID, 6 LOW). Every finding

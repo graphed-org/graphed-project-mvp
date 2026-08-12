@@ -490,3 +490,10 @@ same call produces. Suggested fix already in the finding: derive positions from 
 frontend's OWN dedup-ordered requested-id list (= evaluate_ir return order, measured).
 Workflow returned max-rounds again; cap raised 12 → 18 (loop control only, cache intact);
 resume runs reviser r20 → r21 live, then round 13.
+
+## 2026-08-11 — round-12 reviser done (r20 → r21)
+
+Reviser → r21 (5069 lines, +228 — smallest revision of the series): 13 applied (14 severe,
+one cross-lens merge), 0 rejected, 0 deferred. The §7.2 seam derivation re-bound to the
+frontend's own dedup-ordered requested-id list per the measured fix. Round 13 launches
+on r21.
