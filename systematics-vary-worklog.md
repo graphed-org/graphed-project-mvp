@@ -436,3 +436,12 @@ Round 7 on r15: 0 BLOCKER / 4 HIGH / 13 MID / 12 LOW / 2 NIT (design 2H/6M/4L, t
 hygiene"). HIGH trend: 8/7/8/5/10/9/4 — the compile_ir/discovery cluster fix broke the
 plateau. Reviser → r16 (3516 lines, +345): 29 applied, 0 rejected, 0 deferred, no
 owner-locked tensions. Round 8 (fresh isolated reviews of r16) launches automatically.
+
+## 2026-08-11 — review round 8 done (r16 → r17)
+
+Round 8 on r16: 0 BLOCKER / 2 HIGH / 12 MID / 11 LOW (tests 0H/5M/3L — first HIGH-free
+lens report of the series; design 1H/6M/7L; facts 1H/1L/2N, ~130 anchors verified, exactly
+one substantive failure: §7.3). HIGH trend: ...10/9/4/2. Reviser → r17 (3857 lines, +341):
+24 applied, 1 REJECTED (first rejection of the series — facts LOW claiming a stale
+checkpoint test line span; reviser re-measured and refuted it), 0 deferred. Round 9
+launches on r17.
