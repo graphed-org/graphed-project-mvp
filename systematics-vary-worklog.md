@@ -406,3 +406,17 @@ partition), 0 rejected, 0 deferred, no owner-locked tensions. Anchors +11 rows /
 rewritten. Round 6 = CAP round: reviews r14, reports max-rounds if dirty (no revision).
 Plan if dirty at cap: raise cap in script (loop control only — safe, prompts unchanged,
 journal cache preserved) and resume; escalate to owner if rounds 7+ plateau ~30 findings.
+
+## 2026-08-11 — review round 6 (cap round) done on r14; cap raised 6 → 12
+
+Round 6 on r14: 0 BLOCKER / 9 HIGH / 10 MID / 10 LOW / 3 NIT (design 4H/3M/3L, tests
+4H/7M/4L, facts 1H/3L/3N). Severe volume decaying slowly (33 → 29). Facts HIGH is a
+precision catch: r14's REPLACEMENT §2.3d discovery rule (annotation mentions Array,
+anywhere) still misses compile_ir — signature (session: Session, *outputs: Any) mentions
+Array nowhere, and compile_ir IS in graphed.__all__ so the named-members escape hatch
+(scoped to non-__all__ members) doesn't reach it; measured in-session against
+graphed-latest with inspect.signature. Same design-lens cluster confirms + over-fire on
+m48's own new exports. Workflow returned status=max-rounds (script cap). Per owner
+directive (continue until clean), cap raised 6 → 12 in the script — LOOP CONTROL ONLY,
+no agent prompt changed, all 22 cached results stay valid; resume runs the r14→r15
+reviser live, then round 7. Round-6 artifacts = 3 review files only (no reviser at cap).
