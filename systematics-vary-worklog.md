@@ -384,3 +384,25 @@ results (rounds 1–4) journal-cached; round-boundary monitor stopped; no watche
    ≤1-2k LOC each (memory: commit-sized-thoughts.md); apply in the m48+ decomposition.
 4. Per-round pattern: commit r-review files + revised plan + notes + worklog, push, bounded
    CI check (--limit+headSha, never --commit; rerun once on transient infra failures).
+
+## 2026-08-11 — RESUMED on owner go-ahead; review round 5 done (r13 → r14)
+
+Owner directives: continue plan/review until clean; do NOT proceed to implementation after.
+All 14 verification roots survived intact (no re-clone needed). Rounds 1-4 replayed from
+cache; round 5 fresh on r13.
+
+Round 5 on r13: 0 BLOCKER / 10 HIGH / 12 MID / 11 LOW / 2 NIT (design 4H/7M/4L, tests
+4H/5M/4L/1N, facts 2H/3L/1N). Raw HIGH count up vs round 4 (5H) BUT 5-6 of the 10 are ONE
+defect through three lenses: the r13-added §2.3d discovery rule (graphed.__all__ filtered to
+Array-annotated first param) misses 4/10 verbs, over-fires on broadcast_like, binds a dead
+evaluate_ir refusal, and its m48 anchor freezes 1 error contract where the body binds 2.
+Genuine vacuity catch: §5.2a arena-delta witness satisfiable without calling graphed.vary.
+Character still fix-induced surface (r13 was +307 lines), not noise — substance converging
+(no blockers since round 3, facts anchors near-perfect).
+
+Reviser → r14 (2837 lines, +326): 29 applied (33 raw; discovery-rule cluster merged
+facts+design+tests, refusal contract design+tests, §3.3 directory folded into m49
+partition), 0 rejected, 0 deferred, no owner-locked tensions. Anchors +11 rows / 3
+rewritten. Round 6 = CAP round: reviews r14, reports max-rounds if dirty (no revision).
+Plan if dirty at cap: raise cap in script (loop control only — safe, prompts unchanged,
+journal cache preserved) and resume; escalate to owner if rounds 7+ plateau ~30 findings.
