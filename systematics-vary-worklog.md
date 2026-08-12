@@ -506,3 +506,9 @@ round with nothing above MID. Reviser → r22 (5356 lines, +287): 17 applied, 1 
 measured counter-evidence (tests LOW about a correctionlib systematic= param the m9
 fixture does carry), 0 deferred. Round 14 launches on r22; remaining work is the MID/LOW
 tail.
+
+## 2026-08-12 — review round 14 done (r22 → r23)
+
+Round 14 on r22: 0 BLOCKER / 1 HIGH / 8 MID / 12 LOW (design 1H/5M/3L, tests 0H/2M/4L/1N,
+facts 0H/1M/5L/1N). Single HIGH across all lenses. Reviser → r23 (5605 lines, +249): 19
+applied, 0 rejected, 0 deferred. Round 15 launches on r23.
