@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **draft for review (r18).** Anchoring doc for the work, structured like the root prompt:
+Status: **draft for review (r19).** Anchoring doc for the work, structured like the root prompt:
 rationale is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) as a durable reference, together with its cited research and
 review companions (`systematics-vary-codebase-analysis.md`, `systematics-vary-litsearch.md`,
@@ -265,8 +265,14 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `"1e-40"` renders as the 5-character `1em40`, so an integer-valued input whose plain-digit
   rendering exceeds the cap is rejected **at canonicalization with a message naming the
   magnitude**, not with a generic tag-length error, r13; **the magnitude test runs on the COMPUTED
-  DIGIT COUNT — mantissa digits + exponent — BEFORE any rendering, and the canonical string is
-  produced only once that count is within the cap**, r18: the input grammar states no magnitude
+  DIGIT COUNT BEFORE any rendering, and the canonical string is
+  produced only once that count is within the cap**, r18 — **with the NORMALIZATION stated, r19**:
+  the count is (the input's mantissa digits after removing the decimal point and stripping leading
+  zeros) + (the exponent adjusted for where that decimal point sat), NOT a naive "mantissa digits +
+  exponent", which is off by one at the boundary for a dotted mantissa (`"1.5e31"` renders as `15`
+  followed by 30 zeros = 32 plain digits, exactly at the cap and LEGAL, while the naive sum gives
+  2 + 31 = 33 and rejects it — and the cap boundary is precisely where m48 freezes the magnitude
+  message as a case distinct from the generic tag-length one); r18: the input grammar states no magnitude
   bound, so `"1e1000000000"` is legal input and a render-then-measure implementation must
   materialize a one-billion-digit string before the cap can refuse it) — chosen for its
   uniformly parseable numeric
@@ -395,6 +401,23 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   the central per-event weight factor and every member is a per-event weight factor —
   `graphed.vary(events, "pu", pu_nom, is_weight=True, up=pu_up, down=pu_dn) -> new context` with
   the factor registered into the returned context's ambient weight (§2.6b).
+  **The factor's ROW SPACE is bound here, r19, because nothing else binds it and the stacking rule
+  below multiplies against it**: the registered factor — and every member of a `Varied` factor —
+  MUST live in the TARGET context's row space, i.e. be read through that context or through an
+  ancestor of it. An ANCESTOR-handled factor is re-indexed to the target across the intervening
+  lineage links per §6.1d link kinds (1)-(3), exactly as §6.1d re-indexes an ancestor VALUE at a
+  fill; a factor whose handle is on a divergent branch is the construction-time divergence error
+  bound at the end of this section. Left unbound, a factor computed from a value read at the PARENT
+  (the natural spelling for a jet-derived SF reusing a pre-selection collection) sits at the
+  parent's row count while §2.6c re-indexes the derived context's inherited members to `|sel_L|`
+  rows, and the stacking product `old_ambient[L] × factor[L]` records CLEANLY — measured,
+  `Session.record_op` validates only the backend's `op_form`, never lengths or row spaces
+  (`python/graphed/session.py:142-168`) — dying at execution with a message §6.1d's refusal contract
+  does not cover (that contract is scoped to a fill's weight factors, and §6.1d's link-kind
+  re-indexing runs at the FILL, too late: the mismatch is already interned). The resulting invariant
+  is the one §6.4b's r18 precondition already assumes: **`graphed.weight(ctx)` always answers in
+  `ctx`'s own row space.** m48's stacking anchor carries a positive control registering a factor
+  computed at the PARENT context.
   (c) **Event-context target, shift form** (no `is_weight`): each kwarg names a **collection**;
   each value maps tags to varied records — `graphed.vary(events, "jes", Jet={"up": j_up, "down":
   j_dn}, MET={…}) -> new context` with every named collection replaced by a `Varied` (all
@@ -473,7 +496,7 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `graphed.universe(ctx, label)` and `graphed.nominal(ctx)` return **a CONTEXT** — a CHILD of the
   argument in the §2.6b lineage chain (bound here, r14, because §6.1d's unification is defined over
   lineage and would otherwise have no way to relate the result to its argument: `h.fill(
-  graphed.nominal(sel).Jet.pt, sel.MET.pt)` would either unify by an unstated rule or raise the
+  graphed.nominal(sel).MET.pt, sel.MET.pt)` would either unify by an unstated rule or raise the
   divergence error on a legitimate program) — carrying that label's collections and ambient weight
   (falling back to each container's `"nominal"` member per §2.4), with `graphed.selection(...)`
   equal to the argument's selection at that label. The m48 anchor asserts the ancestry relation. String subscription `v["pt"]` is **field access** (broadcast per §2.3a,
@@ -500,11 +523,30 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   properties invisible to `inspect.isfunction`) had neither a reserved-name rule nor a gate entry and
   would resolve through the label-mapping field access, recording a graph node named `"dtype"`. It is
   a live path: §6.1d binds the numpy `broadcast_like` seam as a NO-OP precisely so an all-numpy
-  varied fill works): for every non-underscore property on `type(graphed.nominal(v))`, **`node_id`
-  and `session` raise `AttributeError`** rather than resolving as field access, and **every other
-  property is answered EAGERLY on the nominal member** (sound by §2.1's form compatibility — the same
-  argument §2.3c uses for `gak.fields`/`type_of`; on a plain `NumpyArray` these are already answered
-  from the form and never recorded, `python/graphed/array.py:283-290`). The `node_id`/`session` half
+  varied fill works). **The disposition splits by MECHANISM, not by `isinstance(m, property)`, r19**
+  (r18 read "every other property is answered EAGERLY … on a plain `NumpyArray` these are already
+  answered from the form and never recorded", which is false of `T`: measured against
+  `graphed-latest@ff7c607`, `NumpyArray.T` is `@property def T: return self.transpose()`
+  (`python/graphed/numpy/array.py:159-161`) and `transpose` is
+  `self._session.record_op("transpose", [self], params)` (`:156-157`), so accessing `T` RECORDS —
+  probe on a 1-D `NumpyForm` source: `dtype`/`ndim`/`shape` → `Session.node_count()` delta 0,
+  `T` → delta 1. `Array._form_meta` is not its path at all, and `_form_meta` itself falls back to
+  recording a `field` op when the form lacks the name, `python/graphed/array.py:283-290`. Under the
+  r18 reading `varied.T` would answer on the nominal member alone, silently dropping every other
+  universe — verbatim the §2.5 confidently-wrong class the rule exists to close — while §2.3a
+  classifies the `transpose` METHOD *broadcast*): for every non-underscore property on
+  `type(graphed.nominal(v))`, exactly one of three classes applies —
+  **(1) `node_id` and `session` raise `AttributeError`** rather than resolving as field access;
+  **(2) a FORM-ANSWERED property — one whose access on a plain nominal `Array` records NO node
+  (measured today: `shape`/`dtype`/`ndim`, all `_form_meta`-backed,
+  `python/graphed/numpy/array.py:76-86`) — is answered EAGERLY on the nominal member** (sound by
+  §2.1's form compatibility, the same argument §2.3c uses for `gak.fields`/`type_of`);
+  **(3) a RECORDING property — one whose access on a plain nominal `Array` records a node (`T`
+  today) — takes its underlying METHOD's §2.3a disposition** (`T` → *broadcast*: it returns a
+  `Varied` whose `graphed.labels` match the input's). The discriminator between (2) and (3) is
+  behavioural and measurable pre-implementation — access the property on a plain nominal `Array`
+  and read the `Session.node_count()` delta — so the gate below classifies each discovered name by
+  measurement rather than by a literal list. The `node_id`/`session` half
   is binding because `Array` exposes both as plain properties, not dunders (`array.py:137-143`), while
   `Array.__getattr__` guards only leading underscores (`array.py:332-335`) — so a `Varied` that
   implements field access by mapping over labels would answer `varied.node_id` with a recorded
@@ -551,9 +593,15 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   properties outright is what left `shape`/`dtype`/`ndim`/`T` with no disposition anywhere): a
   third enumeration over `inspect.getmembers(type(graphed.nominal(v)),
   lambda m: isinstance(m, property))` with no leading underscore, asserting each discovered name
-  resolves per §2.2 — `node_id`/`session` raise `AttributeError`, every other property answers
-  eagerly on the nominal member and records NO node (witnessed by a `Session.node_count()` delta of
-  0 across the access). The gate's floor names `varied.dtype` as its property representative.
+  resolves per §2.2's THREE-class rule (r19; the r18 blanket "records NO node" is red against a
+  correct implementation for `T`, which is a plain alias for the recorded `transpose` op —
+  measured, `python/graphed/numpy/array.py:156-161`, discovered set on `NumpyArray` =
+  `['T','dtype','ndim','node_id','session','shape']`): `node_id`/`session` raise `AttributeError`;
+  a property the same test measures to record NO node on the plain nominal `Array` must answer
+  eagerly on the nominal member with a `Session.node_count()` delta of 0 across the `Varied`
+  access; a property that DOES record on the plain nominal `Array` must broadcast — returning a
+  `Varied` whose `graphed.labels` match the input's. The gate's floor names **both** representatives
+  measured today: `varied.dtype` (eager, delta 0) and `varied.T` (broadcast, returns a `Varied`).
   **What the gate ASSERTS per name is bound too, because a presence check is vacuous here** (r15 —
   r12–r14 bound only the ENUMERATION and the floor, and a `hasattr`/`getattr`-on-the-instance
   iteration is green against exactly the failure this paragraph names: `Varied` implements field
@@ -625,7 +673,7 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   **expand into universes** (per-label results — `apply` returns a `Varied`, `read_columns` returns
   the union over all labels' members, §5.3; **the union is `None` — "read every column" — if ANY
   member's read set is `None`, else the sorted set union**, r17: `read_columns` returns
-  `tuple[str, ...] | None` and `None` is the conservative answer, `projection.py:109-115,146-147`,
+  `tuple[str, ...] | None` and `None` is the conservative answer, `projection.py:109-115,145-146`,
   so a plain set union would silently NARROW a conservative label's read list and starve its task); `graphed.compile_ir` and
   `graphed.aggregate_plan` **refuse** a `Varied` output with an error naming `graphed.universe` —
   they consume `arr.node_id`/`arr.session` directly (`execute.py:70`, `aggregate.py:86`) and
@@ -935,7 +983,7 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   from a pre-`vary` context is unaffected by later `vary` calls *by construction*.
   **A read performed THROUGH a derived context yields THAT context's row space** (bound here, r17 —
   the central rule of the whole idiom, previously only asserted in passing inside §6.1d's rationale
-  for value re-indexing ("`h.fill(events.MET.pt, sel.Jet.pt)` would otherwise apply `sel`'s weight
+  for value re-indexing ("`h.fill(events.MET.pt, sel.MET.pt)` would otherwise apply `sel`'s weight
   … against a value read at `events`' row count") and implied by the §2.6 sketch, while §6.1d's link
   kind (1), §6.4a's row-space predicates and m48's TWO re-indexing anchors — the §2.6c ambient-registry
   one and, r18, the §6.1d fill-time ancestor-VALUE one — are all defined against it):
@@ -990,9 +1038,10 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
                         Jet={"up": j_up, "down": j_dn}, MET={"up": m_up, "down": m_dn})
   jets = events.Jet[events.Jet.pt > 25]                       # universes flow (§2.3)
   sel  = events[gak.num(jets) >= 4]                           # derived context
-  sel  = graphed.vary(sel, "btag", btag_sf(sel.Jet),          # selection-scoped weight
+  sjets = sel.Jet[sel.Jet.pt > 25]                            # the corpus SF is on the pt-CUT jets
+  sel  = graphed.vary(sel, "btag", btag_sf(sjets),            # selection-scoped weight
                       is_weight=True,
-                      up=btag_sf(sel.Jet, "up"), down=btag_sf(sel.Jet, "down"))
+                      up=btag_sf(sjets, "up"), down=btag_sf(sjets, "down"))
   h.fill(sel.Jet.pt)                                          # per-OBJECT fill: the value stays
                                                               # UNFLATTENED so the ambient event
                                                               # weight can broadcast against it
@@ -1014,6 +1063,18 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   threads=…)` (`graphed-histogram src/graphed_histogram/boost.py:153-163`), so `h.fill(pt=…)` is
   an unexpected keyword. Named-axis kwarg fills exist only in the `hist.graphed` fork (cba
   §histogram §3), which is not in m48's repo scope.
+  (iii) **the b-tag SF's ARGUMENT is the pt-CUT jets, not `sel.Jet`** (r19 — r6–r18 wrote
+  `btag_sf(sel.Jet)`, which §2.6c binds to `events.Jet` re-indexed by `sel`'s mask, i.e. the UNCUT
+  collection restricted to selected events, while the corpus reference computes the SF on the
+  pt-cut jets and `_btag_weight` products a per-jet SF over `axis=1` — so sub-25 GeV jets change
+  the weight and a test-author transcribing the sketch into m48/m49's reference matrix misses the
+  15 stored references. Measured, `graphed-corpus src/graphed_corpus/analyses/systematics.py:60-76`:
+  `jets = _apply_jes(events.Jet, …)`, `good = jets[jets.pt > 25]`, `sel_jets = good[sel]`,
+  `weight = _btag_weight(sel_jets, …)`, with `_btag_weight` = `ak.prod(per-jet SF, axis=1)` at
+  `:25-36`). `sel.Jet[sel.Jet.pt > 25]` is the corpus-faithful spelling — the object cut and the
+  event re-index commute — and it is read THROUGH `sel`, so it also satisfies §2.1(b)'s row-space
+  requirement by construction. m48's matrix anchor repeats the note alongside the existing
+  `gak.full_like` / `stable()`-rounding mid-freeze-discovery notes.
   The neutral context *mechanism* (lineage, ambient weight, fill-inference seam) lives in
   `graphed` proper; the nanoevents-flavored constructor is awkward-idiom and lives in
   `graphed.awkward` (factorization rule preserved). The loose `graphed.vary` on Arrays (§2.1a)
@@ -1127,7 +1188,7 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   weight-variation program the filled value is post-selection (`obs = x[mask]`) and `Histogram.fill`
   records ONE External node whose `inputs` are the axis args followed by the weights
   (`graphed-histogram src/graphed_histogram/boost.py:175-178`, `inputs = list(args)` at `:175` then
-  `inputs.extend(weights)`; one `record_external` over that list, `:205-212`), while `session.walk`'s
+  `inputs.extend(weights)`; one `record_external` over that list, `:196-210`), while `session.walk`'s
   post-order over `inputs_of` makes a node's cone the transitive closure of its inputs
   (`python/graphed/session.py:255-286`) — so `reachable(selection_mask) ⊆ reachable(fill_node[L])`
   for EVERY label in every implementation that fills selected data, the intersection is the constant
@@ -1261,7 +1322,7 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   exact spelling pinned at m49 freeze**. **The `| None` is load-bearing, not defensive typing**
   (r17): measured, `read_columns(arrays, source_nid) -> tuple[str, ...] | None` and `None` is a
   live, semantically INVERTED answer — "read every column", returned on whole-record consumption or
-  a bare source read (`projection.py:109-115,146-147`, `if conservative or not needed: return None`).
+  a bare source read (`projection.py:109-115,145-146`, `if conservative or not needed: return None`).
   Under a bare `tuple[str, ...]` an implementer must render that as `()`, which reads as "reads
   nothing" — the exact opposite — or violate a frozen type. The m49 anchor carries a conservative
   label (one gak op applied directly to the source) asserting the `None`.
@@ -1322,11 +1383,24 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   under it every slot's value is a plain `bh.Histogram` … a key-wise `+`". m48 freezes BOTH ends
   (this section's result shape and §6.1c's indices layout), so the contradiction is a mid-milestone
   Test Dispute waiting to happen. Binding: **the plan's combined value is the FLAT slot-keyed
-  mapping §6.1c binds — `{(output, label) → bh.Histogram}` in sibling mode, `{(output, None) →
-  bh.Histogram}` in axis mode — and `_add_groups` stays a homogeneous key-wise `+`** (measured,
+  mapping §6.1c binds — `{(output, label) → bh.Histogram}` for a VARIED output in sibling mode,
+  `{(output, None) → bh.Histogram}` for an axis-mode output — and `_add_groups` stays a homogeneous
+  key-wise `+`** (measured,
   `graphed-histogram src/graphed_histogram/boost.py:120-122`: `{label: a[label] + b[label] for label
-  in a}`); the `{output_name: hist | {label: hist}}` shape above is what a bound **FRONTEND UNPACKER**
-  produces from that value plus the layout. **That unpacker is a NAMED read-only surface, not an
+  in a}`). **The slot keying is SCOPED to outputs a variation reaches, and that scoping is binding
+  (r19)**: an output NO variation reaches keeps today's BARE `output_name` key. r18's unqualified
+  wording re-keyed a wholly UNVARIED group plan's value from `{output_name: hist}` to
+  `{(output_name, "nominal"): hist}` — and sibling mode is the default for every program, so it
+  broke the already-frozen m23 suite, which indexes `SequentialRunner().run(gh.plan({…})).value` by
+  bare output name (`graphed-histogram tests/frozen/m23/test_group_plan.py:74-75` `out["hi"]`/
+  `out["lo"]`, `:86,:89` `grouped["0"]`/`grouped["1"]`, `:99` `zero["hi"]`; the reducer's key IS the
+  output name today, `boost.py:108-117` fed by `layout` built over `(output_name, Histogram)` pairs
+  at `:282`) — while §10 binds the frozen m23 artifacts "binding and unchanged" and `plan()`'s
+  declared return type is `Plan[dict[str, bh.Histogram]]` (`:262`) under the DoD's `mypy --strict`.
+  All three key forms carry a plain `bh.Histogram` value, so `_add_groups`' key-wise `+` stays
+  homogeneous whatever the key. m48's §6.1a anchor carries a wholly-unvaried positive control.
+  The `{output_name: hist | {label: hist}}` shape above is what a bound **FRONTEND UNPACKER**
+  produces from that value. **That unpacker is a NAMED read-only surface, not an
   unstated step** (r18 — three places assumed it ("the information the FRONTEND UNPACKER needs";
   "The frontend unpacks into the §6.1 named mapping"; this section's narrowing helper applied to
   `result[name]`) while nothing bound where it lives or what it is called, and measured there is no
@@ -1337,9 +1411,19 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   foreclosed by §7.2's m48 schema-KEY-SET anchor, so a test-author would have had to invent the
   surface AND its spelling and freeze the guess read-only, the defect class already repaired for
   §2.5's diagnostic channel and §5.3's stats verb): a read-only **`graphed_histogram` module verb
-  over the executed plan value plus the plan's layout — `graphed_histogram.unpack(value)`-shaped,
-  exact spelling pinned at m48 freeze** — returning `dict[str, bh.Histogram | dict[str,
-  bh.Histogram]]` and choosing per output from the layout's recorded MODE (§6.1c). Listed in §9.1
+  over the executed plan value ALONE — `graphed_histogram.unpack(value)`-shaped, exact spelling
+  pinned at m48 freeze** — returning `dict[str, bh.Histogram | dict[str, bh.Histogram]]`.
+  **It takes ONE argument, and the per-output shape is decided by the SLOT KEY FORM, not by a
+  recorded MODE (r19)**: r18 declared a one-argument verb in §9.1 while describing it here as
+  operating over the value PLUS the layout, which is unreachable from the value — measured, `Plan`
+  has no layout accessor and `ExecResult` carries only `value`/`n_partitions`/`n_combines`/`stopped`
+  (`python/graphed/core/execution.py:206-224`), the layout living inside `_GroupReduce`, the plan's
+  `process` (`graphed-histogram src/graphed_histogram/boost.py:106-117,288`). The key form is
+  total and per output: a BARE `output_name` key → that output's bare `bh.Histogram`; a
+  `(output, None)` key → the axis-mode output's bare variation-axis histogram (§6.2 i-bis); the
+  `(output, label)` keys of one output → `{label: hist}`. A varied sibling output always carries
+  ≥ 2 labels (§1.1 makes labels non-empty and `"nominal"` is always present), so no output's shape
+  is ambiguous, and this holds in a MIXED plan exactly as in a single-mode one. Listed in §9.1
   with the other m48 accessors; m48's §6.1a anchor is worded over it.
   The declared result
   type is therefore the value-dependent union
@@ -1352,7 +1436,17 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   (b) **Structural fill-node arity** (again **sibling-mode only**). A fill combining shift labels
   S and weight labels W records
   exactly `1 + |S| + |W|` fill nodes — never the product (frozen-counted via the staged-fill list,
-  the §2.4 discriminator). Axis mode's arity is `1 + |S|` and is stated in §6.2, so m50 does not
+  the §2.4 discriminator). **S and W are defined by LOWERING BEHAVIOUR, not by the "shift"/"weight"
+  vocabulary, r19**: `S` = the labels that require their own SIBLING fill node — those borne by any
+  AXIS value **or by a `Varied` `sample=`** — and `W` = the labels borne ONLY by weight factors
+  (ambient or explicit), which are the ones §6.2's axis mode can collapse into an evaluator-side
+  loop. r15/r16 made `sample=` a first-class fourth label source that m48 freezes as
+  ACCEPTED/expanded (`sample` is appended to the same `inputs` list with no type check today,
+  `graphed-histogram src/graphed_histogram/boost.py:175-178`), while the taxonomy had only two
+  classes: a label borne solely by `sample=` cannot ride the weight loop, which re-fills with
+  different weights against a FIXED sample column, so it must lower as a sibling — and under the
+  narrower reading both frozen arity formulas were wrong for such a program. Axis mode's arity is
+  `1 + |S|` under the same definitions and is stated in §6.2, so m50 does not
   land a feature contradicting a count frozen in m49.
   (c) **The single-histogram `.plan()` path refuses varied fills**: `_SumFills` sums ALL staged
   fill nodes into one histogram (`boost.py:88-98`) and would silently merge universes; varied
@@ -1381,7 +1475,12 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   DISTINCT output). Binding: **`layout` carries per-slot output INDICES**, not counts —
   `tuple[tuple[str, tuple[int, ...], str], ...]` (or `{(output, label): [indices]}` for the
   two-level shape) — derived frontend-side from the compiled output list per §7.2, so a shared
-  node id **replicates** into every slot that needs it instead of shifting positions.
+  node id **replicates** into every slot that needs it instead of shifting positions. **That list
+  is obtained through §7.2's bound `aggregate_plan` seam, r19** — measured, `aggregate_plan`
+  compiles INTERNALLY (`python/graphed/aggregate.py:95`) and takes `reduce`/`empty` as pre-built
+  closures (`:68-108`), while `plan()` builds `layout` before calling it
+  (`graphed-histogram src/graphed_histogram/boost.py:282,286-291`), so the indices are not
+  computable at the site r18 assumed.
   **The AXIS-MODE slot is bound here too — and it is scoped to m50, with §6.2** (r15; scoping added
   r16, mirroring §6.1a/§6.1b's sibling-mode scoping: axis mode does not exist until m50, so leaving
   this source in m48's "§6.1" target lands it with zero m48 frozen coverage — the DoD's ≥90%
@@ -1392,12 +1491,16 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `{label: hist}` mapping; nothing said how such a slot is keyed, and m50's scaling anchor counts
   exactly these slots): an axis-mode output contributes **exactly ONE slot, keyed `(output, None)`**,
   gathering ALL that output's fill-node indices, and its per-slot value is the bare histogram. A
-  plan MAY therefore carry sibling-mode and axis-mode outputs together, so the **layout records the
-  per-OUTPUT MODE** (sibling / axis) — the information the frontend unpacker (§6.1a's
-  `graphed_histogram.unpack`-shaped verb, r18) needs to choose between
-  `{label: hist}` and a bare histogram per §6.1a/§6.2(i-bis). A mixed-mode plan is m50's anchored
-  case (§10/m50), since in a single-mode plan the shape is inferable from the key form alone and the
-  MODE field could be omitted entirely. **The COMBINE needs no branch**
+  plan MAY therefore carry sibling-mode and axis-mode outputs together. **The layout records NO
+  per-output MODE (r18's field is DELETED, r19)**: the three key forms §6.1a binds — bare
+  `output_name`, `(output, label)`, `(output, None)` — are disjoint and per OUTPUT, so the unpacker
+  reads the shape off the keys in a MIXED plan exactly as in a single-mode one, which makes the MODE
+  field unwitnessable: an implementation that never records it passes every m48–m51 anchor,
+  including m50's mixed-mode one, so it could not carry a discriminating frozen test. It is also
+  what forced §9.1's `unpack(value)` to contradict §6.1a's "value plus the layout" — measured, the
+  layout is not reachable from the executed value (`python/graphed/core/execution.py:206-224`).
+  A mixed-mode plan stays m50's anchored case for the UNPACKING and per-slot-spec behaviour it is
+  the only program to exercise (§10/m50). **The COMBINE needs no branch**
   (r17 — r15's "the per-slot VALUE TYPE is recorded in the layout and the combine branches on it"
   asks for something the bound keying makes unnecessary: under it every slot's value is a plain
   `bh.Histogram` — a sibling slot `(output, label)` holds one, an axis-mode slot `(output, None)`
@@ -1437,14 +1540,23 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   orders for one program:
   a determinism-gate difference (§3.2) and a different `_GroupReduce` layout (§6.1c).
   `weight=[...]` *adds* factors; `unweighted=True` opts out
-  (counts histograms); inputs whose contexts sit on one ancestry chain unify to the
+  (counts histograms). **What `unweighted=True` suppresses, and its interaction with an explicit
+  `weight=[…]`, is bound here, r19** (it was introduced in one clause and m48's anchor names it
+  bare, so a test-author would freeze a guess about NEW source — measured, today's signature is
+  `fill(self, *args, weight=None, sample=None, threads=None)`,
+  `graphed-histogram src/graphed_histogram/boost.py:152-158`, with no such parameter): it suppresses
+  the AMBIENT weight **and** any explicit `weight=[…]` — a counts histogram carries no weight at all
+  — and supplying both `unweighted=True` and a non-`None` `weight=` in ONE call is a **record-time
+  error naming both**, the §2.5 validation-over-convention shape (silently letting one win is the
+  confidently-wrong class). m48's anchor names that answer.
+  Inputs whose contexts sit on one ancestry chain unify to the
   **most-derived** context, **and every ancestor-context VALUE is re-indexed to the unified
   context across the intervening lineage links, label-aligned per §2.4** (r12; **stated PER LINK
   KIND in r15**, because the r12/r14 wording — "by the intervening derivation mask(s)" — is total
   only if every link is a mask derivation, which r14 made false in two places: §2.2 binds
   `graphed.universe`/`graphed.nominal` to return a CHILD context, and §2.6b binds `graphed.vary` to
   return one, and neither link carries a mask. On this section's own cited example
-  `h.fill(graphed.nominal(sel).Jet.pt, sel.MET.pt)` the unified context is the child, the ancestor
+  `h.fill(graphed.nominal(sel).MET.pt, sel.MET.pt)` the unified context is the child, the ancestor
   value carries per-label row sets (§2.6c), and no mask relates them — so the rule as written had no
   operand while m48 freezes the outcome). The three link kinds:
   **(1) mask-derivation link** (`ctx[mask]`, §2.6c) — re-index the ancestor value by THAT mask,
@@ -1456,10 +1568,22 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   the ancestor's row space, then continue with the links below it. Links compose in lineage order,
   parent-to-child): unification alone
   is not enough, because §2.6c re-indexes the ambient weight to the derived row count, so
-  `h.fill(events.MET.pt, sel.Jet.pt)` would otherwise apply `sel`'s weight (row count = |sel|)
+  `h.fill(events.MET.pt, sel.MET.pt)` would otherwise apply `sel`'s weight (row count = |sel|)
   against a value read at `events`' row count — a length mismatch whose only symptom is the
   execution-time refusal below, whose message is about the wrong thing. Re-indexing is the same
   operation §2.6c already binds for the ambient registry, applied to the values.
+  **Both worked examples in this paragraph use SAME-GRANULARITY axis values, and that is
+  deliberate, r19** (r12–r18 wrote them as `h.fill(events.MET.pt, sel.Jet.pt)` and
+  `h.fill(graphed.nominal(sel).Jet.pt, sel.MET.pt)`, which cannot execute for a reason unrelated to
+  the mechanism they illustrate — and m48 froze both as fixtures): the evaluator flattens each AXIS
+  input INDEPENDENTLY and hands them to `boost_histogram`
+  (`graphed-histogram src/graphed_histogram/boost.py:39-47,60-71`), which requires equal lengths
+  across axes — measured, bh 1.8.0: `bh.Histogram(Regular(3,0,10), Regular(3,0,10)).fill(
+  np.arange(3.0), np.arange(5.0))` → `ValueError: spans must have compatible lengths`. Re-indexing
+  fixes an ancestor value's row COUNT, not its per-object STRUCTURE, and the broadcast seam bound
+  below is scoped to WEIGHT factors — nothing broadcasts one axis value against another, and
+  mixed-granularity multi-axis fills are NOT scoped in m48–m51. A per-event and a per-object value
+  therefore never share one fill's axis list; the link-kind mechanisms need no such program.
   Contexts on **divergent branches are a hard error** naming both. **The
   fill raises it itself**: §2.3e's op-level rule is early detection, but the fill is a combining
   point no op precedes — it is the first place independent axis/weight/sample handles meet
@@ -1554,9 +1678,12 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   field's actual layout in both eras of the confirmed exemplar (lit §ewkcoffea-confirmed), and
   scalar-string broadcast is probe-verified. The m50 equality anchor covers both the weight-label
   evaluator loop and a mixed shift+weight program landing in ONE axis-mode histogram equal to its
-  sibling-fill decomposition. **Axis-mode fill-node arity is therefore `1 + |S|`** (weight labels
-  collapse into the evaluator-side loop), which is why §6.1b's `1 + |S| + |W|` is scoped to
-  sibling mode.
+  sibling-fill decomposition. **Axis-mode fill-node arity is therefore `1 + |S|`** (only `W` — the
+  labels borne ONLY by weight factors — collapses into the evaluator-side loop), which is why
+  §6.1b's `1 + |S| + |W|` is scoped to sibling mode. **`S` and `W` carry §6.1b's r19 lowering
+  definitions here too**: a label borne by a `Varied` `sample=` is in `S` and lowers as a sibling
+  writing its own scalar category value, since the evaluator's weight loop re-fills against a fixed
+  sample column and cannot carry it.
   **The per-fill variation payload needs its own CARRIER, and it is bound here, because the obvious
   channel does not exist** (r15): both halves above are per-FILL information — a shift sibling
   writes ITS label as the scalar category value of its own fill, and the weight loop needs ITS
@@ -1779,9 +1906,12 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   satisfiable; the r12 runtime clause already narrowed itself to "each level-0 mask", so the
   sentence also disagreed with itself):
   **level 0, split in two halves with different sites** (r14).
-  **(2a) LINEAGE, record-time** — the supplied mask must be the selection that derived some context
-  from the context the record was read from, **across exactly ONE mask-derivation link and any
-  number of `graphed.vary` IDENTITY links** (r16 — the r15 wording required the mask's context `c` to
+  **(2a) LINEAGE, record-time** — the supplied mask must live in the record's own row space, which
+  in r19's binding form is decided by **CONTEXT-HANDLE EQUALITY** (the operative rule; see "HOW IT
+  IS DECIDED" below, which is what an implementer and a test-author work from). Its r16–r18
+  formulation — the mask is the selection that derived some context from the context the record was
+  read from, **across exactly ONE mask-derivation link and any number of `graphed.vary` IDENTITY
+  links** — is retained here only for its rationale (r16 — the r15 wording required the mask's context `c` to
   have the record's own handle as its immediate PARENT across a mask-derivation link, which refuses
   this plan's own mainline skim shape: §2.6's sketch rebinds `sel = graphed.vary(sel, "btag", …,
   is_weight=True, …)` after `sel = events[mask]`, so a skim written after ANY weight `vary` is
@@ -1805,16 +1935,37 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   `to_parquet(events.Jet, select=graphed.selection(sel))` with `sel = events[mask]`, the record's
   own context is the ROOT `events`, and §9.1 defines `graphed.selection` of a root context as
   `None`. The m51 anchor's wording — "a record whose context is not the one the supplied `select=`
-  mask DERIVES FROM is refused" — was already the correct direction and is normative.) Decidable
-  frontend-side, because lineage is a Python object chain; a record read from an ancestor or a
-  sibling context is refused at the `to_parquet` call, naming both contexts.
-  **How "the supplied mask IS `graphed.selection(c)`" is DECIDED is bound, r17**: per-label
-  **node-id equality** against the mask the context retains, with Python object identity as a
-  sufficient fast path. Object identity alone gives a different answer for a legal program — a user
-  who re-records the same selection expression holds a different Python object that interns to the
-  same node ids (`src/store.rs:73-88`; re-measured: recording one op twice returns the same node id)
-  — and m51's anchor passes the same object either way, so the freeze cannot disambiguate it and an
-  implementer would otherwise guess.
+  mask DERIVES FROM is refused" — was already the correct direction and is normative.)
+  **HOW IT IS DECIDED is RE-EXPRESSED over the operand that exists, r19 — `graphed.context_of` of
+  the supplied mask, not a search over the record's context's descendants.** The r16–r18 statement
+  ("a context `c` reachable FROM the record's own context handle by exactly one MASK DERIVATION plus
+  any number of `vary` links, whose `graphed.selection(c)` is the supplied mask") is a DOWNWARD,
+  parent→children search, and no bound surface supports one: §2.6b binds lineage as "Each returned
+  context links to its parent" — an upward chain only — §9.1's `graphed.selection` runs
+  context→mask, and §2.5's weak-reference registration is scoped to `Varied` containers, not
+  contexts. Nothing maps a mask back to the context it derived, so neither (2a) nor absent-operand
+  case (ii) was decidable, while m51 freezes four controls on the predicate. Binding replacement:
+  **the supplied mask's own §2.3e context handle MUST EQUAL the record's context handle —
+  `graphed.context_of(select_mask) is graphed.context_of(record)`** — a single comparison of two
+  values both operands already carry, with no traversal at all. It is the same property (2a) was
+  reaching for: a mask whose reads were performed through the record's context lives in the
+  record's row space by §2.6c, which is exactly what the level-0 OR requires. Verified against all
+  four m51 controls: canonical skim `to_parquet(events.Jet, select=graphed.selection(sel))` with
+  `sel = events[mask]` — the mask is recorded from reads through `events`, so both handles are
+  `events` → ACCEPT; silent-corruption case (`sel = events[nominal_mask]`, record `sel.Jet` handle
+  `sel`, `select=varied_mask` handle `events`) → REFUSE; chained-context case
+  (`graphed.selection(sel2)` for `sel2 = sel[mask2]` has handle `sel`, against a root-row-space
+  record) → REFUSE; universe/nominal case (`graphed.selection(graphed.nominal(sel))` has handle
+  `events`, record read from `sel`) → REFUSE. Both ABSENT-operand cases below are preserved
+  unchanged by it: a record with no handle short-circuits to (i), and a hand-built loose mask
+  carries no handle (§2.3e Drop rule) so it can never equal a contexted record's handle → (ii)'s
+  refusal. The r16 admission of any number of `vary` IDENTITY links becomes automatic — a `vary`
+  link does not change which context a read was performed through — and the r17 per-label
+  **node-id-equality** rule for "the supplied mask IS `graphed.selection(c)`" is WITHDRAWN with the
+  search it served; m51's re-recorded-equal-expression positive control survives and is
+  strengthened, since a re-recorded mask carries the same handle by construction (measured:
+  `a = src * 2.0; b = src * 2.0` → `a.node_id == b.node_id == 1`, `a is b` False). A record read
+  from an ancestor or a sibling context is refused at the `to_parquet` call, naming both contexts.
   **Both operands can be ABSENT, and each case is bound** (r15 — (2a) was stated purely in lineage
   terms while §2.3e's Drop rule yields context-free results and a hand-built `Varied`
   mask need never have derived a context, so the predicate had nothing to compare and no contexts to
@@ -2069,7 +2220,29 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   expressions returns 2. A positional `(output, label) → position` map would therefore walk off the
   end of `_GroupReduce`'s `fills` list or mis-assign labels (`boost.py:102-117`) on exactly the case
   §1.2 mandates and §5.2a/m51 put in scope (a label structurally equal to nominal). The frontend
-  unpacks into the §6.1 named mapping through §6.1a's bound unpack verb (r18). **The same node-id
+  unpacks into the §6.1 named mapping through §6.1a's bound unpack verb (r18).
+  **THE SEAM THAT MAKES THIS DERIVATION POSSIBLE IS BOUND HERE, AND IT IS AN m48 IMPLEMENTATION
+  TARGET (r19)**, because three binding requirements need the compiled artifact at a site that does
+  not have it: §6.1c's index-based `layout` is "derived frontend-side from the compiled output list"
+  yet is a constructor argument of `_GroupReduce`/`_GroupZero`, which are passed INTO
+  `aggregate_plan`; this section's own m48 optimizer-merge refusal must compare distinct compiled
+  outputs against distinct marked record ids inside the group-plan builder; and m49's §8.2(i)
+  `variation_labels` is a FIELD of `_PartitionReduce` keyed on POST-REDUCTION ids from the same
+  compile. Measured against `graphed-latest@ff7c607`: `aggregate_plan(*outputs, reduce, combine,
+  empty, externals, backend, steps_per_file, partitions)` compiles internally
+  (`compiled = compile_ir(session, *outputs)`, `python/graphed/aggregate.py:95`) and immediately
+  constructs the frozen dataclass `_PartitionReduce(ir=…, …, reduce=reduce)` (`:44-55,96-104`) from
+  pre-built closures, and `graphed_histogram.plan()` builds `layout` at
+  `src/graphed_histogram/boost.py:282` — BEFORE its `aggregate_plan` call at `:286`. Binding:
+  **`aggregate_plan` gains ONE pinned seam (exact spelling pinned at m48 freeze) that (α) lets the
+  caller see the compiled output list before the worker closure is finalized — e.g. `reduce`/`empty`
+  supplied as factories over the compiled output ids, or an `on_compiled`-shaped hook — and (β)
+  accepts per-plan variation metadata to be carried as an additive field on the shipped closure
+  (m49's `variation_labels`, §8.2(i)).** `plan()` MUST NOT compile a second time: the §3.3
+  anti-quadratic budget is written for ONE reduction of the variation-expanded graph, and a
+  frontend-side `compile_ir` before `aggregate_plan`'s own would double it. The seam is a function
+  signature, not a schema, so m48's §7.2 schema-absence anchor (worded over `ExecResult`/`Plan`/
+  monitor) is untouched by it. **The same node-id
   rule governs §6.4f's widened write-path unpack** — it is stated there too, r18, because that is
   the paragraph an m51 implementer works from.
   **A SECOND collapse mechanism exists that record-time identity CANNOT see, and m48 refuses rather
@@ -2109,7 +2282,14 @@ exact by construction; the suggested "1+delta" float ratio NOT bit-exact — wor
   exists) is NOT scoped in m48–m51 and is parked in §11. `ExecResult`/`Plan`/monitor **schemas** do not change in
   m48–m50 (per-variation monitor events: Phase 2, the defaulted-field trick documented —
   `store.py:31-41` precedent); the absence is a frozen m48 anchor (§10), worded over **schema KEY
-  SETS**, not over plan bytes: §8.2(i)'s added `_PartitionReduce` field leaves the public schemas
+  SETS asserted against LITERALLY SPELLED expected sets, never against a sibling unvaried run**
+  (r19 — all three are dataclasses whose field names are class-level constants
+  (`python/graphed/core/execution.py:206-217` `Plan`, `:219-224` `ExecResult`, `:335-351`
+  `TaskEvent`, the monitor payload, passed through by instance at `:378-384`), so a
+  varied-vs-unvaried key-set comparison is equal BY CONSTRUCTION — including after an implementer
+  adds a field, which is the only thing the anchor exists to detect; this is the §6.3 repair r17
+  made for the params key set, applied here), not over plan bytes: §8.2(i)'s added
+  `_PartitionReduce` field leaves the public schemas
   untouched but *does* change the shipped worker closure — and **wherever that closure is wrapped
   for checkpointing** it is embedded as an opaque cloudpickle `OpSpec` whose bytes feed
   `identity()` and therefore `task_id` (`python/graphed/core/plan.py:72-90,164-176`). **That wrap
@@ -2358,8 +2538,10 @@ docstring, corrected r15). The
   walk reaches a root context. One rule, stated per lineage link kind,
   matching §6.1d's r15 link-kind table),
   **the §6.1a RESULT UNPACKER** (`graphed_histogram.unpack(value) -> dict[str, bh.Histogram |
-  dict[str, bh.Histogram]]`-shaped, over the executed plan's flat slot-keyed value plus the plan's
-  layout, choosing per output from the layout's MODE; read-only; **m48, spelling pinned at m48
+  dict[str, bh.Histogram]]`-shaped, over the executed plan's flat slot-keyed value ALONE, choosing
+  per output from the SLOT KEY FORM (r19 — the r18 "plus the plan's layout … the layout's MODE" is
+  unreachable from a one-argument verb and unnecessary: the three key forms are disjoint and per
+  output, §6.1a/§6.1c); read-only; **m48, spelling pinned at m48
   freeze** — added r18 because §6.1a's result shape is produced by no bound surface today: `Plan` has
   no finalize hook and `ExecResult.value` is exactly the combine output,
   `python/graphed/core/execution.py:206-224`, while `plan()` returns that `Plan` and nothing else,
@@ -2459,13 +2641,22 @@ Each milestone runs the full §12 process. Frozen anchors listed here are the ac
 the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **binding and unchanged**.
 
 - **m48 — `vary` frontend + weight path** (repos: `graphed` + `graphed-histogram`).
-  Targets: §1, §2 (incl. the §2.6 event context), §3.2, §4, §6.1 (incl. §6.1d
+  Targets: §1, §2 (incl. the §2.6 event context) **except §2.5's shift-after-weight ordering
+  diagnostic, which is m49's — it needs §3.4's reachability cone, which r14 moved to m49** (r19 —
+  §2.5 itself says "it is an m49 target" and r18 added it to m49's target line, while this line's
+  bare "§2" left a reviewer checking "targets exactly as specified" with two answers), §3.2, §4,
+  §6.1 (incl. §6.1d
   ambient fills) **except §6.1c's AXIS-MODE slot, which is m50's with §6.2** (r16 — m48 implements
   only the sibling `{(output, label): [indices]}` layout its anchors exercise), **§7.2** (r12 — m48 freezes the §7.2 schema-absence anchor, and §6.1a/§6.1c
   cannot be implemented without §7.2's `(output, label) -> node id` map and the indices-based
-  `_GroupReduce.layout` it feeds; §7.1/§7.3/§7.4 stay m49), §6.3, **§9.1 partially —
-  `graphed.labels`/`universe`/`nominal`/`weight`, `graphed.context_of` (r15) and the per-label
-  fill-node accessor only** (r13;
+  `_GroupReduce.layout` it feeds; **including §7.2's r19 `aggregate_plan` SEAM**, without which the
+  compiled output list is not available where §6.1c's layout and §7.2's own merge refusal need it —
+  measured, `aggregate_plan` compiles internally at `python/graphed/aggregate.py:95` and takes
+  pre-built closures; §7.1/§7.3/§7.4 stay m49), §6.3, **§9.1 partially —
+  `graphed.labels`/`universe`/`nominal`/`weight`, `graphed.context_of` (r15), the per-label
+  fill-node accessor, and `graphed_histogram.unpack` (r19 — §9.1 marks the r18 unpack verb m48 with
+  its spelling pinned at m48 freeze and m48's §6.1a anchor is bindingly worded over it, while the
+  r18 target line's "only" excluded it) only** (r13;
   §9.1 marks all four m48 and §2.6a agrees, but m48's target line named no §9 section while m50's
   said "§6.2, §9", leaving `graphed.weight` an m50 target that an m48 frozen anchor consumes — the
   §2.1 stacking anchor MUST use it, and §6.4b is stated to be unsatisfiable without it. m50's §9
@@ -2503,7 +2694,7 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
   r14's discriminating second `graphed.labels` program ends "…remains a superset of the
   context-borne half of a FILL's label set", and r15 strengthened the
   `graphed.universe`/`graphed.nominal`-return-a-CHILD clause to be asserted over the resulting VALUE
-  of `h.fill(graphed.nominal(sel).Jet.pt, sel.MET.pt)`; both then need `graphed_histogram` inside
+  of `h.fill(graphed.nominal(sel).MET.pt, sel.MET.pt)`; both then need `graphed_histogram` inside
   `graphed`, i.e. `importorskip`, i.e. a SKIP in CI — `graphed pyproject.toml:29-48` vs
   `.github/workflows/ci.yml:34`, house pattern
   `tests/frozen/preserve/m25/test_histogram_preservation.py:31`). **The rule: any clause whose
@@ -2565,6 +2756,11 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     (b) conversely `bin_values`' driver-side rounding is what absorbs the float-summation-order
     differences a per-partition fill introduces, so the comparison rides
     `bin_values`/`fingerprint` — **raw-view bit-identity vs the references MUST NOT be asserted**.
+    **Third mid-freeze discovery spared, r19**: the b-tag SF's operand is the **pt-CUT** jets
+    (`sel.Jet[sel.Jet.pt > 25]`, §2.6 sketch note (iii)), not `sel.Jet` — the corpus computes
+    `sel_jets = good[sel]` off `good = jets[jets.pt > 25]` and products the per-jet SF over `axis=1`
+    (`graphed-corpus src/graphed_corpus/analyses/systematics.py:60-76,25-36`), so including sub-25
+    GeV jets changes the weight and misses the references.
   - §4.3 structural selection-invariance, in the r10 binding form: **the selection cone's node ids
     are identical across all weight labels** (NOT the withdrawn impact-set-subset wording, which is
     false for a correct implementation — §4.3); **with the extraction mechanism named** (§4.3 r12):
@@ -2585,9 +2781,16 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     carve-out makes both clauses false by design in m50's axis mode, where labels ARE StrCategory
     bin identities inside the content-hashed spec, `graphed-histogram
     src/graphed_histogram/boost.py:180-212`; every sibling-exposed anchor elsewhere carries this
-    scoping and this one was left general): NO node in the store carries any label string in its
-    params or
-    token, AND renaming every label leaves `compile_ir(...).ir` byte-identical. Plus the **dedup
+    scoping and this one was left general): no node's `name` or `params` — **including, for a
+    reduced `stage` node, its `members`' own names and params** — contains any label string,
+    AND renaming every label leaves `compile_ir(...).ir` byte-identical. **"or token" is DROPPED,
+    r19**: measured, `GraphStore.nodes()` yields `{id, output, inputs, kind, name, params}` (a
+    stage adding `n_members`/`members`, each member carrying its own `kind`/`name`/`params`) and no
+    `#[pymethods]` member returns a token, so the r10–r18 wording asserted over a quantity no public
+    surface exposes; the token is derived from kind+name+params, and the byte-identity clause
+    strictly subsumes it either way. The house pattern for reaching the store from a frozen test is
+    `s._store.nodes()` (`graphed-histogram tests/frozen/m29/test_multi_weight_fills.py:84,95`).
+    Plus the **dedup
     witness §5.2a defers to this bullet**: two labels whose members are structurally identical give
     arena Δ = 0, the same node id, and — per §7.2 — both keys present in the result with ONE
     evaluated fill (measured: `mark_output` de-dups, `src/store.rs:152-153`, so `compile_ir` over
@@ -2627,7 +2830,12 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     `old_ambient[L] × factor[L]` — the factor evaluated in THAT label's universe, per §2.1's
     per-overload stacking rule — not the old ambient unchanged. **Read through
     `graphed.weight(ctx)`** (§9.1, r12) so the assertion is frontend-observable and this anchor
-    stays in `graphed`'s half of the m48 split.
+    stays in `graphed`'s half of the m48 split. **Plus §2.1(b)'s r19 ROW-SPACE positive control**:
+    registering, on a DERIVED context, a factor computed from a value read at the PARENT is accepted
+    and re-indexed to the derived row space per §6.1d's link kinds, so `graphed.weight(sel)` answers
+    at `sel`'s per-label row counts — the invariant §6.4b's row-space precondition assumes;
+    `Session.record_op` performs no length check (`python/graphed/session.py:142-168`), so without
+    this the mismatch survives recording and dies at execution.
   - **§2.2 `Varied.apply`**: per-universe application of an `Array -> Array` function, plus the
     error contract — `fn` returning a `Varied` raises with guidance to combine via ordinary ops.
   - **§2.3d module-verb dispositions + §2.2's reserved `Array`-protocol names** (r13 — both were
@@ -2695,11 +2903,18 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     `varied.node_id` / `varied.session` raise `AttributeError` rather than recording a `field` op,
     with a negative control that `varied["node_id"]` (STRING getitem) still resolves as field
     access — so the rule cannot be implemented as a blanket `__getattr__` refusal; **plus the
-    PROPERTY half of §2.2's r18 disposition rule** — `varied.dtype` (the named representative) answers
-    eagerly on the nominal member and records NO node (`Session.node_count()` delta 0), while
-    `varied.node_id`/`.session` raise, so the numpy idiom's `shape`/`dtype`/`ndim`/`T`
-    (`python/graphed/numpy/array.py:78,82,86,160`, plain properties `inspect.isfunction` never
-    enumerates) cannot fall through into a recorded `field` op.
+    PROPERTY half of §2.2's disposition rule, classified BY MEASUREMENT, r19** — the numpy idiom's
+    `shape`/`dtype`/`ndim`/`T` are plain properties `inspect.isfunction` never enumerates
+    (`python/graphed/numpy/array.py:76-86,159-161`) and so cannot fall through into a recorded
+    `field` op, but they are NOT one class: measured against `graphed-latest@ff7c607`,
+    `dtype`/`ndim`/`shape` are `_form_meta`-backed and record nothing (`Session.node_count()`
+    delta 0) while `T` is `return self.transpose()` over `record_op("transpose", …)` and records
+    (delta 1). So the anchor asserts per discovered name against the delta measured on the PLAIN
+    nominal `Array`: `varied.dtype` (the eager representative) answers eagerly on the nominal member
+    with delta 0, `varied.T` (the recording representative) returns a `Varied` whose
+    `graphed.labels` match the input's — the §2.3a *broadcast* disposition its own `transpose`
+    method carries — and `varied.node_id`/`.session` raise. Freezing a blanket "delta 0 for every
+    property" reds a correct implementation on `T`.
   - **§6.1a result shapes** — **in SIBLING mode** (§6.2 axis mode is m50 and has its own shape,
     §6.2(i-bis); word the anchor so it does not freeze a general rule m50 must contradict), **worded
     over §6.1a's bound UNPACK verb (`graphed_histogram.unpack`-shaped, spelling pinned at freeze) and
@@ -2711,7 +2926,13 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     MIXED varied/unvaried output set gives: a varied output is
     `{label: hist}`, an output no variation reaches is a BARE `hist` (not `{"nominal": hist}`),
     absent labels are absent (never duplicated from nominal), and `graphed.universe`/`graphed.labels`
-    narrow both shapes uniformly.
+    narrow both shapes uniformly. **Plus a WHOLLY-UNVARIED positive control (r19)**: a group plan
+    with no variation anywhere keeps today's value verbatim — every key a BARE output name, so
+    `run(gh.plan({"hi": h1, "lo": h2})).value["hi"]` still works and `plan()`'s declared
+    `Plan[dict[str, bh.Histogram]]` (`boost.py:262`) still types under `mypy --strict`. §6.1a's
+    slot keying is scoped to outputs a variation reaches precisely so the already-frozen m23 suite
+    stays green (`graphed-histogram tests/frozen/m23/test_group_plan.py:74-75,86,89,99` all index
+    the value by bare output name), and §10 binds those artifacts unchanged.
   - **§2.3b plain-Array entry points learn `Varied`** (binding since r1, unanchored until r11; the
     m48 dunder-parity anchor is the MIRROR property and does not exercise it, and it otherwise
     reaches the suite only implicitly one milestone later inside m49's 15-reference matrix, where
@@ -2727,10 +2948,19 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     covered by "§2 validation errors" below but this one is a DIAGNOSTIC, not an error — the
     mkShapesRDF silent-cost guard): a registered label reaching no marked output is reported by
     `compile_ir` diagnostics; absent when every label reaches an output.
-  - **§7.2 schema absence**: the `ExecResult`/`Plan`/monitor payload schema **KEY SETS** are
-    identical for a varied and an unvaried program (the §6.3 params-key-absence pattern applied to
-    the plan/result schemas). Worded over key sets, NOT over plan bytes or the `process` spec —
-    m49's §8.2(i) closure field changes those by design (§7.2, §7.3).
+  - **§7.2 schema absence**: the `ExecResult`/`Plan`/monitor payload schema **KEY SETS** on a varied
+    program equal **LITERALLY SPELLED expected sets** — `{f.name for f in dataclasses.fields(Plan)}
+    == {"process","combine","empty","tasks","next_tasks","stop","open_once"}` and likewise
+    `ExecResult` → `{"value","n_partitions","n_combines","stopped"}` and the monitor payload
+    `TaskEvent` → `{"phase","key","worker","t","partition","n_entries","bytes_read","error"}`
+    (measured, `python/graphed/core/execution.py:206-217,219-224,335-351`; `emit_task` passes the
+    `TaskEvent` INSTANCE, `:378-384`, so the payload is that dataclass, not a dict). **A
+    varied-vs-unvaried COMPARISON is vacuous and MUST NOT be the assertion** (r19): all three are
+    dataclasses with class-level field lists, so both programs yield instances of the SAME classes
+    and the key sets are equal by construction — including after a field is added, the only thing
+    this anchor exists to detect. The comparison may ride along as a sanity assertion. Worded over
+    key sets, NOT over plan bytes or the `process` spec — m49's §8.2(i) closure field changes those
+    by design (§7.2, §7.3).
   - Single-pass read witness **on the reference-matrix run** (§5.2b applied to the weight matrix).
   - §3.2 determinism: same varied program compiled in two fresh processes under differing
     `PYTHONHASHSEED` → byte-identical `compile_ir` output; `graphed.labels` order pinned
@@ -2760,9 +2990,14 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     including inside a Mapping/Sequence argument, plus an assertion that the substitution happened**
     (§2.3e(2) r17: `gak.zip`'s mapping is its ONLY array-bearing operand, `functions.py:118-119`, so
     without a slot the container-traversing class has no test-owned position at all), and asserts the exempt set
-    is exactly {*eager-metadata*, *refusing*} **plus §2.3e(3)'s MEMBERSHIP floor** (the refusing
-    class is exactly `{gak.join}` at freeze time — measured, the only boundary verb among gak's 65
-    public functions, `python/graphed/awkward/functions.py:18`, r16; every eager-metadata member's
+    is exactly {*eager-metadata*, *refusing*} **plus §2.3e(3)'s MEMBERSHIP floor** (r19 — the r16
+    wording "the refusing class is exactly `{gak.join}` at freeze time" is STALE: §2.3e(3) was
+    rebound in r18 to containment plus a monotone count precisely because a frozen equality reds the
+    moment a future gak boundary verb arrives with its classification in `src`, which is where the
+    self-repairing rule wants it, and §10 is "the acceptance skeleton the test-author starts from",
+    so the stale spelling re-installs the trap: **`gak.join` IS IN the refusing class and
+    `len(refusing) >= ` the freeze-time count** — measured, the only boundary verb among gak's 65
+    public functions, `python/graphed/awkward/functions.py:18`; every eager-metadata member's
     return annotation is non-`Array`; the broadcast count is ≥ the freeze-time count — otherwise a
     re-classification hides an unimplemented member while the exempt CLASS NAMES stay exactly those
     two), **and the `Array`-surface gate carries its own floor** (refusing = `{repartition}`,
@@ -2852,10 +3087,16 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     pass", link kind (2) is identity, and link kind (1) — §6.1d's own worked example and §2.6c's
     central rule — was covered only by the ABSENCE of an error at the op, the shape r15 rejected for
     its sibling; the §2.6c anchor below is the ambient-REGISTRY re-index, a different operation):
-    `h.fill(events.MET.pt, sel.Jet.pt)` with `sel = events[varied_mask]` compared ELEMENTWISE,
+    `h.fill(events.MET.pt, sel.MET.pt)` with `sel = events[varied_mask]` compared ELEMENTWISE,
     label-aligned, against a manually re-indexed reference (each label's ancestor value by that
     label's mask, nominal's by nominal's) — an implementation that unifies the handles but never
-    re-indexes the ancestor value must fail it;
+    re-indexes the ancestor value must fail it, on the row COUNT alone. **Both axis values are
+    PER-EVENT, and the fixture MUST NOT be "improved" to a per-object second axis, r19** (the r18
+    spelling `h.fill(events.MET.pt, sel.Jet.pt)` cannot execute at all: the evaluator flattens each
+    axis independently, `graphed-histogram src/graphed_histogram/boost.py:39-47,60-71`, and bh
+    requires equal lengths across axes — measured, bh 1.8.0, `ValueError: spans must have
+    compatible lengths` — so it would red for a reason unrelated to what the anchor asserts, and
+    §6.1d's broadcast seam is scoped to weight factors, never axis-vs-axis);
     lineage semantics (`graphed.vary` returns a NEW context and the
     input context is unchanged — a fill from the pre-vary context carries no new label, a fill
     from the returned context does; ancestor-chain inputs unify to the most-derived context);
@@ -2888,7 +3129,14 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     unifies instead of diverging — **asserted over the resulting VALUE, not merely over the absence
     of the divergence error** (r15): the ancestor-context value is PROJECTED to that label per
     §6.1d's link-kind (3) and compared elementwise against a manually projected reference, so a
-    guess that unifies but silently mis-weights cannot pass; `unweighted=True`; data-context guard for
+    guess that unifies but silently mis-weights cannot pass — the fixture is
+    `h.fill(graphed.nominal(sel).MET.pt, sel.MET.pt)`, **both axis values PER-EVENT for the reason
+    §6.1d states, r19** (the r15–r18 `graphed.nominal(sel).Jet.pt` mixes a per-object with a
+    per-event axis and cannot execute: bh requires equal flattened lengths across axes, measured
+    `ValueError: spans must have compatible lengths`); **`unweighted=True` in §6.1d's r19
+    bound form** — it suppresses the AMBIENT weight AND any explicit `weight=[…]` (a contexted fill
+    with registrations yields counts equal to an unweighted eager reference), and
+    `fill(x, weight=[w], unweighted=True)` is a RECORD-TIME error naming both; data-context guard for
     **both** forms (`is_weight=True` AND a shift-form `vary`, §2.6d);
     lockstep `graphed.vary(events, name, Jet=…, MET=…)` shared-tag-set validation; §1.1 tag
     grammar (kwarg tags + `variations=` numeric-tag escape + every listed rejection); no
@@ -3057,7 +3305,7 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     unanchored), **read through the §9.1 verb whose shape §5.3 r16 pins**
     (`{label: tuple[str, ...] | None}`, sorted per label; spelling pinned at m49 freeze) — **with a
     CONSERVATIVE label in the same fixture** (r17: one gak op applied directly to the source, for
-    which `read_columns` returns `None` = "read every column", `projection.py:146-147`), asserting
+    which `read_columns` returns `None` = "read every column", `projection.py:145-146`), asserting
     that label maps to `None` and not to `()`; §5.4 refusal + positive control.
   - §3.3 NEW frozen variation benchmark file (exact `stages == N+1`, `reduced == 2N+2`, linear
     bound).
@@ -3070,7 +3318,10 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     builder marks every universe's terminating reduction as an output, so nothing in that topology is
     dead and the DCE clause below has no operand) — every surviving record id maps to a
     `(reduced_id, member_index)` whose
-    reduced id is in the compiled output/stage set, the unmarked branch's record id maps to `None`, and
+    reduced id **is a node id of the compiled reduced store** (r19 — "in the compiled output/stage
+    set" is false for the SOURCE record, whose reduced node is measured to be neither an output nor
+    a stage: reduced kinds on this topology are `{source: 1, stage: N+1, reduction: N}`), the
+    unmarked branch's record id maps to `None`, and
     — **on a topology EXTENDED a second way, r16: one derived node consumed by TWO NON-nominal
     universes** — that node maps to ONE `(reduced_id, member_index)` key **whose `variation_labels`
     entry carries BOTH labels** (the PAIR key space §8.2(i) declares, r17). That extension is what makes the clause non-vacuous: §3.3's builder gives each universe
@@ -3087,8 +3338,17 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     `variation == "jes_up"` anchor, lives in another repo, which is the per-repo-coverage argument
     that motivated adding this anchor at all): the shared-prefix record ids all map to ONE reduced
     id, each universe's chain maps to a reduced id DISTINCT from every other universe's, and the
-    map's image over the topology has exactly **N + 1** distinct reduced ids — matching the
-    `stages == N + 1` shape §3.3 already pins (re-measured r18: N=16 → 17 stages, N=128 → 129).
+    map's image over the WHOLE topology has exactly **2N + 2** distinct reduced ids, of which
+    exactly **N + 1** are of kind `stage` — matching the `reduced_nodes == 2N + 2` / `stages ==
+    N + 1` shape §3.3 already pins. **The r18 "exactly N + 1 distinct reduced ids" is CORRECTED
+    here, r19**: the accessor is bound over EVERY surviving record id, which on this topology
+    includes the source and each universe's terminating reduction — neither of which is a stage —
+    so a frozen `len({rid for rid, _ in m.values()}) == N + 1` reds a correct accessor by ~2×.
+    Re-measured r19 against `graphed-latest@ff7c607` on the §3.3 builder: N=3 → stages 4 /
+    reduced_nodes 8 / kinds `{source: 1, stage: 4, reduction: 3}`; N=16 → 17 / 34 /
+    `{source: 1, stage: 17, reduction: 16}`; N=128 → 129 / 258 /
+    `{source: 1, stage: 129, reduction: 128}`. Both halves stay non-degenerate against the constant
+    map the clause exists to catch, since it fails the per-universe-distinctness half.
     Plus **plan-byte determinism with the §8.2(i) field present**: the same
     varied program built in two fresh processes under differing `PYTHONHASHSEED` yields
     byte-identical `DurablePlan.to_bytes()` and identical per-partition `task_id` (the plan-level
@@ -3119,8 +3379,11 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     `StageError`s differing ONLY in `variation` are unequal **AND hash differently**, or the
     omission is invisible to the cross-process label anchor.
 - **m50 — scale + integration** (repos: `graphed-histogram` + `graphed` preserve/docs).
-  Targets: §6.2, **§6.1c's AXIS-MODE slot** (r16 — the `(output, None)` keying, the per-OUTPUT MODE
-  recorded in the layout, and the per-slot spec taken from the fill node; m50's scaling anchor
+  Targets: §6.2, **§6.1c's AXIS-MODE slot** (r16 — the `(output, None)` keying and the per-slot
+  spec taken from the fill node; **r19: "the per-OUTPUT MODE recorded in the layout" is DELETED
+  here**, §6.1c having dropped the field — the three slot key forms are disjoint and per output, so
+  the unpacker reads the shape off the keys and no anchor in m48–m51 could witness a MODE field;
+  m50's scaling anchor
   consumes exactly this and m50's target line did not name it. **r18: "the per-slot value type in
   the layout and the combine's branch on it" is DELETED here** — r17 withdrew that design in §6.1c
   ("The COMBINE needs no branch"; `_add_groups` is a key-wise `+`, `graphed-histogram
@@ -3139,16 +3402,20 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     283-286`; `evaluate_ir` dispatches by `nd["descriptor"]["content_hash"]`,
     `graphed python/graphed/execute.py:116-124`), which the bin-for-bin equality can mask whenever
     two siblings happen to agree.
-  - **MIXED-MODE PLAN — the per-OUTPUT MODE's only reason to exist (r18)**: one `plan(...)` call
-    carrying an axis-mode output AND a sibling-mode varied output together. §6.1c binds the layout to
-    record the per-output MODE precisely because a plan MAY carry both, and the frontend unpacker
-    (§6.1a) must choose between a bare histogram and `{label: hist}` — yet every other m50 anchor is
-    single-mode (the equality anchor compares two separate programs, the scaling anchor pins the
-    fixture's output count at 1, (i-bis) is one axis-mode histogram, the declaration/mode-mismatch
-    anchors concern one histogram), and in a single-mode plan the shape is inferable from the key
-    form alone, so the MODE field can be omitted entirely and every m50 anchor stays green. Assert:
+  - **MIXED-MODE PLAN — mixed-mode UNPACKING and the per-slot SPEC (r18; re-headlined r19)**: one
+    `plan(...)` call carrying an axis-mode output AND a sibling-mode varied output together, plus a
+    third output no variation reaches. **What it witnesses is the unpacking and the per-slot spec,
+    NOT a per-output MODE field** (r19 — r18 headlined it "the per-OUTPUT MODE's only reason to
+    exist", which it measurably is not: §6.1a/§6.1c make the three slot key forms disjoint and per
+    OUTPUT, so an implementation that never records a MODE passes every assertion here exactly as it
+    passes the single-mode ones; §6.1c has accordingly dropped the field, and §9.1's one-argument
+    `unpack(value)` is consistent again). Every other m50 anchor is single-mode (the equality anchor
+    compares two separate programs, the scaling anchor pins the fixture's output count at 1, (i-bis)
+    is one axis-mode histogram, the declaration/mode-mismatch anchors concern one histogram), so
+    this is the only program that reaches the mixed unpack at all. Assert:
     the axis-mode output unpacks to a BARE variation-axis histogram, the sibling-mode output to
-    `{label: hist}`, both narrow through `graphed.labels`/`graphed.universe`, and both are
+    `{label: hist}`, the unvaried output to a BARE `hist` under its bare key (§6.1a), all narrow
+    through `graphed.labels`/`graphed.universe`, and all are
     bin-for-bin correct. (It also exercises `_GroupZero`'s per-slot spec across two DIFFERENT specs —
     `graphed-histogram src/graphed_histogram/boost.py:127-130` — which nothing else in m48–m51
     reaches.)
@@ -3298,14 +3565,14 @@ the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **bindin
     `to_parquet(events.Jet, select=graphed.selection(sel2))` is ACCEPTED by (2a) and round-trips
     identically to the pre-`vary` spelling (§9.1 r16: `graphed.selection` walks `vary` identity
     links; §6.4a(2a) r16 admits them).
-    **Plus the NODE-ID-EQUALITY positive control (r18 — §6.4a(2a) r17 bound that "the supplied mask
-    IS `graphed.selection(c)`" is decided by per-label NODE-ID equality with object identity only as
-    a fast path, and said in the same breath that the existing anchors pass the same object either
-    way, so nothing discriminates it and an implementer shipping `mask is ctx._selection` would pass
-    m51 and refuse a legal program forever)**: a `select=` value that is a RE-RECORDED equal
-    expression — a distinct Python object with the same per-label node ids — is ACCEPTED and
-    round-trips identically (measured r18 vs `graphed-latest@ff7c607`: `a = src * 2.0; b = src * 2.0`
-    → `a.node_id == b.node_id == 1`, `a is b` False, `session.node_count() == 2`).
+    **Plus the RE-RECORDED-MASK positive control (r18; re-worded r19 for §6.4a(2a)'s handle-equality
+    predicate, which withdrew the per-label node-id rule along with the descendant search it served —
+    the control's PURPOSE is unchanged: an implementer shipping `mask is ctx._selection` would pass
+    every other m51 anchor and refuse a legal program forever)**: a `select=` value that is a
+    RE-RECORDED equal expression — a distinct Python object carrying the record's context handle and
+    the same per-label node ids — is ACCEPTED and round-trips identically (measured r18 vs
+    `graphed-latest@ff7c607`: `a = src * 2.0; b = src * 2.0` → `a.node_id == b.node_id == 1`,
+    `a is b` False, `session.node_count() == 2`).
     **Plus the UNIVERSE/NOMINAL-derived case, both halves (r17 — two binding rules in this sink had
     no anchor at all, so a polymorphic return and a refusal path would land as new m51 source with
     zero frozen-suite coverage under the DoD's ≥90 % diff-coverage-from-the-frozen-suite gate)**:
@@ -3572,6 +3839,75 @@ Rust `Vary` NodeKey.
 
 ## Revision history
 
+- **r19 (2026-07-30)** — review round 10 (three independent r18 reviews: facts / design / tests,
+  `systematics-vary-plan-review-r18-{facts,design,tests}.md`; 22 findings after NIT exclusion, 19
+  unique after merging three cross-lens duplicate pairs — 2 BLOCKER, 6 HIGH, 3 MID, 8 LOW). Every finding
+  re-verified in-session against the pinned verification roots before acting; audit trail in
+  `systematics-vary-plan-revision-r19-notes.md`. **Nothing rejected, nothing deferred** — no
+  finding's resolution required reversing an owner-locked decision.
+  **BLOCKER** — **§2.2's property rule splits by MECHANISM, not by `isinstance(m, property)`**: r18's
+  premise ("every other property is answered EAGERLY … already answered from the form and never
+  recorded") is false for `T`, which is `@property def T: return self.transpose()` over
+  `record_op("transpose", …)` (`python/graphed/numpy/array.py:156-161`) — measured on
+  `graphed-latest@ff7c607`, discovered properties `['T','dtype','ndim','node_id','session','shape']`
+  with `dtype`/`ndim`/`shape` at `node_count()` delta 0 and `T` at delta 1 — so the r18 m48 gate
+  froze an assertion a correct `Varied` must fail, and read literally the rule made `varied.T` drop
+  every non-nominal universe. Three classes now: `node_id`/`session` raise; a form-answered property
+  is eager; a RECORDING property takes its method's §2.3a disposition (`T` → broadcast). The m48
+  anchor names `varied.dtype` AND `varied.T` and classifies by measured delta.
+  **§6.1a's flat slot keying is SCOPED to outputs a variation reaches**: r18's unqualified binding
+  re-keyed a wholly UNVARIED group plan's value to `{(output, "nominal"): hist}` — sibling mode is
+  every program's default — which breaks the already-frozen m23 suite (`graphed-histogram
+  tests/frozen/m23/test_group_plan.py:74-75,86,89,99` all index by bare output name) that §10 binds
+  unchanged, and changes `plan()`'s declared `Plan[dict[str, bh.Histogram]]` under `mypy --strict`.
+  An unvaried output keeps its bare key; m48's §6.1a anchor gains a wholly-unvaried positive control.
+  **HIGH** — **m49's §8.2(i) image-cardinality clause corrected N+1 → 2N+2** (of which N+1 are of
+  kind `stage`): the accessor is bound over EVERY surviving record id, and re-measured r19 the §3.3
+  topology reduces to `{source: 1, stage: N+1, reduction: N}` — N=16 → 17 stages / 34 reduced,
+  N=128 → 129 / 258, exactly the `reduced_nodes == 2N + 2` §3.3 itself pins; the companion clause
+  widens to "a node id of the compiled reduced store", since the source is neither output nor stage.
+  **§6.4a(2a) re-expressed over the operand that exists** — `graphed.context_of(select_mask) is
+  graphed.context_of(record)`: r16–r18 required a DOWNWARD search over the record context's
+  descendants, while §2.6b binds lineage parent-ward only and nothing maps a mask back to a context,
+  so neither (2a) nor absent-operand case (ii) was decidable; handle equality decides all four m51
+  controls identically, preserves both absent-operand cases, and makes the `vary`-identity-link
+  admission automatic (r17's per-label node-id rule is withdrawn with the search it served).
+  **§2.1(b) gains a ROW-SPACE contract on a registered weight factor** — it must live in the target
+  context's row space, an ancestor-handled factor is re-indexed per §6.1d's link kinds — because
+  `record_op` validates only `op_form`, never lengths (`python/graphed/session.py:142-168`), so a
+  parent-computed factor stacked into a derived context's registry records cleanly and dies at
+  execution outside §6.1d's refusal contract; the invariant `graphed.weight(ctx)` answers in `ctx`'s
+  row space is what §6.4b's r18 precondition already assumed. **§7.2 binds the `aggregate_plan`
+  SEAM** three requirements need — §6.1c's index layout, §7.2's own merge refusal and m49's
+  `variation_labels` all want the compiled artifact at a site that lacks it (measured:
+  `aggregate_plan` compiles internally at `aggregate.py:95` and takes pre-built closures; `plan()`
+  builds `layout` at `boost.py:282` BEFORE calling it) — with an explicit "MUST NOT compile twice".
+  **m48's §7.2 schema-absence anchor re-worded to LITERAL expected key sets**: all three schemas are
+  dataclasses with class-level field lists (`core/execution.py:206-217,219-224,335-351`; `emit_task`
+  passes the `TaskEvent` instance, `:378-384`), so the varied-vs-unvaried comparison is equal by
+  construction — including after a field is added — the §6.3 repair r17 made for params, applied here.
+  **MID** — §6.1b/§6.2 define `S`/`W` by LOWERING behaviour, so a label borne only by a `Varied`
+  `sample=` (first-class since r15, frozen ACCEPTED in m48) has a class: it needs a sibling fill node,
+  keeping both frozen arity formulas correct. §6.1c's per-output MODE field is DELETED and §9.1's
+  `unpack(value)` stays one-argument: the three slot key forms are disjoint and per output, so the
+  shape is read off the keys even in a mixed plan — the field was unwitnessable and forced §9.1 to
+  contradict §6.1a's "value plus the layout" (measured, the layout is unreachable from the executed
+  value); m50's mixed-mode anchor is re-headlined as the unpacking/per-slot-spec anchor it is.
+  m48's two mixed-granularity fill fixtures are restated at SAME granularity (`sel.Jet.pt` →
+  `sel.MET.pt`, `graphed.nominal(sel).Jet.pt` → `.MET.pt`): the evaluator flattens each axis
+  independently (`boost.py:39-47,60-71`) and bh requires equal lengths across axes — measured, bh
+  1.8.0, `ValueError: spans must have compatible lengths` — so both anchors named programs that
+  cannot execute, for a reason unrelated to what they assert. m48's gak floor drops r16's stale
+  "the refusing class is exactly `{gak.join}`" for §2.3e(3)'s r18 containment + monotone count.
+  **LOW** — m48's target line excepts §2.5's shift-after-weight diagnostic (m49) and adds
+  `graphed_histogram.unpack` to its §9.1 list; §6.1d binds `unweighted=True` (suppresses ambient AND
+  explicit factors; both in one call is a record-time error) with the answer named in m48's anchor;
+  the §2.6 sketch's b-tag SF takes the pt-CUT jets (`sel.Jet[sel.Jet.pt > 25]`), matching
+  `graphed-corpus …/systematics.py:60-76,25-36`, with the note repeated in m48's matrix anchor;
+  §1.1's integer-magnitude digit count states its normalization (naive "mantissa digits + exponent"
+  is off by one at the cap for a dotted mantissa); m48's §1.2 anchor drops "or token" (measured:
+  `GraphStore.nodes()` exposes no token) and recurses into a stage's `members`; citations corrected
+  `projection.py:146-147` → `:145-146` and `boost.py:205-212` → `:196-210`.
 - **r18 (2026-07-30)** — review round 9 (three independent r17 reviews: facts / design / tests,
   `systematics-vary-plan-review-r17-{facts,design,tests}.md`; 24 findings after NIT exclusion —
   1 BLOCKER, 5 HIGH, 11 MID, 7 LOW; three cross-lens duplicate pairs merged). Every finding
@@ -3605,7 +3941,7 @@ Rust `Vary` NodeKey.
   freezes the determinism anchor green against the very `frozenset` §8.2(i) bans, while a
   `__main__`-defined (by-value) operand makes the bytes seed-dependent for BOTH forms — red against
   a correct implementation. **§6.1d link kind (1) gets a VALUE-asserting m48 anchor**
-  (`h.fill(events.MET.pt, sel.Jet.pt)` elementwise against a manually re-indexed reference), the
+  (`h.fill(events.MET.pt, sel.MET.pt)` elementwise against a manually re-indexed reference), the
   treatment r15 gave link kind (3).
   **MID** — §2.1 states the member-type rule once (a member may be an `Array` OR a `Varied`;
   (a)/(c) reduce to the central universe, (b) keeps it label-aligned), since "members are Arrays"
@@ -3662,7 +3998,7 @@ Rust `Vary` NodeKey.
   anchor gains that case; full support is parked in §11 (it needs §8.2(i)'s m49 map).
   **MID** — §6.2(i-bis) binds `graphed.labels(h)` to §2.2's order (nominal first) over a
   lexicographically stored axis; §5.3/§9.1/§2.3d bind `tuple[str, ...] | None` (measured:
-  `read_columns` returns `None` = "read every column", `projection.py:146-147`) and the `Varied`
+  `read_columns` returns `None` = "read every column", `projection.py:145-146`) and the `Varied`
   union is `None` if any member's is; §6.2(i) makes the fill MODE a property of the histogram (first
   fill fixes it, the other mode is a hard error); §6.2's "a shift sibling MAY target the same axis"
   becomes binding (the MAY contradicted its own `1 + |S|` arity, §6.1c's one-slot rule and m50's

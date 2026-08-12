@@ -454,3 +454,15 @@ facts 0H/0M/2L/1N — essentially clean two rounds running). BLOCKER = r17-intro
 slot-keyed mapping ("combine needs no branch") — same frozen object, mutually exclusive
 shapes. Reviser → r18 (4209 lines, +352): 22 applied, 0 rejected, 0 deferred. Round 10
 launches on r18.
+
+## 2026-08-11 — review round 10 done (r18 → r19)
+
+Round 10 on r18: 3 BLOCKER / 7 HIGH / 6 MID / 8 LOW raw = 2 distinct blockers, both
+r18-introduced: (1) §2.2/§2.3a property rule freezes "every non-shape property answers
+eagerly, node-delta 0" but NumpyArray.T is a RECORDING property (return self.transpose()
+→ record_op) — tests+facts twin; (2) §6.1a flat slot-keyed mapping bound UNQUALIFIED,
+re-keying unvaried programs and breaking frozen m23 — design. MID/LOW volume lowest of
+series (6M/8L). Reviser → r19 (4545 lines, +336): 19 unique applied (22 post-NIT, 3
+cross-lens dup pairs merged: T-property blocker, N+1 image, unpack/MODE), 0 rejected,
+0 deferred. Round 11 launches on r19. Trend: revision-seam regressions now dominate;
+work lists shrinking (39/33/29/24/22/19 applied per round).
