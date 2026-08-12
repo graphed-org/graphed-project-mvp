@@ -497,3 +497,12 @@ Reviser → r21 (5069 lines, +228 — smallest revision of the series): 13 appli
 one cross-lens merge), 0 rejected, 0 deferred. The §7.2 seam derivation re-bound to the
 frontend's own dedup-ordered requested-id list per the measured fix. Round 13 launches
 on r21.
+
+## 2026-08-12 — review round 13 done (r21 → r22); FIRST HIGH-FREE ROUND
+
+Round 13 on r21: 0 BLOCKER / 0 HIGH / 9 MID / 10 LOW / 3 NIT (design 0H/4M/6L — first
+HIGH-free design report; tests 0H/5M/2L; facts 2L/3N "all line-span precision"). First
+round with nothing above MID. Reviser → r22 (5356 lines, +287): 17 applied, 1 REJECTED on
+measured counter-evidence (tests LOW about a correctionlib systematic= param the m9
+fixture does carry), 0 deferred. Round 14 launches on r22; remaining work is the MID/LOW
+tail.
