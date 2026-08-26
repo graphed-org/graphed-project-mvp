@@ -592,3 +592,28 @@ counts r27 carried ("two parts" vs its own three-item enumeration; "Two spelling
 were resolved by dropping the figures per the count rule.
 
 NEXT unchanged: m48 decomposition from the §12.4 ledger, owner-gated.
+
+## 2026-08-26 — r29: critical streamlining pass (r28 → r29)
+
+Owner directive: one thorough critical pass for further streamlining beyond r28's mechanical
+apparatus strip. Diagnosis (from a full read of §1-§2.3, §6.1, §10 samples): five residual bulk
+classes — (B1) vacuity engineering (the plan pre-litigating how a frozen test could be
+mis-written, doing TEST_SANITY's and the test-author's job), (B2) negative-space enumeration of
+wrong implementations/filters, (B3) the same rule restated at every touching site, (B4)
+justification walk-throughs and rhetoric ("§2.5 confidently-wrong class" ~15 sites), (B5)
+milestone-assignment defenses in §10. Canonical homes fixed: x[L]/.node_id conventions → §2.2;
+label-aligned union → §2.4; MODE-decides → §6.1c; basename/pythonpath/vendoring/importorskip →
+§10 preamble; b-tag-on-JES walk-through → §2.1.
+
+Method: 14 parallel section streamliners under one spec + one bounded loss-check pass (no loop).
+Result: 4586 → 3231 lines (r27 was 6444; net −50%). Loss check: all 42 r28 Binding: clauses have
+counterparts (several merged), all 7 UNANCHORED markers 1:1, every directory pin/threshold/
+control/§12.4 item present; §-marker sets and section headers identical. Repairs applied from
+the check: restored the §5.1 no-API-language-implying-shift-order clause and the m49 per-repo
+freeze-tagging clause; de-conflated §6.4d's refusal fixture from m51's legal same-offsets
+object-migration case; restored §6.4a(2a)'s direction sentence; resolved the PRE-EXISTING
+§9.1-vs-§10/m50 contradiction on the plan-level listing anchor's home in favor of §10/m50
+(graphed-histogram flat m50 — the argued, importorskip-consistent side); dropped a false (§2.2)
+citation on the 1-D fixture pin. Accepted widening: the importorskip prohibition is now one
+universal §10-preamble rule instead of three per-anchor restatements. Committed per revision:
+r28 and r29 as two commits, per owner call.
