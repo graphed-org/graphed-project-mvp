@@ -571,3 +571,24 @@ Sequence[Varied] operand widened to include Mapping[str, Sequence[Array]].
 NEXT (owner-gated): m48 decomposition via the gated pipeline, working from the §12.4
 ledger, under the commit-sized-thoughts ruling (steps ≤1-2k LOC). Implementation
 explicitly NOT started per owner directive.
+
+## 2026-08-26 — r28: design extraction (r27 → r28) under the revised CLAUDE.md
+
+Owner directive: the review cycle's apparatus had metastasized into the plan itself; extract
+the design per the revised root CLAUDE.md ("a plan is a design, not a ledger"). r28 rewrites
+systematics-vary-plan.md in place: 6444 → 4586 lines. Removed wholesale: the Anchors appendix
+(file:line stamps; evidence lives in cba/lit companions) and the Revision history (git +
+revision-r*-notes files hold it). Removed in-body: measurement transcripts/"(measured: …)"
+parentheticals (load-bearing facts restated plainly, symbols instead of line coordinates),
+all lowercase-rN round attributions, drift-log/re-pin prose, adjudication/disposition prose,
+counts beside enumerated lists. §12.1+§12.1a folded into one forward-process statement
+(cycle closed; gated pipeline per milestone). §12.4 ledger, §12.3 actions, all binding
+rules/anchors/targets retained.
+
+Method: 13 parallel section extractors under one editorial spec + one bounded loss-check pass
+(no loop). Loss check: zero binding losses; subsection-marker sets differ only by §12.1a;
+per-milestone anchor bullets and frozen-test directory sets identical. Two stale in-body
+counts r27 carried ("two parts" vs its own three-item enumeration; "Two spellings" vs three)
+were resolved by dropping the figures per the count rule.
+
+NEXT unchanged: m48 decomposition from the §12.4 ledger, owner-gated.
