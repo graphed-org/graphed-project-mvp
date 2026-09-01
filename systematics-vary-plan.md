@@ -2269,8 +2269,10 @@ unchanged**.
   enumerations and representatives, and any program built on an awkward-idiom fixture or backend —
   lives in `graphed`'s `tests/frozen/awkward/m48`; everything else in `graphed`'s
   `tests/frozen/frontend/m48`.** Rule (2) is the required awkward-free free-threaded gate (§10
-  preamble), which on every push collects `tests/frozen/core`, `tests/frozen/frontend` (minus
-  m40) and `tests/frozen/numpy` (minus m40) WHOLE, one process each, so **it binds every
+  preamble), which on every push to `main`, every pull request and every `workflow_dispatch`
+  collects `tests/frozen/core`, `tests/frozen/frontend` (minus m40) and `tests/frozen/numpy`
+  (minus m40) WHOLE, one process each, and `tests/frozen/numpy/m40` in a fourth process (so
+  numpy/m40 is INSIDE the gate, just separately collected), so **it binds every
   `graphed`-side frozen assignment in m48–m51, not m48's alone**: any later milestone's anchor
   in those three trees either stays awkward-free or gets its own `tests/frozen/awkward/<mXX>`.
   `core` is stricter than collection — a frozen m1 test asserts `"awkward" not in sys.modules`,
@@ -2822,8 +2824,10 @@ unchanged**.
     Per-repo partition of the remaining m49 anchors, **rule (2) (§10/m48) applying here too**:
     `graphed` `tests/frozen/frontend/m49` — the non-fill frontend anchors (§5.2a arena delta,
     §5.2c stage shape, §3.4 impact sets, §5.3 projection with its awkward-free conservative
-    spelling, and §5.4's refusal when its refusing fixture is awkward-free — a numpy-backed join
-    is one, `tests/frozen/numpy/m40/test_join_primitives.py`). `graphed`
+    spelling, and §5.4's refusal when its refusing fixture is awkward-free — a numpy-backed
+    frontend join is one, the numpy `BackendCase` in `REAL_BACKENDS`
+    (`tests/frozen/frontend/m40/shuffle_backends.py`, whose `_numpy_source` builds via
+    `from_record`) — that CASE, not that module, which also carries the awkward one)). `graphed`
     `tests/frozen/awkward/m49` — **§2.5's shift-after-weight diagnostic**, whose fixture
     registers an ambient weight and so is an event-context program (§2.1(b)), plus §5.4's
     refusal if instead spelled through `gak.join`, the bound representative.
@@ -2832,8 +2836,11 @@ unchanged**.
     additionally the §2.4/§6.1b structural arity anchor (fill-shaped; in `graphed` it would
     `importorskip`-SKIP), the m05 ordering witness, and the JER-SF stochastic fixture (its
     partition-invariance witness needs a plan run at two `steps_per_file` values). `graphed` gains
-    **`tests/frozen/checkpoint/m49`** for §7.3 interrupt/resume and §7.4 dead-letter (a new
-    directory; unique-basename rule — `m8/test_resume.py` exists). §8.1's `__hash__` anchor and
+    **`tests/frozen/checkpoint/m49`** for §7.3 interrupt/resume and §7.4's dead-letter
+    MECHANISM — partition-atomic retry, one poisoned variation dead-lettering the whole composite
+    — while the LABEL the dead-letter surface names rides the §8.2 StageError anchor in
+    `graphed-executors` (§7.4, §8.2). A new directory; unique-basename rule —
+    `m8/test_resume.py` exists. §8.1's `__hash__` anchor and
     §8.2's cross-process/multi-label anchors — `graphed-executors`' flat `tests/frozen/m49`,
     EXCEPT the §8.2(i) accessor anchor, which is `graphed`'s (below); `graphed` MAY host a
     spawn-based cross-process test (`tests/frozen/debug/m6/test_process_boundary.py` precedent).
