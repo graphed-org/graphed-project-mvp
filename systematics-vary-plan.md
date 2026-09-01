@@ -385,9 +385,12 @@ existing metadata channels.
   **unchanged**; in the **weight form (b)** the newly registered factor is combined into the
   ambient weight **label-aligned per §2.4**, so an inherited label L's ambient member becomes
   `old_ambient[L] × factor[L]` — the factor evaluated in *that label's own universe* (its
-  central universe only when L is new to the factor). **`factor[L]` means §2.4 applied TWICE
-  when the factor NESTS**: a registered factor may itself be a `Varied` whose members are
-  `Varied` (the member rule above; the mainline
+  central universe only when L is new to the factor). **L ranges over the labels the TARGET
+  carries** (§2.2's union), not over the ambient registry's own labels: `old_ambient[L]` is that
+  registry's member for L, its `"nominal"` member when L is new to the registry, and the product
+  degenerates to `factor[L]` alone when nothing is registered yet. **`factor[L]` means §2.4
+  applied TWICE when the factor NESTS**: a registered factor may itself be a `Varied` whose
+  members are `Varied` (the member rule above; the mainline
   `graphed.vary(sel, "btag", btag_sf(sjets), is_weight=True, up=…, down=…)` registers a
   container labelled `{nominal, btag_up, btag_down}` whose members are each `Varied` over the
   inherited jes labels, `sjets` being `Varied`). Binding: take the container's member for L (its
@@ -585,10 +588,11 @@ existing metadata channels.
   self-repairing — a new function is fixed in `src`, never by editing a frozen test).
   Binding discovery: `inspect.getmembers(graphed.awkward.functions, inspect.isfunction)` filtered
   to `__module__ == "graphed.awkward.functions"` and no leading underscore. The MODULE is named,
-  not the `gak` alias — the alias re-exports modules/classes only and discovers NO functions
-  (`graphed.awkward.num` → `AttributeError`), and `graphed.awkward.functions` defines no
-  `__all__`. Non-vacuity floor, asserted in the same frozen test: the discovered set is
-  non-empty, is at least the freeze-time count, and contains at least one NAMED member of each
+  not the PACKAGE `graphed.awkward` — the package re-exports modules/classes only and discovers
+  NO functions (`graphed.awkward.num` → `AttributeError`), while `gak` IS that same module
+  object (`from . import functions as gak`), which defines no `__all__`. Non-vacuity floor,
+  asserted in the same frozen test: the discovered set is non-empty, is at least the freeze-time
+  count, and contains at least one NAMED member of each
   classification class. The classes: *broadcast* (elementwise/structural default),
   *container-traversing* (`gak.zip`/`concatenate`/… detect `Varied` **inside** their
   Mapping/Sequence arguments), *tuple-returning* (`gak.unzip`/`broadcast_arrays` return a tuple
@@ -638,9 +642,10 @@ existing metadata channels.
   `Varied` operand and handles it internally without returning per-label results to the caller.
   Exhaustiveness is kept by a DISCOVERY RULE, not by this literal list (the self-repairing rule
   §2.3a/c already adopt), bound over the MEASURED signature surface, not over first parameters (a
-  first-positional-`Array` filter misses `compile_ir`, `read_columns` and `apply`, whose `Array`
-  operand is not first). Binding: the m48 anchor enumerates `graphed.__all__` dynamically,
-  filtered to `inspect.isfunction` members **any of whose parameter annotations MENTIONS
+  first-positional-`Array` filter misses `compile_ir` and `apply`, whose `Array` operand is not
+  first, and `read_columns`, whose first operand is `Sequence[Array]` rather than `Array`).
+  Binding: the m48 anchor enumerates `graphed.__all__` dynamically, filtered to
+  `inspect.isfunction` members **any of whose parameter annotations MENTIONS
   `Array`** (including `Sequence[Array]`, unions and `*args: Array`), **UNION an explicitly NAMED
   freeze-time floor list**, and asserts every member of that union carries a disposition. The
   named list is: **`graphed.compile_ir`**, **`graphed.context_of`**, **`graphed.broadcast_like`**,
@@ -763,7 +768,7 @@ existing metadata channels.
   branches, `linear_fit`'s operands), and the gate asserts the result's handle is **NOT `None`
   AND IS the input's handle**. **For the CONTAINER-TRAVERSING class the fixture is bound as a
   TEMPLATE** (`gak.zip`'s mapping is its only array-bearing operand, so there is otherwise no
-  position to substitute into; likewise `linear_fit`): each `src` fixture declares a named
+  position to substitute into): each `src` fixture declares a named
   **substitution SLOT** — a sentinel the frozen test replaces with its own contexted `Array`,
   *including inside a Mapping/Sequence argument* — and the gate asserts the substitution
   actually happened (the handle-bearing input of the produced call IS the test's own contexted
@@ -944,7 +949,7 @@ existing metadata channels.
   weight and `btag_sf(sel.Jet)` misses the stored references. `sel.Jet[sel.Jet.pt > 25]` is the
   corpus-faithful spelling (the object cut and the event re-index commute), and it is read
   THROUGH `sel`, so it satisfies §2.1(b)'s row-space requirement by construction. m48's matrix
-  anchor repeats the note alongside the existing `gak.full_like` / `stable()`-rounding notes.
+  anchor repeats the note alongside the existing `gak.full_like` / pre-fill-rounding notes.
   The neutral context *mechanism* (lineage, ambient weight, fill-inference seam) lives in
   `graphed` proper; the nanoevents-flavored constructor is awkward-idiom and lives in
   `graphed.awkward` (factorization rule preserved). The loose `graphed.vary` on Arrays (§2.1a)
@@ -1073,8 +1078,8 @@ existing metadata channels.
   monotone-scale JES *fixture* and MUST stay scoped to it — a JER-SF re-smearing shift migrates
   events in both directions (§5.5), and any suite or API language implying shifts order is a
   test-authoring error.
-- **§5.2 (Witnesses that sharing engaged — R0.10.)** The m49 suite pins mechanism witnesses, not
-  just results:
+- **§5.2 (Witnesses that sharing engaged — R0.10.)** Mechanism witnesses, not just results;
+  (a) and (c) are m49's, (b) is applied at m48, m49 and m51:
   (a) **Arena-delta witness with a literal expected integer**, built through the public
   `graphed.vary` surface on the §3.3 topology (the raw-`GraphStore` replication §3.3 describes
   witnesses only `GraphStore::intern`, already frozen at m1/m4). One universe = {1 varied fork op,
@@ -1094,9 +1099,11 @@ existing metadata channels.
   label-out-of-identity anchor (§10), not here.
   (b) **Single-read witness bound to the reference-matrix run itself**: a read-counting
   partitioned source (m23 pattern) asserts `part_reads == n_partitions` — not
-  `n_partitions × n_labels` — on the SAME Session/plan that reproduces the corpus references (the
-  m49 `graphed-histogram` half, §10/m49(i), where m48's vendored references live), so a
-  per-variation re-run loop cannot pass.
+  `n_partitions × n_labels` — on the SAME Session/plan that reproduces the corpus references, so
+  a per-variation re-run loop cannot pass. **The shape is applied to every anchored reference or
+  write run**: m48's weight-only matrix and m49's full 15-reference matrix, both in
+  `graphed-histogram` where m48's vendored references live (§10/m48, §10/m49(i)), and m51's
+  augmented write run (§6.4).
   (c) **Reduced-stage shape — the §3.3 SHAPE, built through `graphed.vary`**: the shared prefix
   appears in exactly ONE stage, and the total stage count equals an **ORACLE**, not a literal —
   the same N-universe topology hand-built WITHOUT `vary` in a separate `Session`, reduced, its
@@ -1248,8 +1255,10 @@ existing metadata channels.
   `evaluate_ir` returns one value per DISTINCT output). Binding: **`layout` carries per-slot
   output INDICES**, not counts — `tuple[tuple[str, tuple[int, ...], str], ...]` (or
   `{(output, label): [indices]}` for the two-level shape) — derived frontend-side per §7.2 as
-  **the index of each marked record id's FIRST OCCURRENCE in `plan()`'s OWN ordered `fill_nodes`
-  list**, so a shared node id **replicates** into every slot that needs it. The operand is that
+  **the rank of each marked record id in the DEDUPLICATED `fill_nodes` list `plan()` owns**
+  (`list(dict.fromkeys(fill_nodes))`, which matches `evaluate_ir`'s one-value-per-distinct-output
+  list element for element; a raw `fill_nodes.index(...)` overruns it), so a shared node id
+  **replicates** into every slot that needs it. The operand is that
   list, NOT the compiled output list (post-reduction ids cannot be joined to the record ids
   `plan()` owns, §7.2) and NOT §7.2's `aggregate_plan` seam — that seam stays an m48 target for
   §7.2's merge refusal and m49's `variation_labels`; this layout needs nothing from it.
@@ -1505,7 +1514,13 @@ existing metadata channels.
   `len(weights) > 1`). A key-absence placeholder is unusable here: m48 in sibling mode adds NO
   params key by design (§1.2), so there is no key to spell. **Two halves are bound**: **(1)** the
   golden blob is captured from the **PRE-m48 revision** of that fill graph (captured after
-  implementation it is a no-op tautology); **(2)** §6.1d's broadcast seam is **SCOPED, and the
+  implementation it is a no-op tautology), **with the fill node's `PayloadDescriptor.version`
+  NORMALIZED OUT of both the committed literal and the live blob** — one deterministic transform
+  applied identically to both sides, deleting the single length-prefixed `bh.__version__` field
+  (`len(v).to_bytes(4, "little") + v.encode()`). `Histogram.fill` hard-codes
+  `version=bh.__version__` into the serialized descriptor with no author-facing knob and
+  `boost-histogram>=1.4` is unpinned, so a raw literal reds on the next release, in a frozen file
+  that cannot be repaired in place; **(2)** §6.1d's broadcast seam is **SCOPED, and the
   trigger is stated ONCE: the seam is recorded for every weight factor of a fill that carries a
   context handle OR any `Varied` input; a fill with NEITHER records byte-identically to today** —
   exactly this section's golden case.
@@ -1806,14 +1821,16 @@ existing metadata channels.
   weight loop inside ONE fill node is not such a re-execution. §5.2b's single-read witness is the
   mechanism witness for this requirement.
 - **§7.2** The frontend owns `(output, label) → **node id**` — NOT `→ position` — and derives
-  `node id → position` as **the index of that record id's FIRST OCCURRENCE in the frontend's OWN
-  ordered list of marked record ids** (the list it passes to `compile_ir`), so **many labels MAY
-  resolve to one position and the unpacker replicates that value**. The operand is bound to that
-  list, not to the compiled output list: `GraphStore::mark_output` de-duplicates on the REDUCED
-  store and `evaluate_ir` returns one value per reduced output, in first-occurrence order over the
-  DISTINCT record ids — compiling two structurally identical outputs returns ONE value. The
-  frontend's own list is the exact operand for every program m48 admits: the two orders disagree
-  only when the OPTIMIZER merges distinct record ids, which the shortfall guard below refuses. (A
+  `node id → position` as **the rank of that record id in the DEDUPLICATED list of marked record
+  ids** (`list(dict.fromkeys(...))` over the list the frontend passes to `compile_ir`), so **many
+  labels MAY resolve to one position and the unpacker replicates that value**. The operand is
+  bound to that list, not to the compiled output list: `GraphStore::mark_output` de-duplicates on
+  the REDUCED store and `evaluate_ir` returns one value per reduced output, in first-occurrence
+  order over the DISTINCT record ids — compiling two structurally identical outputs returns ONE
+  value, so a RAW index into the marked list overruns the value list whenever a duplicate id
+  precedes a later one. The deduplicated frontend list matches the value list element for element
+  on every program m48 admits: the two disagree only when the OPTIMIZER merges distinct record
+  ids, which the shortfall guard below refuses. (A
   positional `(output, label) → position` map would mis-assign labels on exactly the case §1.2
   mandates: a label structurally equal to nominal.) The frontend unpacks into the §6.1 named
   mapping through §6.1a's bound unpack verb.
@@ -2116,11 +2133,18 @@ existing metadata channels.
 
 Numbering: the executors repo froze m47 last. Frozen layouts by repo:
 
-- **`graphed`** (frozen tree partitioned by package; `scripts/run-tests.sh` runs it per subtree):
-  **`tests/frozen/frontend/m48`, `tests/frozen/frontend/m49`, `tests/frozen/preserve/m50`,
+- **`graphed`** (frozen tree partitioned by package; `scripts/run-tests.sh` runs `frontend`,
+  `numpy` and `awkward` one process PER MILESTONE dir): **`tests/frozen/frontend/m48`,
+  `tests/frozen/awkward/m48`, `tests/frozen/frontend/m49`, `tests/frozen/preserve/m50`,
   `tests/frozen/awkward/m51`**, plus the §3.3 benchmark in `tests/frozen/core/m49` and
   **`tests/frozen/numpy/m51` for m51's numpy-backend refusal anchor** (§6.4f's numpy half is
   `graphed`-side source in `python/graphed/numpy/io.py`, and `numpy` is a `SPLIT_PKG`).
+  **m48 gets a SECOND `graphed` tree because `ci.yml`'s REQUIRED `test-freethreaded` job collects
+  `tests/frozen/frontend` WHOLE on 3.14t with only `pytest hypothesis numpy` installed** — it
+  `--ignore`s `frontend/m40` for exactly this reason — so a `frontend/m48` anchor importing
+  `graphed.awkward` reds that gate at COLLECTION. No required awkward-free job collects
+  `tests/frozen/awkward`, `run-tests.sh` auto-globs its milestone dirs, and both `graphed` trees
+  feed the same `--cov=graphed` gate, so the split costs no diff coverage.
   `tests/frozen/preserve/m50` hosts m50's preservation, docs **and frontend-introspection**
   anchors — the §9.1 `graphed.variations(ctx)` anchor and the §6.2(i-bis) narrowing-helper
   behaviour of `graphed.labels`/`graphed.universe` over a histogram object (frozen tests
@@ -2135,22 +2159,28 @@ Numbering: the executors repo froze m47 last. Frozen layouts by repo:
 
 **Basename uniqueness (binding, every repo)**: a duplicate top-level test basename is a pytest
 collection ERROR wherever one process collects a flat tree with no `__init__.py` under prepend
-import mode — which is every scope above outside `graphed`'s `SPLIT_PKGS`
-(`"frontend numpy awkward"`): `graphed`'s `core`, `preserve` and `checkpoint` subtrees,
-`graphed-histogram` and `graphed-executors` (each runs `pytest tests/frozen` in ONE process),
-and `uproot5-graphed-mvp`. Every file added under `graphed-histogram tests/frozen/m48|m49|m50`,
-`graphed-executors tests/frozen/m49`,
-`graphed tests/frozen/{core/m49,preserve/m50,checkpoint/m49}` and
-`uproot5-graphed-mvp tests/frozen/m51` carries a basename **unique across its whole
-pytest-process scope**. The natural names are exactly the colliding ones —
-`core/m4/test_benchmark.py`, `preserve/m9/test_reproduce.py` + `test_inspect.py`, and
-`checkpoint/m8/test_resume.py` already exist — so use e.g. `test_variation_benchmark.py`,
-`test_varied_bundle_reproduce.py`, `test_varied_inspect.py`.
+import mode, and **the binding scope is the WIDEST pytest process any workflow runs, not the
+narrowest**. `run-tests.sh` splits `graphed`'s `frontend`/`numpy`/`awkward` per milestone dir,
+but the required free-threaded job collects **all of `tests/frozen/frontend` minus `m40`** and
+**all of `tests/frozen/numpy` minus `m40`** in one process each: a `frontend/m48` basename must
+be unique against every other frontend milestone but m40, and a `numpy/m51` basename against
+every numpy milestone but m40. `tests/frozen/awkward` has no whole-subtree job, so `awkward/m48`
+needs uniqueness only inside its own dir. Everywhere else the scope is the whole tree:
+`graphed`'s `core`, `preserve` and `checkpoint` subtrees, `graphed-histogram` and
+`graphed-executors` (each runs `pytest tests/frozen` in ONE process), and `uproot5-graphed-mvp`.
+The natural names are exactly the colliding ones — `frontend/m14/test_apply.py` (the obvious
+name for the §2.2 `Varied.apply` anchor), `frontend/m3/test_provenance.py`,
+`frontend/m2/test_external.py`, `core/m4/test_benchmark.py`, `preserve/m9/test_reproduce.py` +
+`test_inspect.py`, and `checkpoint/m8/test_resume.py` already exist — so use e.g.
+`test_varied_apply.py`, `test_variation_benchmark.py`, `test_varied_bundle_reproduce.py`,
+`test_varied_inspect.py`.
 
 **Pythonpath**: any helper imported ACROSS frozen directories is added to that repo's
 `pyproject.toml` `pythonpath` list (`graphed` already lists `tests/_corpus`;
 `graphed-histogram` uses `pythonpath = ["src", "tests/frozen/m23"]`, `graphed-executors`
 `["src", "tests/frozen/m7", …]`). A shared `vary` fixture module is expected and must be listed.
+m48's §4.1 anchor reads `agc.correctionlib_json()` out of `graphed`'s frozen
+`tests/frozen/preserve/m9`, so that directory joins `graphed`'s list.
 
 **Vendoring, not `importorskip`**: `graphed` lists no `graphed-histogram` in any extra while CI
 installs `.[dev]`, so the house pattern `pytest.importorskip("graphed_histogram")`
@@ -2164,7 +2194,9 @@ corpus wheel packages only `src/graphed_corpus`), so **m48 VENDORS the corpus in
 reference JSONs to `tests/_corpus/` and put that directory on `pythonpath`. Vendoring, NOT a
 new dependency: `graphed-corpus` is not resolvable by name in this org's CI — the working
 precedent pre-installs it from a git URL via a workflow env var before `pip install -e .[dev]`
-(`graphed-executors .github/workflows/ci.yml`), which `graphed-histogram`'s workflow lacks. If
+(`graphed-executors .github/workflows/ci.yml`'s `CORPUS`); `graphed-histogram`'s workflow already
+runs that preinstall shape for `graphed`/`graphed-executors` but carries no `CORPUS` entry.
+Vendoring follows `graphed`'s own precedent and adds no cross-repo resolution surface. If
 a future revision prefers the dependency route, it MUST bind the pair — dev-extra name PLUS the
 env var and its `pip install` line in every job that runs the frozen suite.
 
@@ -2210,17 +2242,32 @@ unchanged**.
   §9.2; m51's carries `graphed.selection`. **§3.4 is an m49 target, NOT m48** (its frozen
   anchor lives in m49 and no m48 anchor exercises it — §4.3's impact-set cross-check is
   optional).
-  **The anchor list is PARTITIONED per repo by ONE rule: any clause whose assertion requires a
-  `Histogram.fill` lives in `graphed-histogram`'s flat `tests/frozen/m48`; everything
-  frontend-observable stays in `graphed`'s `tests/frozen/frontend/m48`.** The corpus matrix
-  anchors run against the corpus vendored into `graphed-histogram` (§10 preamble) and are not
-  `importorskip`-guarded.
-  Applied: `graphed` takes the pure-frontend anchors — §1.1 grammar, §2.x semantics, §2.6
-  context lineage, §1.2 label-out-of-identity, §3.2 determinism, §7.2 schema absence, §7.2's
-  `aggregate_plan` seam (α). `graphed-histogram` takes every anchor that needs a fill — the
-  corpus weight matrix + its §5.2b read witness, §6.1a result shapes, §6.1c `.plan()` refusal,
-  §6.1d ambient fills, §4.1 correctionlib, §6.3 goldens, and §4.3's selection-invariance anchor
-  (its operands are per-label fill nodes read through §9.1's accessor).
+  **The anchor list is PARTITIONED into THREE trees by two rules applied in order: (1) any clause
+  whose assertion requires a `Histogram.fill` lives in `graphed-histogram`'s flat
+  `tests/frozen/m48`; (2) of the rest, any anchor that imports `graphed.awkward` — the gak
+  enumerations and representatives, and any program built on an awkward-idiom fixture or backend —
+  lives in `graphed`'s `tests/frozen/awkward/m48`; everything else in `graphed`'s
+  `tests/frozen/frontend/m48`.** Rule (2) is the required awkward-free free-threaded gate (§10
+  preamble). The corpus matrix anchors run against the corpus vendored into `graphed-histogram`
+  (§10 preamble) and are not `importorskip`-guarded.
+  Applied: **rule (2) takes the whole §2.6 event-context family** — its constructor
+  (`gnano.events`-shaped) is awkward-idiom (§2.6), so every context-bound clause lands in
+  `graphed`'s `awkward/m48`, §1.1's grammar and lockstep anchors and the §2.1 stacking anchor
+  (base case and weight-form extension, with both §2.1(b) controls) among them — **together
+  with** the §2.3d module-verb
+  table (its idiom-package enumerations reach `graphed.awkward.__all__` and its floor is asserted
+  over the UNION, so the table cannot be split), the gak-classification exhaustiveness gate,
+  §2.3e's context-handle gate, the per-class gak representatives, §6.1d's lineage seams (they
+  take context handles) and §4.1 correctionlib (fill-free, but `record_external` yields a payload
+  descriptor only under `AwkwardBackend`). `graphed`'s `frontend/m48` keeps what needs neither
+  `graphed.awkward` nor an event context, on numpy-idiom fixtures over the loose §2.1a `vary`:
+  §1.2 label-out-of-identity, §3.2 determinism, §7.2 schema absence, §7.2's `aggregate_plan`
+  seam (α) (the m5 call shape it extends is awkward-free), §2.2 `Varied.apply`, §2.3a's
+  `Array`-surface parity gate, §2.3b's plain-Array entry points and §2.5's unreached-label
+  diagnostic. `graphed-histogram` takes every anchor that needs a fill — the corpus weight matrix
+  + its §5.2b read witness, §6.1a result shapes, §6.1c `.plan()` refusal, §6.1d ambient fills,
+  §6.3 goldens, and §4.3's selection-invariance anchor (its operands are per-label fill nodes
+  read through §9.1's accessor).
   **Straddling anchors are assigned explicitly**: **(1)** §1.2's dedup clause — the arena-Δ /
   node-id / one-`compile_ir`-value half stays in `graphed`; the result-mapping half ("both keys
   present with ONE evaluated fill", read off `_GroupReduce`'s `{label: hist}`) goes to
@@ -2249,12 +2296,14 @@ unchanged**.
     Traps: the ttgamma flat SF is a constant — spell it
     `gak.full_like(<a per-event Array>, sf)` or as arithmetic on such an Array; no constant
     Array without a shape donor exists (§4.1, §11). The corpus rounds the observable to 6
-    decimals BEFORE the fill and the view after (`stable()` in
-    `tests/_corpus/graphed_corpus/analyses/systematics.py`; `histograms.py`'s
-    `bin_values`/`fingerprint` round again): the recorded program re-expresses the pre-fill
-    rounding as `rint(x * 1e6) / 1e6` (gak has no `round(x, decimals)`), and the comparison
-    rides `bin_values`/`fingerprint` — **raw-view bit-identity vs the references MUST NOT be
-    asserted** (driver-side rounding absorbs per-partition summation-order differences). The
+    decimals BEFORE the fill — inline `np.round(ak.to_numpy(<observable>), STABLE_DECIMALS)` in
+    `tests/_corpus/graphed_corpus/analyses/systematics.py` — and the view after (`_round_hist`
+    there; `histograms.py`'s `bin_values`/`fingerprint` round again): the recorded program
+    re-expresses the pre-fill rounding as **`np.rint(x * 1e6) / 1e6`, a numpy ufunc dispatched
+    through `Array.__array_ufunc__`** — neither `gak` nor `graphed` exposes `rint` or
+    `round(x, decimals)`, and `np.round(x, 6)` records a `field` access and raises — and the
+    comparison rides `bin_values`/`fingerprint` — **raw-view bit-identity vs the references MUST
+    NOT be asserted** (driver-side rounding absorbs per-partition summation-order differences). The
     b-tag SF's operand is the **pt-CUT** jets (`sel.Jet[sel.Jet.pt > 25]`, §2.6 sketch note
     (iii)), not `sel.Jet`.
   - §4.3 structural selection-invariance, in the binding form: **the selection cone's node ids
@@ -2268,11 +2317,12 @@ unchanged**.
     equal-counts as sanity.
   - **§1.2 label-out-of-identity** — **for a varied program in the DEFAULT SIBLING lowering**
     (§1.2's §6.2 carve-out makes both clauses false by design in m50's axis mode; every
-    sibling-exposed anchor elsewhere carries this scoping): no node's `name` or `params` —
-    **including, for a reduced `stage` node, its `members`' own names and params** — contains
-    any label string, AND renaming every label leaves `compile_ir(...).ir` byte-identical
-    (which subsumes any token clause). House pattern for reaching the store from a frozen
-    test: `s._store.nodes()` (`graphed-histogram tests/frozen/m29/test_multi_weight_fills.py`).
+    sibling-exposed anchor elsewhere carries this scoping): no node's `name` or `params`
+    contains any label string, AND renaming every label leaves `compile_ir(...).ir`
+    byte-identical — which subsumes any token clause and reaches the fused `stage` nodes'
+    members, which the record-time store never carries. House pattern for reaching that store
+    from a frozen test: `s._store.nodes()`
+    (`graphed-histogram tests/frozen/m29/test_multi_weight_fills.py`).
     Plus the **dedup witness §5.2a defers to this bullet**: two labels whose members are
     structurally identical give arena Δ = 0, the same node id, and — per §7.2 — both keys
     present in the result with ONE evaluated fill. Plus the **NON-record-time collapse case
@@ -2306,8 +2356,11 @@ unchanged**.
     be NESTED** — a `Varied` whose members are themselves `Varied` over the inherited shift
     labels, the corpus spelling `graphed.vary(sel, "btag", btag_sf(sel.Jet[sel.Jet.pt > 25]),
     is_weight=True, …)` on a `Varied`-mask-derived `sel` (§2.1; a FLAT factor makes the one-
-    and two-level readings agree and leaves §2.1's two-level rule unwitnessed) — and the
-    assertion is
+    and two-level readings agree and leaves §2.1's two-level rule unwitnessed). **The program
+    MUST register an ambient weight on the PARENT context before that derivation** (the §2.6
+    sketch's `pu`): §2.6c's re-indexing is what gives the ambient its own `jes_up` member, so
+    without it `graphed.weight(sel)` is `None` (§9.1), the RHS's `old_ambient_jes_up` does not
+    exist, and §2.1(b)'s composition is unwitnessed. The assertion is
     `graphed.universe(graphed.weight(sel2), "jes_up").node_id == (old_ambient_jes_up *
     graphed.universe(graphed.nominal(factor), "jes_up")).node_id`
     — **`.node_id` equality, NEVER a bare `assert` on the recorded comparison**:
@@ -2345,12 +2398,12 @@ unchanged**.
     carried onto the SHIPPED closure and is readable there (`plan.process`). **The READ-BACK
     ROUTE is named**: `Plan.process` is declared `Callable[[Partition, WorkerResources], R]`
     (`python/graphed/core/execution.py`), so the anchor reads the field off the CONCRETE
-    closure type `graphed.aggregate._PartitionReduce` via a narrowing `isinstance`/cast
-    (`plan.process.variation_labels` on the declared type is an `attr-defined` error under
-    `mypy --strict`, R0.4a). "Before the worker closure exists" is NOT asserted — the hook has
-    no handle on the closure; the return channel is what makes the ordering observable. Seam
-    half (β)'s own per-plan metadata is anchored at m49 with §8.2(i).
-  - **§6.1d's LINEAGE SEAMS, in `graphed`'s `tests/frozen/frontend/m48`** (new `graphed`
+    closure type `graphed.aggregate._PartitionReduce` via a narrowing `isinstance`/cast (the
+    declared type has no `variation_labels`, and the `isinstance` is also the runtime
+    discriminator of the concrete closure). "Before the worker closure exists" is NOT asserted
+    — the hook has no handle on the closure; the return channel is what makes the ordering
+    observable. Seam half (β)'s own per-plan metadata is anchored at m49 with §8.2(i).
+  - **§6.1d's LINEAGE SEAMS, in `graphed`'s `tests/frozen/awkward/m48`** (new `graphed`
     source whose only consumers are fill-shaped — the same per-repo coverage argument as the
     seam above): `graphed.unify_contexts`-shaped answers the MOST-DERIVED handle for handles
     on one ancestry chain, `None` when every argument is context-free, ignores context-free
@@ -2369,7 +2422,7 @@ unchanged**.
     the error contract — `fn` returning a `Varied` raises with guidance to combine via
     ordinary ops.
   - **§2.3d module-verb dispositions + §2.2's reserved `Array`-protocol names**. One
-    table-driven test in `graphed`'s `tests/frozen/frontend/m48`, driven by the §2.3d
+    table-driven test in `graphed`'s `tests/frozen/awkward/m48`, driven by the §2.3d
     **discovery rule**: dynamic over `graphed.__all__`, filtered to `inspect.isfunction`
     members any of whose parameter annotations mentions `Array`, **UNION the named floor
     list `{graphed.compile_ir, graphed.context_of, graphed.broadcast_like}`** (`compile_ir`'s
@@ -2414,7 +2467,12 @@ unchanged**.
     mapping (§2.3d). `graphed.broadcast_like` broadcasts (§2.3d, §6.1d).
     `varied.node_id` / `varied.session` raise `AttributeError` rather than recording a `field`
     op, with a negative control that `varied["node_id"]` (STRING getitem) still resolves as
-    field access — so the rule cannot be a blanket `__getattr__` refusal. **Plus the PROPERTY
+    field access — so the rule cannot be a blanket `__getattr__` refusal. **That control needs
+    its OWN fixture: a RECORD-typed operand carrying a literal `node_id` field**
+    (`graphed.numpy.from_record(s, "r", node_id=…, pt=…)`, or an awkward record). String getitem
+    records a `field` op, which refuses on any vector form and on a record lacking the field, so
+    on the 1-D fixture the property clause pins below it reds a correct implementation.
+    **Plus the PROPERTY
     half of §2.2's disposition rule, classified BY MEASUREMENT**: the numpy idiom's
     `shape`/`dtype`/`ndim`/`T` are plain properties `inspect.isfunction` never enumerates
     (`python/graphed/numpy/array.py`), and they are NOT one class — `dtype`/`ndim`/`shape`
@@ -2451,9 +2509,12 @@ unchanged**.
     rules out "return the argument unchanged for every histogram"). **Plus a WHOLLY-UNVARIED
     positive control**: a group plan with no variation anywhere keeps today's value verbatim —
     every key a BARE output name, so `run(gh.plan({"hi": h1, "lo": h2})).value["hi"]` still
-    works **and still type-checks under `mypy --strict` once `plan()`'s declared return type
-    WIDENS to `Plan[dict[str | tuple[str, str | None], bh.Histogram]]`, part of m48's §6.1c
-    target**. §6.1a's slot keying is scoped to outputs a variation reaches precisely so the
+    works once **`plan()`'s declared return type WIDENS to
+    `Plan[dict[str | tuple[str, str | None], bh.Histogram]]`, part of m48's §6.1c target** — a
+    widening the repos' existing src-only `mypy --strict` already gates end to end, since
+    `aggregate_plan` infers `Plan[V]` from `_GroupReduce.__call__`, `_add_groups` and
+    `_GroupZero.__call__`, so a half-done widening is an `arg-type` error on `combine`/`empty`.
+    §6.1a's slot keying is scoped to outputs a variation reaches precisely so the
     already-frozen m23 suite stays green (`tests/frozen/m23/test_group_plan.py` indexes the
     value by bare output name), and §10 binds those artifacts unchanged.
   - **§2.3b plain-Array entry points learn `Varied`**: `plain_array[varied_mask]` and
@@ -2484,13 +2545,15 @@ unchanged**.
   - §3.2 determinism: same varied program compiled in two fresh processes under differing
     `PYTHONHASHSEED` → byte-identical `compile_ir` output; `graphed.labels` order pinned
     (nominal-first + insertion order).
-  - §6.3 goldens: committed GIR blob, captured PRE-m48, + the params KEY-SET equality against
-    a literally spelled set — `{"spec", "n_axes", "weighted", "sampled"}` for the unvaried
-    single-weight fill (§6.3).
+  - §6.3 goldens: committed GIR blob, captured PRE-m48 with the descriptor `version` field
+    normalized out of both sides (§6.3), + the params KEY-SET equality against a literally
+    spelled set — `{"spec", "n_axes", "weighted", "sampled"}` for the unvaried single-weight
+    fill (§6.3).
   - §2.3 **public-surface** parity (dunders AND methods, §2.3a — enumerated dynamically from
     `type(graphed.nominal(v))` so the numpy idiom's methods and tuple `__getitem__` are
     covered; `Array`'s own `filter`/`map`/`reduce`/`repartition`) and gak-classification
-    exhaustiveness, both **dynamically enumerated** (§2.3a/c) — the classification test
+    exhaustiveness, both **dynamically enumerated** (§2.3a/c) — the parity gate is
+    `frontend/m48`'s, the two gak gates `awkward/m48`'s — the classification test
     freezes only that every DISCOVERED public gak function has a classification; the
     *behaviour* of the `refusing` class is an m49 anchor (§5.4 is an m49 target).
     **§2.3e context-handle propagation is a SEPARATE, SCOPED gate** (a behavioural gate over
@@ -2536,10 +2599,12 @@ unchanged**.
     `fill` appends `sample` unchecked, so a `Varied` sample falls into `record_external` and
     dies on `.node_id`), asserting the bound operand order (axis values in argument order,
     then ambient, then explicit factors in list order, then `sample=`) and that the varied
-    `sample=` is ACCEPTED/expanded rather than raising `AttributeError`. **The fixture's
-    histogram MUST use a `Mean`/`WeightedMean` STORAGE** — bh 1.8.0 rejects `sample=` on the
-    default `Double()` AND on `Weight()` (`TypeError: Keyword(s) sample not expected`) while
-    the evaluator passes `sample` straight to `h.fill`, so a default-storage fixture records
+    `sample=` is ACCEPTED/expanded rather than raising `AttributeError`. **Both varied axis
+    values are PER-EVENT** — the same equal-lengths pin the link-kind-(1) fixture carries below.
+    **The fixture's histogram MUST use a `Mean`/`WeightedMean` STORAGE** — bh 1.8.0 rejects
+    `sample=` on the default `Double()` AND on `Weight()`
+    (`TypeError: Keyword(s) sample not expected`) while the evaluator passes `sample` straight to
+    `h.fill`, so a default-storage fixture records
     cleanly and dies at EVALUATION. If the anchor is instead written as a RECORD-TIME
     assertion — the fold order read off the recorded fill node's `inputs` / the per-label
     fill-node accessor, plan never run — the test MUST say so explicitly.
@@ -2550,7 +2615,10 @@ unchanged**.
     `graphed.preserve.record_external(s, CORRECTIONLIB_PLUGIN, corr_bytes, [njet],
     params={"name": "event_sf", "systematic": syst})` over `agc.correctionlib_json()` at its
     default `scale=1.0` — three labels give three External nodes sharing one
-    `descriptor.content_hash` and differing ONLY in `params["systematic"]`.
+    `descriptor.content_hash` and differing ONLY in `params["systematic"]`. **The Session takes
+    `AwkwardBackend`**: under `NumpyBackend` the same call raises
+    `backend returned no payload descriptor for external op`, which is why this fill-free anchor
+    lands in `awkward/m48`. `correctionlib` itself is never imported (the plugin loads lazily).
     `gak.apply_correction` is NOT that path: it records
     `params={"name": …, "args": json.dumps(args)}` (`python/graphed/awkward/functions.py`), so
     the systematic value rides inside the `args` JSON string and this anchor's observable is
@@ -2739,9 +2807,10 @@ unchanged**.
     (ii) **`graphed-executors`, flat `tests/frozen/m49`** — the same matrix through a process-pool
     executor (the executors live in `graphed-executors`). Because this half must exercise
     §4.2/§6.1's varied-fill lowering, **m49 adds `graphed-histogram` to `graphed-executors`' `dev`
-    extra AND binds the install pair, exactly as m48 does for the corpus** (a name-only dev-extra
-    entry resolves to the stale PyPI `0.0.1` release): a **`HISTOGRAM` git-URL workflow env var
-    plus its `pip install` line in every job that runs `tests/frozen`** (`ci.yml`). No
+    extra AND binds the install pair, in the shape that repo's own `ci.yml` already uses for
+    `CORPUS`** (a name-only dev-extra entry resolves to the stale PyPI `0.0.1` release): a
+    **`HISTOGRAM` git-URL workflow env var plus its `pip install` line in every job that runs
+    `tests/frozen`** (`ci.yml`). No
     `importorskip` (§10 preamble). It compares against corpus references recomputed in-process via
     `graphed_corpus` (the m7 house pattern, `tests/frozen/m7/adl.py`; not
     materialize-then-fill-eagerly, which exercises none of §4.2/§6.1/§6.2). This is the
@@ -3109,7 +3178,8 @@ unchanged**.
     SAME-PROCESS comparison, never a committed `.parquet` fixture** (§6.4g: a parquet footer
     embeds its writer version, so a committed blob breaks on a pyarrow bump and across §A.5
     matrix legs while the behaviour is correct — R0.10a). Committed byte oracles stay for GIR/IR
-    goldens (§6.3).
+    goldens (§6.3), whose only framework-version bytes are the `External` payload descriptor's,
+    which §6.3 normalizes out.
   - **Structure refusal (negative anchor, §6.4d)**: a stored varied field whose per-label offsets
     differ from nominal's is refused with an error naming the label and the field — with a
     positive control that a same-multiplicity shift with object-level migration still writes and
@@ -3144,8 +3214,9 @@ unchanged**.
 
 Definition of Done per milestone = the standard checklist (root `CLAUDE.md` §E.0): targets exactly
 as specified, frozen suite green and unmodified since freeze, ≥90% diff coverage from the frozen
-suite, determinism gate, ruff/clippy/mypy-strict (src AND tests, R0.4a), Sphinx `-W`, full-matrix
-CI green at the pinned revision (R0.5), attempts log + reviewer APPROVE recorded.
+suite, determinism gate, ruff/clippy/mypy-strict over each repo's configured scope (R0.4a; the
+src-only configs are that rule's own cross-cutting cleanup, not an m48–m51 target), Sphinx `-W`,
+full-matrix CI green at the pinned revision (R0.5), attempts log + reviewer APPROVE recorded.
 
 ## §11 Out of scope (Phase 2 — named, not silently dropped)
 
@@ -3192,11 +3263,15 @@ NodeKey.
   freezes the acceptance suite (TEST_SANITY: collects, non-vacuous — fails the stub for the right
   reason — deterministic, coverage-wired), implementer iterates under the full R0.4 mechanical
   gates without ever touching `tests/frozen/**` (disputes via `.graphed/<mX>/disputes/`, the m39
-  precedent), reviewer judges intent/guardrails/technique and may REJECT; implementation review
-  runs the design / integrity / mutation three-lens pattern (m46/m47 precedent) at the
-  BLOCKER / HIGH / MID / LOW / NIT severity terms, cycling until clean, empowered to send work back
-  to planning. R0.5 pins DONE to full-matrix CI green. R0.10/R0.10a govern every witness; R0.11
-  governs every number in every report.
+  precedent). **The gate command is PER REPO**: `graphed` runs `uvx prek run --all-files` +
+  `COV=1 ./scripts/run-tests.sh`, because `graphed_orchestrator.precommit` cannot derive that
+  repo's coverage command (no single `pytest --cov` CI line) and falls back to a repo-root
+  `pytest` that cannot collect the split tree; every other repo runs
+  `python -m graphed_orchestrator.precommit .`. Reviewer judges intent/guardrails/technique and
+  may REJECT; implementation review runs the design / integrity / mutation three-lens pattern
+  (m46/m47 precedent) at the BLOCKER / HIGH / MID / LOW / NIT severity terms, cycling until
+  clean, empowered to send work back to planning. R0.5 pins DONE to full-matrix CI green.
+  R0.10/R0.10a govern every witness; R0.11 governs every number in every report.
 - **§12.2 (Worklogs.)** `systematics-vary-worklog.md` continues as the dual memory; per-milestone
   `.graphed/<mX>/attempts.md` as always.
 - **§12.3 (Bookkeeping amendments, on landing.)** (a) Draft **R23** for the root prompt binding
