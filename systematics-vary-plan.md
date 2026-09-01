@@ -1870,8 +1870,9 @@ existing metadata channels.
   (with a dummy value).
   **The field's TYPE is bound ONCE, in §8.2(i), as `tuple[…, …] | None` defaulting to `None`, and
   the m48 dummy is the empty tuple `()`** — a well-typed NON-DEFAULT value against §8.2(i)'s
-  declared type (no configured mypy scope checks a frozen test, R0.4a). **The field therefore EXISTS
-  from m48**, which is where its one-time journal churn lands — see §7.3.
+  declared type (`graphed`'s mypy scope is `files = ["python"]`, so no gate checks it, R0.4a).
+  **The field therefore EXISTS from m48**, which is where its one-time journal churn lands —
+  see §7.3.
   **The seam is ADDITIVE and the artifact is the `CompiledGraph`.**
   *Additive*: the contracts of the existing `reduce`/`combine`/`empty` parameters are UNCHANGED —
   frozen m5 passes them as plain callables
@@ -2149,7 +2150,8 @@ Numbering: the executors repo froze m47 last. Frozen layouts by repo:
 
 - **`graphed`** (frozen tree partitioned by package; `scripts/run-tests.sh` runs `frontend`,
   `numpy` and `awkward` one process PER MILESTONE dir): **`tests/frozen/frontend/m48`,
-  `tests/frozen/awkward/m48`, `tests/frozen/frontend/m49`, `tests/frozen/preserve/m50`,
+  `tests/frozen/awkward/m48`, `tests/frozen/frontend/m49`, `tests/frozen/awkward/m49`,
+  `tests/frozen/checkpoint/m49` (new), `tests/frozen/preserve/m50`,
   `tests/frozen/awkward/m51`**, plus the §3.3 benchmark in `tests/frozen/core/m49` and
   **`tests/frozen/numpy/m51` for m51's numpy-backend refusal anchor** (§6.4f's numpy half is
   `graphed`-side source in `python/graphed/numpy/io.py`, and `numpy` is a `SPLIT_PKG`).
@@ -2178,19 +2180,21 @@ narrowest**. `run-tests.sh` splits `graphed`'s `frontend`/`numpy`/`awkward` per 
 but the required free-threaded job collects **all of `tests/frozen/frontend` minus `m40`** and
 **all of `tests/frozen/numpy` minus `m40`** in one process each: a `frontend/m48` basename must
 be unique against every other frontend milestone but m40, and a `numpy/m51` basename against
-every numpy milestone but m40. `tests/frozen/awkward` has no whole-subtree job, so `awkward/m48`
-needs uniqueness only inside its own dir. Everywhere else the scope is the whole tree:
-`graphed`'s `core`, `preserve` and `checkpoint` subtrees, `graphed-histogram` and
+every numpy milestone but m40. `tests/frozen/awkward` has no whole-subtree job, so any
+`awkward/<mXX>` dir needs uniqueness only inside itself. Everywhere else the scope is the whole
+tree: `graphed`'s `core`, `preserve` and `checkpoint` subtrees, `graphed-histogram` and
 `graphed-executors` (each runs `pytest tests/frozen` in ONE process), and `uproot5-graphed-mvp`.
 The natural name for an anchor is routinely the colliding one, so the test-author walks the
 scope before naming a file — regenerate it with
-`find tests/frozen/<scope> -name 'test_*.py' -exec basename {} \; | sort`. Live traps for
-anchors this plan places: `frontend/m5/test_aggregate_plan.py` against §7.2's seam (α) anchor,
+`find tests/frozen/<scope> -name 'test_*.py' -not -path '*/m40/*' -exec basename {} \; | sort`
+(the m40 exclusion applies to the frontend and numpy scopes, which the gate `--ignore`s). Live
+traps for anchors this plan places: `frontend/m5/test_aggregate_plan.py` against §7.2's seam (α)
+anchor, `frontend/m5/test_read_columns_projection.py` against §5.3's m49 projection anchor,
 `frontend/m3/test_array_surface.py` against §2.3a's parity gate, `frontend/m14/test_apply.py`
 against §2.2 `Varied.apply`, `core/m4/test_benchmark.py`, `preserve/m9/test_reproduce.py` +
 `test_inspect.py`, `checkpoint/m8/test_resume.py` — so use e.g. `test_varied_aggregate_plan.py`,
-`test_varied_array_surface.py`, `test_varied_apply.py`, `test_variation_benchmark.py`,
-`test_varied_bundle_reproduce.py`, `test_varied_inspect.py`.
+`test_varied_read_columns_projection.py`, `test_varied_array_surface.py`, `test_varied_apply.py`,
+`test_variation_benchmark.py`, `test_varied_bundle_reproduce.py`, `test_varied_inspect.py`.
 
 **Pythonpath**: any helper imported ACROSS frozen directories is added to that repo's
 `pyproject.toml` `pythonpath` list (`graphed` already lists `tests/_corpus`;
@@ -2265,9 +2269,12 @@ unchanged**.
   enumerations and representatives, and any program built on an awkward-idiom fixture or backend —
   lives in `graphed`'s `tests/frozen/awkward/m48`; everything else in `graphed`'s
   `tests/frozen/frontend/m48`.** Rule (2) is the required awkward-free free-threaded gate (§10
-  preamble), which collects `tests/frozen/frontend` whole on every push, so **it binds every
-  `graphed`-side frozen assignment in m48–m51, not m48's alone**: any later milestone's
-  frontend anchor either stays awkward-free or gets its own `tests/frozen/awkward/<mXX>`. The
+  preamble), which on every push collects `tests/frozen/core`, `tests/frozen/frontend` (minus
+  m40) and `tests/frozen/numpy` (minus m40) WHOLE, one process each, so **it binds every
+  `graphed`-side frozen assignment in m48–m51, not m48's alone**: any later milestone's anchor
+  in those three trees either stays awkward-free or gets its own `tests/frozen/awkward/<mXX>`.
+  `core` is stricter than collection — a frozen m1 test asserts `"awkward" not in sys.modules`,
+  so one awkward import anywhere in that invocation reds it. The
   corpus matrix anchors run against the corpus vendored into `graphed-histogram` (§10 preamble)
   and are not `importorskip`-guarded.
   Applied: **rule (2) takes the whole §2.6 event-context family** — its constructor
@@ -2815,8 +2822,11 @@ unchanged**.
     Per-repo partition of the remaining m49 anchors, **rule (2) (§10/m48) applying here too**:
     `graphed` `tests/frozen/frontend/m49` — the non-fill frontend anchors (§5.2a arena delta,
     §5.2c stage shape, §3.4 impact sets, §5.3 projection with its awkward-free conservative
-    spelling, §5.4 refusal — that last only if its refusing fixture is awkward-free; refused
-    through `gak.join`, the bound representative, it alone takes a `tests/frozen/awkward/m49`).
+    spelling, and §5.4's refusal when its refusing fixture is awkward-free — a numpy-backed join
+    is one, `tests/frozen/numpy/m40/test_join_primitives.py`). `graphed`
+    `tests/frozen/awkward/m49` — **§2.5's shift-after-weight diagnostic**, whose fixture
+    registers an ambient weight and so is an event-context program (§2.1(b)), plus §5.4's
+    refusal if instead spelled through `gak.join`, the bound representative.
     `graphed` `tests/frozen/core/m49` — the §3.3 benchmark (§10's header and §3.3 pin it to
     `core/m49`). `graphed-histogram` flat `tests/frozen/m49` —
     additionally the §2.4/§6.1b structural arity anchor (fill-shaped; in `graphed` it would
@@ -2894,8 +2904,9 @@ unchanged**.
     stats verb **order-insensitively**:
     `set(stats["jes_up"]) - set(stats["nominal"]) == {"Jet_eta"}` AND
     `set(stats["nominal"]) - set(stats["jes_up"]) == set()` (a plain concatenation is red — both
-    returns are sorted and `Jet_eta` sorts first);
-    §5.4 refusal + positive control.
+    returns are sorted and `Jet_eta` sorts first).
+  - §5.4 refusal + positive control (a downstream variation still compiles and produces correct
+    results) — its tree follows its refusing fixture per the partition above.
   - §3.3 NEW frozen variation benchmark file (exact `stages == N+1`, `reduced == 2N+2`, linear
     bound).
   - **§8.2(i) accessor + keying, in `graphed`** — the bullet straddles two homes: the accessor
@@ -3208,7 +3219,7 @@ unchanged**.
     embeds its writer version, so a committed blob breaks on a pyarrow bump and across §A.5
     matrix legs while the behaviour is correct — R0.10a). Committed byte oracles stay for GIR/IR
     goldens (§6.3), whose only framework-version bytes are the `External` payload descriptor's,
-    which §6.3 strips from each side before comparing.
+    which §6.3 strips per side — the committed literal at capture, the live blob at assert time.
   - **Structure refusal (negative anchor, §6.4d)**: a stored varied field whose per-label offsets
     differ from nominal's is refused with an error naming the label and the field — with a
     positive control that a same-multiplicity shift with object-level migration still writes and
