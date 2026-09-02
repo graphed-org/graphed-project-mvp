@@ -1021,8 +1021,8 @@ existing metadata channels.
   the same operand): a sequence must be all `Varied`, a mapping must map a label to a sequence of
   `Array`, and a `Varied` member must not itself be a `Varied` (§2.2 admits nested members but the
   per-label walk cannot resolve past one level). Anything else raises a `GraphedError` naming the
-  offending element — never the bare `AttributeError` an unchecked operand produces today by
-  reaching for `.session` on a container. No `source_nid` parameter: the reachability
+  offending element, rather than the `AttributeError` an unchecked operand produces today by
+  reaching for `.session` on whatever it was handed. No `source_nid` parameter: the reachability
   difference over `session.walk` is
   source-agnostic, and a bare `Sequence[Array]` carries no label attribution. **The key set is the
   §2.4 UNION over the operand's containers, in §2.4's bound union order** (a mapping operand's own
@@ -1159,8 +1159,8 @@ existing metadata channels.
   read at the per-label FILL node) — plus `read_columns`' own `source_nid`, returning
   `{label: tuple[str, ...] | None}`: per label, that label's SORTED read set, computed by applying
   `read_columns` to each label's members — **`graphed.member_of(v, L)` for a `Varied` operand**
-  (§3.4's key set and §2.4 resolution rule, verbatim; the strict `graphed.universe` raises on a
-  union label a container lacks), the mapping's own entry for a labelled mapping. Listed in §9.1,
+  (§3.4's key set and §2.4 resolution rule, verbatim), the mapping's own entry for a labelled
+  mapping. Listed in §9.1,
   exact spelling pinned at m49 freeze. The `| None` is live semantics, not defensive typing:
   `read_columns` returns `None` to mean "read every column" (whole-record consumption or a bare
   source read), the inverse of what `()` would say. The m49 anchor carries a conservative label —
@@ -1224,9 +1224,11 @@ existing metadata channels.
   **The fixture's construction is bound too, because bidirectional migration does not fall out of
   "use the JER formula"**: the smear takes coffea's stochastic shape
   `1 + sqrt(max(SF² − 1, 0)) · g` with `g` the per-row content-seeded standard normal of (a), each
-  varied label carries **SF ≠ 1 on BOTH sides and in OPPOSITE directions** (one above, one below;
-  at SF = 1 the factor is exactly 1 whatever `g` is, which would make that label's
-  partition-invariance leg pass vacuously), and the selection threshold sits inside the smeared
+  varied label carries **SF ABOVE 1, at DIFFERENT magnitudes** — the `max(…, 0)` floor makes the
+  factor exactly 1 for every row at any SF ≤ 1, so such a label equals nominal, its
+  partition-invariance leg passes vacuously and it reds the bidirectional-migration witness by
+  being a mutual subset of nominal; above 1 is also the physical range of a JER scale factor.
+  The selection threshold sits inside the smeared
   distribution's bulk so a signed per-row `g` moves events across it in both directions. Nominal is
   unsmeared, so every varied mask differs from it both ways by construction. The m49 suite carries
   the fixture (§10); its witnesses assert bidirectional migration and run-to-run byte-identity,
@@ -1980,16 +1982,21 @@ existing metadata channels.
   plus the workaround — spell a label whose value equals another's with the SAME expression
   (`variations={"1": w}`, not `w * 1.0`), which routes it through §1.2's record-time dedup path
   and is supported. It MUST NOT slice on a shortfall (the mis-slice surfaces as an opaque
-  worker-side `IndexError`). **The VARIED scoping of that refusal is an m48 stopgap that m49
-  removes**, because the "unvaried programs are unaffected" premise it rests on is false as built:
-  an unvaried program whose fills the same identity rules merge does not run today either — the
-  positional unpack mis-slices and dies in the worker with exactly that `IndexError`, and no frozen
-  test covers the path (m48's positive control drives `compile_ir`/`evaluate_ir` directly, with no
-  fill and no group plan, so it never reaches the slot layout that breaks). m49 applies the same
-  shortfall check to unvaried programs, with the message's label list dropped where there are no
-  labels to name, turning an opaque worker crash into the same clear refusal plus workaround; §6.3's
-  "no-variation paths are unchanged" is kept in the form that is true — a merge-FREE unvaried
-  program is untouched, which the m49 anchor carries as its positive control. Lifting the refusal
+  worker-side `IndexError`). **m48's scoping — one consumer, varied programs only — is a stopgap,
+  and m49 widens the refusal to its CLASS: every consumer that unpacks compiled outputs against
+  marked fill nodes, on every program.** The premise the stopgap rests on ("unvaried programs are
+  unaffected") is false on both members, and they fail differently, which is why the class and not
+  one member is what gets fixed. On the GROUP-plan builder a merged unvaried program mis-slices and
+  dies in the worker with exactly that `IndexError`. On `Histogram.plan()` — one histogram whose own
+  staged fills merge, reduced by `_SumFills`, which iterates its fills rather than indexing them —
+  nothing raises at all: the shortfall silently UNDER-SUMS, dropping a whole fill and returning a
+  plausible, physically wrong histogram. That is the silent miscompilation §5.4 itself calls worse
+  than refusal, and it is reachable from public API. Neither is covered by a frozen test (m48's
+  positive control drives `compile_ir`/`evaluate_ir` directly, with no fill and no plan, so it
+  reaches neither unpack). m49 therefore installs the same shortfall check on both consumers, with
+  the message's label list dropped where there are no labels to name. A merge-FREE program of either
+  shape is untouched — the m49 anchors carry that as their positive control — and the refusal stays
+  BUILDER-side, never in `compile_ir` or `aggregate_plan`. Lifting the refusal
   into full support (replicating through §8.2(i)'s map once it exists) is NOT scoped in m48–m51
   and is parked in §11.
   `ExecResult`/`Plan`/monitor **schemas** do not change in m48–m50 (per-variation monitor events:
@@ -2076,11 +2083,14 @@ existing metadata channels.
   frozen m7 executors suite; (iii) models its attribution on that, over the reduced ids instead.
   (i) *Transport*: the `variation_labels` field on the worker closure (`_PartitionReduce`,
   `aggregate.py`) — added at m48 as a defaulted pass-through (it is §7.2's (β) return channel),
-  populated at m49 — a sorted association list from the **PAIR key**
-  `(reduced_node_id, member_index | None)` to that key's attribution. `member_index` exists because
-  a universe's chain collapses into a Stage whose members are evaluated inline (`execute.py`).
-  **ONE field carries the whole payload** — the labels of (i) and the provenance of (ii) — so §7.3's
-  churn scope (one field, once, at m48) stands; nothing else on the closure may grow. Every value in
+  populated at m49 — a sorted association list whose **ENTRY LAYOUT is bound**, because a producer
+  in one repo and a consumer in another share it:
+  `((reduced_node_id, member_index | None), (labels, frame))`, one entry per key, `labels` a sorted
+  tuple of strings and `frame` the user source location as plain string/int data. `member_index`
+  exists because a universe's chain collapses into a Stage whose members are evaluated inline
+  (`execute.py`). **ONE field carries both payloads** — the labels of (i) and the provenance of
+  (ii) — so §7.3's churn scope (one field, once, at m48) stands; nothing else on the closure may
+  grow. Every value in
   it is **ORDERED and SORTED, never a `set`/`frozenset`**: a frozenset pickles in hash order, so the
   closure's cloudpickle bytes would vary with `PYTHONHASHSEED` and feed `OpSpec.identity()` →
   `DurablePlan` fingerprints (`core/plan.py`), violating §3.2 and killing cross-run checkpoint
@@ -2110,9 +2120,12 @@ existing metadata channels.
   record id DCE dropped — rides on the artifact as an **additive `CompiledGraph` field**, absent at
   m48, populated by `compile_ir` at m49 — the same additive-field shape §2.5 takes for its
   diagnostics channels, with the same scoping note (m48's §7.2 schema-absence anchor is worded over
-  `ExecResult`/`Plan`/monitor, not `CompiledGraph`). Consequence: **m48's (α) hook signature — ONE
-  argument, the `CompiledGraph` — stays sufficient at m49 and MUST NOT be widened**; the hook reads
-  the map off the artifact it already receives.
+  `ExecResult`/`Plan`/monitor, not `CompiledGraph`). **`compile_ir` populates the PER-KEY FRAME onto
+  that same artifact field**, applying (ii)'s tie-break as it goes: it is the one place holding both
+  the map and `Session._provenance`, which is `graphed`-private, so no consumer reaches across a
+  repo boundary for it and the hook supplier copies rather than computes. Consequence: **m48's (α)
+  hook signature — ONE argument, the `CompiledGraph` — stays sufficient at m49 and MUST NOT be
+  widened**; the hook reads both halves off the artifact it already receives.
   **BOTH reduction paths carry it.** `compile_ir` reduces through `GraphStore.reduce_with_outputs`
   or, for the public `Session(incremental=True)` configuration, through
   `IncrementalReducer::finalize`, which first translates original-arena ids through its own
@@ -2127,15 +2140,26 @@ existing metadata channels.
   every reached id through the accessor, and UNION the labels per resulting key — which is what
   makes the map set-valued. **`"nominal"` is EXCLUDED from that union, and a key whose union is
   empty carries no entry**: the empty rendering `""` stays the single encoding of nominal/unvaried
-  (§8.1), and no key ever renders the literal string `nominal`. The map is returned through §7.2's
-  (β) channel. `graphed` itself never produces it: §2.3d makes `compile_ir`/`aggregate_plan` refuse
-  a `Varied` output. Consequence for §10: `graphed`'s m49 anchor witnesses the ACCESSOR (and the
+  (§8.1), and no key ever renders the literal string `nominal`. It pairs each key with the frame
+  the artifact already carries and returns the whole association list through §7.2's (β) channel.
+  `graphed` itself never produces the CLOSURE field: §2.3d makes `compile_ir`/`aggregate_plan`
+  refuse a `Varied` output, and frozen m48 law pins the field to `None` when no hook is supplied.
+  **That `None` is a bound state, not an oversight, and (ii)'s wrap is conditional on it**: a
+  hook-less program — every plain `aggregate_plan` build and every unvaried one — ships `None`, the
+  wrap attributes nothing, and the original exception propagates exactly as it does today. Only a
+  program whose builder supplied the hook gains labelled `StageError`s. So §7.3's scope holds
+  verbatim (unvaried programs keep the `None` default and churn nothing at m49), and the M6 contract
+  is extended where attribution exists rather than narrowed anywhere; constructing a `StageError`
+  with no frames is not a case the design admits. Consequence for §10: `graphed`'s m49 anchor
+  witnesses the ACCESSOR (and the
   set-valuedness its key space must support); the LABEL association is witnessed in
   `graphed-histogram`'s m49 through the bound owner, never by a test that supplies its own hook
   and then asserts what it just computed (§5.2a).
   **§3.1 still holds** ("no optimizer SEMANTICS change"): read-only data the reducer already
   computes, composed and returned rather than dropped — no new `NodeKey`, no serialize tag, no
-  rewrite arm, and the only signature that widens is the engine trait's return, which §3.1 names.
+  rewrite arm. What widens is return types along the reduction call chain the target line names
+  (the four passes, the engine trait, `finalize`, and `GraphStore`'s `reduce*` family, whose
+  `Reduced`/report results the composed map travels in), not the IR and not what the reducer does.
   If the accessor is descoped the honest fallback is coarse, and is stated here rather than
   silently assumed: an "output-position" fallback is not implementable either (`evaluate_ir` is
   one flat loop with no per-node annotation, and outputs are selected only at the end), so
@@ -2144,9 +2168,12 @@ existing metadata channels.
   below), and the docs say so. (iii) is the keying event for both (i) and any fallback:
   descoping it removes per-label attribution entirely.
   (ii) *Attributed worker-side errors*, which do not exist today: the `evaluate_ir` call site in
-  `_PartitionReduce.__call__` is wrapped so a worker failure becomes a `StageError`, which needs
-  the user's frames at construction — so per-node provenance rides the SAME field as (i), one entry
-  per key, **re-keyed through the same accessor**, since `Session._provenance` is keyed by
+  `_PartitionReduce.__call__` is wrapped so that a worker failure becomes a `StageError` **when the
+  closure carries attribution, and re-raises untouched when it does not** — `StageError` needs the
+  user's frames at construction, so with the field at its `None` default there is nothing to build
+  one from and today's behaviour is the correct behaviour. The frames ride the SAME field as (i),
+  one entry per key, **re-keyed through the same accessor** by `compile_ir` (i), since
+  `Session._provenance` is keyed by
   record-time ids and inherits the identical re-indexing problem. That re-keying is many-to-one —
   the reducer merges distinct record ids recorded at DIFFERENT user lines onto one key, including
   intra-stage, where `member_index` cannot separate them — so **the tie-break is bound: the LOWEST
@@ -2219,9 +2246,9 @@ existing metadata channels.
   at m48 freeze),
   **`graphed.member_of(value, label)`** (§2.4's resolution rule — the container's own member for
   the label, else its `"nominal"` one, and the value itself when it is not a `Varied`; the two m49
-  verbs below both range over the §2.4 label UNION, where the strict `graphed.universe` raises.
-  It exists in `accessors.py` today but is not exported, so m49 exports it; read-only; m49,
-  spelling pinned at m49 freeze),
+  verbs below both range over the §2.4 label UNION, which §3.4 explains `graphed.universe` cannot
+  serve. It is defined in `varied.py` today and re-exported into `accessors.py`, but not out of the
+  package, so m49 exports it; read-only; m49, spelling pinned at m49 freeze),
   **the §3.4 impact API** (`{label: tuple[int, ...]}` of that label's sorted record node ids, over
   the per-label output CONTAINERS — `Sequence[Varied] | Mapping[str, Sequence[Array]]` (the
   labelled mapping is what the fill-node accessor above returns), WITHOUT `source_nid`, §3.4;
@@ -2474,7 +2501,8 @@ unchanged**.
     mis-sliced — with the SCOPE positive control alongside it, in `graphed` (needs no
     fill): an UNVARIED multi-output program whose outputs the optimizer merges
     (`compile_ir(s, b, b * 1.0)`, which returns ONE value) still compiles and runs exactly as
-    today (§7.2 SITE+SCOPE; §6.3's "no-variation paths are unchanged").
+    today — the refusal is BUILDER-side, so this control stays true at m49 too, where §7.2 widens
+    the refusal to every builder and every program.
   - **§6.1c `.plan()` refusal**: `.plan()` on a `Histogram` that is VARIED **or in axis mode**
     raises naming the group API (`_SumFills` would otherwise silently merge universes into a
     plausible-looking, physically wrong result). m48 exercises the varied arm; word the anchor
@@ -2931,11 +2959,15 @@ unchanged**.
   spellings pinned at m49 freeze)**.
   **Implementation-target partition (one reasoning partition per commit)**: (1) the `graphed-core`
   correspondence — the four pass returns, the engine-trait widening, the incremental composition,
-  and the PyO3 accessor, all inside `src/optimizer` + `src/store.rs` + `src/lib.rs`; (2) the
+  and the PyO3 accessor, inside `src/optimizer` + `src/store.rs` + `src/lib.rs`, **plus its Python
+  half: `compile_ir`'s additive `CompiledGraph` field and the per-key frame it puts there
+  (`python/graphed/execute.py`)**; (2) the
   `graphed` frontend verbs — §3.4, §5.3's stats verb, `member_of`, §2.5's record-time diagnostic;
   (3) the `graphed` error path — §8.1's field, §8.2(ii)'s wrap and (iii)'s attribution hook,
-  §6.1d's awkward wrapper; (4) the `graphed-histogram` producer — the `variation_labels` payload
-  and §7.2's widened refusal. Each is a single compartmentalized concern inside one repo.
+  §6.1d's awkward wrapper, **and §5.4's message shape, which as built names the verb alone**;
+  (4) the `graphed-histogram` producer — the `variation_labels` payload
+  and §7.2's refusal on both merged-fill consumers. Each is a single compartmentalized concern
+  inside one repo.
   Frozen anchors:
   - The **full 15-reference matrix**, split across two repos:
     (i) **`graphed-histogram`, flat `tests/frozen/m49`** — the matrix through the frontend,
@@ -2973,9 +3005,11 @@ unchanged**.
     re-index through `graphed.reindex_to` on the fill path, blame parity between the plan/executor
     path and `materialize` (§6.1d's contract holds on both), a per-side-strip discriminator for the
     §6.3 goldens (one pattern applied to both sides leaves them byte-identical and witnesses
-    nothing), and **§7.2's widened merge-shortfall refusal** — two UNVARIED fills the M4 identity
-    rules merge raise the clear refusal instead of dying in the worker with an `IndexError`, with a
-    merge-free unvaried pair as the positive control. `graphed` gains
+    nothing), and **§7.2's merge-shortfall refusal on BOTH consumers** — two UNVARIED fills the M4
+    identity rules merge raise the clear refusal on the group builder, where they die in the worker
+    with an `IndexError` today, AND on `Histogram.plan()`, where today they RUN and silently
+    under-sum (the anchor names the observed wrong answer's shape, not an exception, as what the
+    refusal replaces); a merge-free pair of each shape is the positive control. `graphed` gains
     **`tests/frozen/checkpoint/m49`** for §7.3 interrupt/resume and §7.4's dead-letter
     MECHANISM — partition-atomic retry, one poisoned variation dead-lettering the whole composite
     — while the LABEL the dead-letter surface names rides the §8.2 StageError anchor in
@@ -2985,7 +3019,12 @@ unchanged**.
     the rule that each half is anchored in the repo whose source it is (§7.2), its §B.3 diff
     coverage must come from `graphed`'s own frozen suite, which no `graphed-executors` test can
     supply. It carries the in-process failure through `_PartitionReduce` and a spawn-based
-    cross-process test (`tests/frozen/debug/m6/test_process_boundary.py` precedent); the `debug`
+    cross-process test (`tests/frozen/debug/m6/test_process_boundary.py` precedent), **plus the
+    hook-less arm**: an `aggregate_plan` build with no hook ships the `None` field, and a worker
+    failure there re-raises the ORIGINAL exception unchanged — not a `StageError` and not the
+    `IndexError` an unconditional wrap would produce from empty frames. Its attributed arm supplies
+    a (β) hook, which is legal because §5.2a's self-derivation ban is worded over the LABEL
+    association, not over the mechanism this anchor witnesses. The `debug`
     subtree runs whole, so basenames are unique against every debug milestone.
     `graphed-executors`' flat `tests/frozen/m49` keeps the CROSS-REPO half — the labelled
     `StageError` surviving a real process-pool boundary, including the dead-letter label — which
@@ -3014,9 +3053,10 @@ unchanged**.
   - A **JER-SF-style stochastic shift fixture** (additive — corpus m05 tests/references
     untouched): per-row content-seeded re-smearing per §5.5a, one shared draw, SF-varied per label.
     **The FIXTURE is stated** (§5.5b): the stochastic form `1 + sqrt(max(SF² − 1, 0)) · g` over the
-    shared per-row standard normal, `SF > 1` on one varied label and `SF < 1` on the other — never
-    `SF = 1`, which zeroes the draw and makes that label's partition-invariance leg pass without
-    testing anything — and the selection threshold inside the smeared bulk, which is what makes the
+    shared per-row standard normal, **both varied labels above 1 at different magnitudes** — any
+    `SF ≤ 1` hits the formula's `max(…, 0)` floor, smears by exactly 1, and both passes that label's
+    partition-invariance leg without testing anything and reds the migration witness below by
+    equalling nominal — and the selection threshold inside the smeared bulk, which is what makes the
     migration two-way rather than nested.
     Witnesses: run-to-run byte-identical results; selected counts pairwise distinct across
     {nominal, jer_up, jer_down} with NO ordering asserted, plus **bidirectional migration** (no
@@ -3115,8 +3155,11 @@ unchanged**.
     op (`x * 1.0`) on a live path, which is reachable from an output and so survives DCE, and is
     then folded away by the engine's identity rule. Its record id must map to the reduced node its
     input landed in, which only a map composed through canonicalization, CSE and stage fusion can
-    answer; an accessor returning DCE's `remap` alone is red on it, and the base topology cannot
-    tell the two apart. **Plus BOTH reduction paths**: the same fixture compiled on a
+    answer. It is the NARROW discriminator: the base clauses above already red a DCE-`remap`-only
+    accessor (where every universe's reduction is marked, DCE drops nothing, so its remap is the
+    identity and its image is neither the reduced store's node ids nor `2N + 2` of them), while this
+    one isolates the post-DCE passes from the composition as a whole.
+    **Plus BOTH reduction paths**: the same fixture compiled on a
     `Session(incremental=True)` — public M10 surface, which reduces through a canonical arena of
     its own before the four passes — answers with the same RECORD-keyed map.
     Plus **plan-byte determinism with the §8.2(i) field POPULATED** — the field reaches the shipped
@@ -3137,7 +3180,8 @@ unchanged**.
     the anchor red against a correct implementation.
   - **`variation_labels` POPULATION, in `graphed-histogram`'s flat `tests/frozen/m49`** (the
     field's only bound producer is that repo's group-plan builder, §8.2(i)): over a varied
-    program, `gh.plan({…})`'s shipped closure carries a `variation_labels` entry whose label tuple
+    program, `gh.plan({…})`'s shipped closure carries a `variation_labels` entry in §8.2(i)'s bound
+    layout whose label tuple
     is SORTED and, for a `(reduced_node_id, member_index)` key two labels' cones both reach,
     carries BOTH labels — the set-valued half the `graphed` accessor anchor can only witness as a
     key collapse. The fixture's shared node is UPSTREAM of the label fork (the §3.4 shape):
