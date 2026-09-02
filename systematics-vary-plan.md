@@ -2154,8 +2154,9 @@ existing metadata channels.
   reachability difference, because the shared prefix is exactly where a fused failure raises), map
   every reached id through the accessor, and UNION the labels per resulting key — which is what
   makes the map set-valued. **`"nominal"` is EXCLUDED from that union, and a key no non-nominal
-  label reaches keeps its entry with an EMPTY label tuple** — it still has a frame, so a failure in
-  the shared prefix is still attributed to the user's line, and it renders `""` per the rule below,
+  label reaches keeps its entry with an EMPTY label tuple** — the NOMINAL-EXCLUSIVE region, since the
+  whole-cone walk puts the shared prefix in every label's cone. It still has a frame, so a failure
+  there is still attributed to the user's line, and it renders `""` per the rule below,
   which stays the single encoding of nominal/unvaried (§8.1); no key ever renders the literal string
   `nominal`. The producer pairs each key with the frame the artifact carries and returns the whole
   association list through §7.2's (β) channel.
@@ -2221,9 +2222,11 @@ existing metadata channels.
   boundary re-raises driver-side carrying `variation == "jes_up"` AND the user's analysis line
   (M6 contract extended, not altered), and the dead-letter descriptor shows the label (§7.4);
   **plus a shared-node failure asserting the multi-label rendering** (a pick-one-arbitrarily
-  implementation passes the single-label anchor alone) **and a shared-PREFIX failure in the same
-  varied program asserting the empty-tuple rendering** — `variation == ""` WITH the user's line, so
-  an implementation that renders it `"nominal"` or skips the wrap for it is red.
+  implementation passes the single-label anchor alone) **and a NOMINAL-EXCLUSIVE-node failure in the
+  same varied program asserting the empty-tuple rendering** — a key reached only from the nominal
+  cone (the nominal sibling fill is one), `variation == ""` WITH the user's line, so an
+  implementation that renders it `"nominal"` or skips the wrap for it is red. Both ride the
+  cross-process bullet's home, `graphed-executors`' flat `tests/frozen/m49` (§10/m49).
 - **§8.3** Per-node provenance needs no new machinery (§2.3): varied nodes record at user op
   lines. `to_dot`/debug labels remain readable; the impact-set API (§3.4) is the "which nodes
   belong to which label" view.
