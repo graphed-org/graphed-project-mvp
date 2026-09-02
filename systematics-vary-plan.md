@@ -8,7 +8,7 @@ evidence trails live in the files the plan cites — `systematics-vary-codebase-
 stated assumptions. Source directive: the owner's high-level doc (Google Doc `116lg4…`, mirrored
 at `scratchpad/systematics-plan.txt`). The plan-review cycle is closed (§12.1); review history
 lives in git and the `systematics-vary-plan-review-r*` / `systematics-vary-plan-revision-r*-notes`
-files. Next step: the m48 decomposition against the §12.4 ledger.
+files. m48 and m49 are DONE and merged; next step is the m50 decomposition.
 
 > **Naming — owner decision.** Verb **`vary`** (`graphed.vary`), concept noun **"variation"**,
 > container **`Varied`**. Variation labels are `f"{name}_{tag}"` underscore style (`jes_up`,
@@ -850,6 +850,10 @@ existing metadata channels.
   is sound; the m48 scoping note above (the schema-absence anchor is worded over
   `ExecResult`/`Plan`/monitor, not `CompiledGraph`) governs it unchanged. Diagnostic, not an error:
   a weight that legitimately does not track the shift is a valid program.
+  **It is session-HISTORY-scoped by construction, and that is settled**: a sound program and a
+  violating one can compile to byte-identical artifacts (same IR, same correspondence map), so no
+  filter at a shipping site can separate them — the report is the only channel that carries the
+  ordering, and it names the pair. Nothing downstream may be asked to re-derive it.
 - **§2.6 (The event context — systematics attach to `events`, functionally; owner semantics,
   respun functional per collaborator feedback.)** The primary user idiom
   is not loose `Varied` threading but an **event context**: a frontend wrapper over the root
@@ -1305,18 +1309,18 @@ existing metadata channels.
   in axis mode (a 1-bin `{"nominal"}` axis there). **The refusal is GENERAL — sibling mode AND
   §6.2's axis mode**: `Histogram.plan` starts from `self._spec`
   (`_SumFills(self._spec)`/`_ZeroHist(self._spec)`), fixed in `__init__`, which under §6.2's
-  fill-time declaration lacks the variation axis the fill results carry; §6.1c's per-slot spec
-  repair is scoped to `_GroupReduce`'s layout and does not reach `_SumFills`/`_ZeroHist`.
+  fill-time declaration lacks the variation axis the fill results carry; §6.1c's per-slot spec —
+  the fill node's, shipped at m48 — lives on `_GroupReduce`'s layout and does not reach
+  `_SumFills`/`_ZeroHist`.
   Axis-mode programs therefore also route through the group API; no m50 anchor needs
   `Histogram.plan` to SUCCEED on an axis-mode histogram (m50's fourth output asserts it RAISES
   this refusal — the axis-mode arm's only coverage).
-  **The reducer's LAYOUT changes shape, and that is binding**: today `layout` is
-  `tuple[tuple[str, int, str], ...]` = `(label, n_fills, spec)` sliced positionally over the
-  distinct-output list, which mis-slices or `IndexError`s the moment two marked fills intern to
-  one node — the case §1.2 mandates and m48 freezes (`mark_output` de-dups in `src/store.rs`;
-  `evaluate_ir` returns one value per DISTINCT output). Binding: **`layout` carries per-slot
-  output INDICES**, not counts — `tuple[tuple[str, tuple[int, ...], str], ...]` (or
-  `{(output, label): [indices]}` for the two-level shape) — derived frontend-side per §7.2 as
+  **The reducer's LAYOUT shape SHIPPED at m48–m49 and is binding unchanged**: the two-level
+  `SlotKey`, the per-slot output INDEX tuples, and the dedup rank that derives them are live code
+  (`src/graphed_histogram/boost.py`), so nothing here is migration work and m50 must not be read as
+  re-deriving it. Indices, not counts, because two marked fills intern to one node the moment §1.2's
+  identical-label case arises (`mark_output` de-dups in `src/store.rs`; `evaluate_ir` returns one
+  value per DISTINCT output), and the indices are
   **the rank of each marked record id in the DEDUPLICATED list of `fill_nodes` NODE IDS**
   (`list(dict.fromkeys(n.node_id for n in fill_nodes))` — `fill_nodes` is `list[Array]` and
   `Array` is unhashable, so the dedup runs over ids, never the Arrays), which matches
@@ -1324,8 +1328,10 @@ existing metadata channels.
   undeduplicated list overruns it. A shared node id therefore **replicates** into every slot that
   needs it. The operand is that
   list, NOT the compiled output list (post-reduction ids cannot be joined to the record ids
-  `plan()` owns, §7.2) and NOT §7.2's `aggregate_plan` seam — that seam stays an m48 target for
-  §7.2's merge refusal and m49's `variation_labels`; this layout needs nothing from it.
+  `plan()` owns, §7.2) and NOT §7.2's `aggregate_plan` seam — that seam is m48's, for §7.2's merge
+  refusal and m49's `variation_labels`; this layout needs nothing from it.
+  **m50's ONLY delta to the layout is the axis-mode slot below**, plus §9.1's listing and
+  §6.2(i-bis)'s recognition of the shape it produces.
   **The AXIS-MODE slot is bound here too — scoped to m50, with §6.2**: an axis-mode output
   contributes **exactly ONE slot, keyed `(output, None)`**, gathering ALL that output's fill-node
   indices; its per-slot value is the bare histogram carrying the variation axis (§6.2 i-bis), not
@@ -1487,8 +1493,10 @@ existing metadata channels.
   This reproduces the corpus reference layout (independent per-variation histograms — UHI, no
   invented formats).
 
-- **§6.2 (Scaling shape: the variation axis, m50 — weight labels only.)** An opt-in fill mode
-  (opt-in spelling pinned at m50 freeze) lands **weight-label** variations in ONE histogram with a
+- **§6.2 (Scaling shape: the variation axis, m50 — weight labels collapse into the loop.)** An
+  opt-in fill mode — **expressed PER `fill()` call and remembered by the histogram**, which is what
+  makes §6.2(i)'s "later fill in the OTHER mode" reachable and its mode-mismatch error buildable;
+  exact spelling pinned at m50 freeze — lands **weight-label** variations in ONE histogram with a
   **non-growth, pre-declared, sorted StrCategory `"variation"` axis** via an evaluator-side loop
   (extend/sibling `FillEvaluator`; labels ride the spec/params under the §1.2 carve-out;
   scalar-string broadcast and non-growth combine-safety are probe-verified — cba §histogram §3).
@@ -1505,6 +1513,14 @@ existing metadata channels.
   `W` carry §6.1b's lowering definitions here too**: a label borne by a `Varied` `sample=` is in
   `S` and lowers as a sibling writing its own scalar category value, since the evaluator's weight
   loop re-fills against a fixed sample column and cannot carry it.
+  **§6.1d's broadcast seam ranges over the loop node's weight COLUMNS, one per label — the axis
+  mode of the same rule, not a new one.** §6.1d binds every weight factor a fill applies to be
+  broadcast to that fill's value structure; axis mode hands the loop node `|W|` columns instead of
+  one, so the seam is recorded upstream of the loop node PER COLUMN. The loop evaluator inherits
+  the sibling evaluator's independent per-input flatten, so an unbroadcast per-event column
+  length-mismatches against a per-object value exactly as a sibling fill's would — and the corpus
+  this mode exists to serve is per-object (lit §ewkcoffea-confirmed), so m50's equality anchor
+  carries a per-object value (§10/m50) rather than leaving that granularity to the test-author.
   **The per-fill variation payload has a bound CARRIER**: an External evaluator is resolved solely
   by the payload's content hash (today `content_hash(self._spec)`), the plan-time registry merges
   every histogram's evaluators into ONE dict keyed the same way, and §6.2(i)'s cross-fill
@@ -2210,8 +2226,10 @@ existing metadata channels.
   m49 target**; without it (i) and (ii) do not compose: a wrapper around the call yields an
   exception carrying no node id, so it cannot index the map (i) ships. Binding: `evaluate_ir`
   gains an **optional attribution hook** (or an equivalent exception wrapper) annotating a
-  failure with `(reduced_node_id, member_index | None)` at its two dispatch points (the
-  top-level node loop and the inline stage-member loop), and `_PartitionReduce` maps that
+  failure with `(reduced_node_id, member_index | None)` at each evaluating dispatch point — the
+  top-level node loop, the inline stage-member loop, and the External payload's evaluator; the
+  SOURCE arm is deliberately excluded, since every label's cone reaches a source and attributing a
+  load failure would render the union of every label — and `_PartitionReduce` maps that
   through `variation_labels`. This is a change to `graphed`'s **evaluation path** — not core,
   not the IR, not any schema — and it lands in `graphed`, so the m49 anchors are worded over the
   RESULTING `StageError`, never the wrap site. If (iii) is descoped, the plan-wide fallback
@@ -2290,7 +2308,14 @@ existing metadata channels.
   `source_nid`; read-only; m49, spelling pinned at m49 freeze), and a
   plan-level listing of `{output: [labels]}` **(m50; spelling pinned at m50 freeze; its own frozen
   anchor in `graphed-histogram`'s flat `tests/frozen/m50` (§10/m50), separate from m50's
-  `inspect()` test — that test covers a bundle's text rendering, not this mapping)** constitute the introspection surface
+  `inspect()` test — that test covers a bundle's text rendering, not this mapping)** — **and it
+  answers UNIFORMLY over both modes, which is bound because the slot key alone cannot serve it**:
+  an axis-mode output contributes one `(output, None)` slot whose key carries no label (§6.1c), so
+  the listing reads that output's labels from the fill's declared variation label set, which the
+  builder holds while it builds the layout, and never by decoding the per-slot spec string. The
+  caller does not have to know the mode; every varied output — sibling or axis — maps to its labels
+  in §2.4 order, and §6.2(i-bis)'s nominal-first-then-lexicographic rule governs
+  `graphed.labels(h)` on a RESULT histogram, a different surface that does not reach here — constitute the introspection surface
   (RDF `GetVariations` analogue); `inspect()`'s own label listing stays anchored in m50's
   `inspect()` test (§9.2).
 - **§9.2** Preservation: a bundle built from a variation-expanded graph reproduces **all** labels
@@ -2302,7 +2327,13 @@ existing metadata channels.
   returns a single array; m50 extends both: a varied bundle accepts a `Varied`
   `value=`/`weight=` (equivalently a per-label mapping) and `reproduce` returns
   `{label: array}`; **an unvaried bundle still takes bare Arrays and `reproduce` still returns a
-  bare array** (backward compatible). The MANIFEST gains a label channel, bound here — §1.2 keeps
+  bare array** (backward compatible). **The bundled graph is the value/weight/`{name,bins,lo,hi}`
+  TRIPLE the signature above already takes, NOT a histogram-terminal fill graph** — which is why
+  `reproduce` yields a per-label count ARRAY and the m9 `np.array_equal` comparison applies
+  unchanged. The triple carries no `External`, so no new preserve plugin is in m50's scope; the
+  corollary is that the §6.2 axis-mode `Histogram` itself — its variation axis and storage — is not
+  what a bundle round-trips, and widening the bundle to the fill graph is Phase 2 (§11). The
+  MANIFEST gains a label channel, bound here — §1.2 keeps
   labels OUT of the IR, and today's `analysis.outputs` is the singular two-key record
   `{"value": int(value.node_id), "weight": None if weight is None else int(weight.node_id)}`, so
   nothing durable carries labels. Additive the way §8.2(i)'s field is: a VARIED bundle's manifest
@@ -2321,7 +2352,8 @@ Numbering: the executors repo froze m47 last. Frozen layouts by repo:
   `numpy` and `awkward` one process PER MILESTONE dir): **`tests/frozen/frontend/m48`,
   `tests/frozen/awkward/m48`, `tests/frozen/frontend/m49`, `tests/frozen/awkward/m49`,
   `tests/frozen/checkpoint/m49` (new), **`tests/frozen/debug/m49` (new)**,
-  `tests/frozen/preserve/m50`,
+  `tests/frozen/preserve/m50`, **`tests/frozen/frontend/m50`, `tests/frozen/awkward/m50` and
+  `tests/frozen/debug/m50` (new, for the m49 carryover anchors §10/m50 homes)**,
   `tests/frozen/awkward/m51`**, plus the §3.3 benchmark in `tests/frozen/core/m49` and
   **`tests/frozen/numpy/m51` for m51's numpy-backend refusal anchor** (§6.4f's numpy half is
   `graphed`-side source in `python/graphed/numpy/io.py`, and `numpy` is a `SPLIT_PKG`).
@@ -3243,7 +3275,9 @@ unchanged**.
     are unequal **AND hash differently**. The `__hash__` and wrap/attribution halves are `graphed`
     source, so they are anchored in `graphed`'s `tests/frozen/debug/m49`; what stays in
     `graphed-executors` is the real process-pool crossing.
-- **m50 — scale + integration** (repos: `graphed-histogram` + `graphed` preserve/docs).
+- **m50 — scale + integration** (repos: `graphed-histogram` + `graphed` preserve/docs, **plus
+  `graphed` frozen-only trees for the m49 carryover anchors below — no `graphed` source outside
+  preserve/docs is an m50 target**).
   Targets: §6.2, **§6.1c's AXIS-MODE slot** (the `(output, None)` keying and the per-slot spec
   taken from the fill node; §6.1c defines no per-output MODE field — the three slot key forms are
   disjoint and per output, and the combine stays a key-wise `+`), **§9.1's `graphed.variations`**
@@ -3259,7 +3293,14 @@ unchanged**.
     into `W` would silently reuse one sample column across universes). **The fixture MUST use a
     `Mean`/`WeightedMean` storage and per-label sample values that DIFFER (§6.1b)** — bh rejects
     `sample=` on `Double()`/`Weight()` storages with a `TypeError`, so a default-storage fixture
-    dies at evaluation and a sample-discarding storage makes the equality vacuous. **Plus the
+    dies at evaluation and a sample-discarding storage makes the equality vacuous.
+    **Its VALUE is PER-OBJECT (jagged) and at least one weight factor is per-EVENT, so §6.1d's
+    broadcast seam is engaged on the loop node's columns** (§6.2): every pinned quantity above is
+    satisfiable on flat per-event data, on which the broadcast is a no-op, so a per-event fixture
+    admits an implementation that hands the loop node raw columns — which then length-mismatches
+    at `h.fill` on the per-object analyses this mode exists for. The sibling analogue is already
+    discriminating this way (`tests/frozen/m48/test_ambient_object_fills.py`); axis mode gets the
+    same treatment rather than a weaker one. **Plus the
     per-fill CARRIER witness** (§6.2): in the mixed program the `1 + |S|` axis-mode fill nodes
     carry distinct External `content_hash`es and resolve to distinct evaluators (the registry is
     keyed on `content_hash(self._spec)` alone, so otherwise every sibling resolves to the
@@ -3320,9 +3361,8 @@ unchanged**.
     in sibling mode, ONE entry `(output, None)` in axis mode — with the fixture's output count
     pinned at 1 **and the fixture scoped to WEIGHT labels only** (under a mixed program the
     axis-mode side still records `1 + |S|` fill nodes and the 1-vs-`N+1` count is ambiguous; the
-    mixed program is frozen by the adjacent equality anchor, which does not count slots). The
-    count only holds once §6.1c's two-level `{(output, label): hist}` shape exists (today
-    `_GroupReduce` keys on the output name alone). Plus bin-for-bin equality. The "allocates 1
+    mixed program is frozen by the adjacent equality anchor, which does not count slots). Plus
+    bin-for-bin equality. The "allocates 1
     histogram object" half and the N≈100 wall-clock sibling-vs-axis comparison are
     **implementer-report measurements under R0.11** (methodology stated) — NOT frozen gates.
   - §9.2 one-bundle-N-labels preservation (m9 comparison form, on the bound varied
@@ -3335,12 +3375,17 @@ unchanged**.
     takes a `Bundle` and cannot exercise a plan-level mapping): **in `graphed-histogram`'s flat
     `tests/frozen/m50`, NOT in `graphed`** — the anchor is fill-shaped (a named OUTPUT exists
     only in `graphed-histogram`'s group API, while `graphed`'s `aggregate_plan` carries no output
-    names; in `graphed` it would `importorskip`-SKIP, §10 preamble). Over a TWO-output varied
-    program — one output reached by variations, one not — the listing maps each output to its
+    names; in `graphed` it would `importorskip`-SKIP, §10 preamble). Over a THREE-output program —
+    a sibling-mode varied output, an **AXIS-MODE** varied output, and one no variation reaches —
+    the listing maps each output to its
     labels in §2.4 order, and the unvaried output maps to **`["nominal"]`** (`[]` and
     `["nominal"]` are different frozen assertions §6.1a does not settle; `["nominal"]` is the
     consistent choice because §6.1a binds a bare `hist` to read as the single label `"nominal"`
-    through the narrowing helper).
+    through the narrowing helper). **The axis-mode arm is what makes the anchor discriminating**
+    (§9.1): that output's slot key is `(output, None)` and carries no label, so an implementation
+    reading labels off the KEY answers `[None]` or `[]` for it and is red, while a sibling-only
+    program admits that implementation. Assert its entry equals the sibling output's label list —
+    the two outputs carry the same variations, so the listing must not vary with the MODE.
   - **§9.1 `graphed.variations(ctx)`** (load-bearing because §6.2 explicitly refuses to give
     numeric ordering from bin index): per-name tags and kinds — **over §9.1's shape
     `{name: {tag: (kind, value | None)}}` with the two-word kind vocabulary `"weight"`/`"shift"`,
@@ -3348,6 +3393,26 @@ unchanged**.
     under **both** parsers — canonical e-form `m?\d+(em\d+)?` (`5em1` → 0.5, `m15em1` → −1.5) and
     datacard p-form `m?\d+(p\d+)?` (`2p5` → 2.5) — and a non-numeric tag (`up`) returning no
     value rather than raising.
+  - **The m49 frozen-suite carryovers, homed here rather than deferred** — each is one file over
+    ALREADY-SHIPPED m49 source, so m50 adds `graphed` frozen trees but no `graphed` source target
+    (§10 preamble). They are frozen now because m50 is the last milestone before the write-out one,
+    and each currently rides a `tests/extra` witness, which no gate protects:
+    **`tests/frozen/debug/m50`** — the External ARM of §8.2(ii)'s attribution: a failure raised
+    inside an External evaluator with an entry for its key becomes a labelled `StageError`, with the
+    no-entry control beside it. `evaluate_ir` dispatches attribution at THREE sites — the op loop,
+    the inline stage-member loop, and the External payload's evaluator — and no frozen anchor
+    reaches the third.
+    **`tests/frozen/frontend/m50`** (awkward-free — the required 3.14t job collects this subtree
+    whole) — two arms of §8.2(i)'s correspondence. (a) The INCREMENTAL discriminator: a fixture
+    whose record arena makes `IncrementalReducer`'s own original→canonical map NON-identity, so an
+    accessor that skips composing it in front of the four passes is red. m49's incremental arm is
+    present but vacuous in exactly that direction — it passes under the deletion it exists to catch.
+    (b) The `opt_level=0` arm: the same program compiled unoptimized answers in RECORD ids too
+    (§8.2(i) binds both reduction paths; a 1:1 lowering is the case where a composed map and an
+    identity map are hardest to tell apart, which is why it needs its own assertion).
+    **`tests/frozen/awkward/m50`** — §6.1d's UNFLATTEN HINT: the per-event-factor-against-per-object-
+    value refusal names the offending factor AND points at "pass the value unflattened". m49's frozen
+    blame anchor asserts the factor half only, so an implementation that drops the hint ships green.
   - Docs: a "How variations work" design.rst section with **executed** examples (the docs-sweep
     rule) covering §7.3's limitations — **all three invalidation classes, each with the scope §7.3
     binds**: the IR-level one (adding/removing a variation) is unconditional, while the
@@ -3545,6 +3610,10 @@ auto-symmetric weight derivation from a lone `up` (§2.6b);
 variation axis is unfillable today — `Histogram.fill` requires one array per axis
 (`graphed-histogram src/graphed_histogram/boost.py`) — and supporting it needs a fill-arity
 carve-out plus a declared-vs-inferred reconciliation rule);
+**a HISTOGRAM-TERMINAL preservation bundle** (§9.2 bundles the value/weight/spec triple, so
+`reproduce` returns count arrays; serializing the fill graph instead would round-trip the §6.2
+variation axis and its storage, but it carries the `histogram.weight_guard` `External`, for which
+no preserve plugin is registered — the plugin becomes a target only if that widening is adopted);
 per-variation monitor/dashboard axis; stage-granular checkpoint task ids (the §7.3 fix);
 variations crossing Exchange/Join boundaries (§5.4); implicit variation cross products; weight
 clamping/validation hooks (narf `theory_weight_truncate` precedent); growth category axes;
