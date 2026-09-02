@@ -3275,9 +3275,11 @@ unchanged**.
     are unequal **AND hash differently**. The `__hash__` and wrap/attribution halves are `graphed`
     source, so they are anchored in `graphed`'s `tests/frozen/debug/m49`; what stays in
     `graphed-executors` is the real process-pool crossing.
-- **m50 — scale + integration** (repos: `graphed-histogram` + `graphed` preserve/docs, **plus
-  `graphed` frozen-only trees for the m49 carryover anchors below — no `graphed` source outside
-  preserve/docs is an m50 target**).
+- **m50 — scale + integration** (repos: `graphed-histogram` + `graphed`. The `graphed` source
+  targets are `preserve/` for §9.2, the §9.1 `graphed.variations` verb, and §6.2(i-bis)'s
+  axis-mode arm of the narrowing helpers — `accessors.py` already dispatches a duck-typed
+  histogram but reads every one as unvaried, so recognising a variation axis is an edit to that
+  arm. **The m49 carryover trees below add `graphed` frozen tests only, no source.**)
   Targets: §6.2, **§6.1c's AXIS-MODE slot** (the `(output, None)` keying and the per-slot spec
   taken from the fill node; §6.1c defines no per-output MODE field — the three slot key forms are
   disjoint and per output, and the combine stays a key-wise `+`), **§9.1's `graphed.variations`**
