@@ -2085,8 +2085,12 @@ existing metadata channels.
   `aggregate.py`) — added at m48 as a defaulted pass-through (it is §7.2's (β) return channel),
   populated at m49 — a sorted association list whose **ENTRY LAYOUT is bound**, because a producer
   in one repo and a consumer in another share it:
-  `((reduced_node_id, member_index | None), (labels, frame))`, one entry per key, `labels` a sorted
-  tuple of strings and `frame` the user source location as plain string/int data. `member_index`
+  `((reduced_node_id, member_index | None), (labels, frame))`, one entry per key the map covers,
+  `labels` a sorted tuple of strings — **possibly EMPTY, which is how a key no non-nominal label
+  reaches is carried** — and `frame` the user source location as plain string/int data. Entries sort
+  on `(reduced_node_id, -1 if member_index is None else member_index)`; a bare `sorted()` over the
+  keys is a `TypeError` the moment one reduced id carries both an indexed and a `None` entry.
+  `member_index`
   exists because a universe's chain collapses into a Stage whose members are evaluated inline
   (`execute.py`). **ONE field carries both payloads** — the labels of (i) and the provenance of
   (ii) — so §7.3's churn scope (one field, once, at m48) stands; nothing else on the closure may
@@ -2116,14 +2120,27 @@ existing metadata channels.
   representative in that graph.** The map is a plain index vector, so the boundary stays egg-free
   and Phase-2-swappable; DCE and CSE stay outside the engine; the engine's semantics and outputs are
   unchanged, so §3.3's benchmark and §3.2's determinism gate see the same reduced graph they see
-  today. The composed map — `record_node_id -> (reduced_node_id, member_index | None)`, absent for a
-  record id DCE dropped — rides on the artifact as an **additive `CompiledGraph` field**, absent at
-  m48, populated by `compile_ir` at m49 — the same additive-field shape §2.5 takes for its
-  diagnostics channels, with the same scoping note (m48's §7.2 schema-absence anchor is worded over
-  `ExecResult`/`Plan`/monitor, not `CompiledGraph`). **`compile_ir` populates the PER-KEY FRAME onto
-  that same artifact field**, applying (ii)'s tie-break as it goes: it is the one place holding both
-  the map and `Session._provenance`, which is `graphed`-private, so no consumer reaches across a
-  repo boundary for it and the hook supplier copies rather than computes. Consequence: **m48's (α)
+  today. It rides on the artifact as an **additive `CompiledGraph` field**, absent at m48, populated
+  by `compile_ir` at m49 — the same additive-field shape §2.5 takes for its diagnostics channels,
+  with the same scoping note (m48's §7.2 schema-absence anchor is worded over
+  `ExecResult`/`Plan`/monitor, not `CompiledGraph`).
+  **This field is the SECOND structure two repos share, so its shape and its owner are bound here,
+  beside the closure's.** It carries two halves: the composed map
+  `record_node_id -> (reduced_node_id, member_index | None)`, absent for a record id DCE dropped;
+  and a per-KEY frame association list in (i)'s key order, `((reduced_node_id, member_index | None),
+  frame)`. **`compile_ir` owns both and applies (ii)'s tie-break as it builds the second** — it is
+  the one place holding the map and `Session._provenance` together, and that dict is `graphed`-
+  private, so the tie-break never runs across a repo boundary. The `graphed-histogram` hook READS
+  the map (to fold its cone walk onto keys) and COPIES the frames; it computes neither.
+  **Population is GATED on the session carrying registered variations** — no registration, no field,
+  no bytes. The gate is not cosmetic: unlike `_PartitionReduce`, which carries `ir` as bytes, the
+  write closures embed the whole `CompiledGraph` BY VALUE (`_WritePart`, `awkward/io.py`,
+  `numpy/io.py`), so an unconditional field would change every UNVARIED write program's pickled
+  closure and grow it by an entry per record node — re-churning by-value write journals a second
+  time and falsifying §7.3's write-path account. Gated, an unvaried program's artifact and closure
+  are byte-identical to m48's, which is also the §2.5 precedent's shape (`unreached_labels` is empty
+  for an unvaried program). A VARIED write program does carry it, and churns nothing either: varied
+  write-out is new surface at m51 (§6.4f), so no journal predates it. Consequence: **m48's (α)
   hook signature — ONE argument, the `CompiledGraph` — stays sufficient at m49 and MUST NOT be
   widened**; the hook reads both halves off the artifact it already receives.
   **BOTH reduction paths carry it.** `compile_ir` reduces through `GraphStore.reduce_with_outputs`
@@ -2138,18 +2155,24 @@ existing metadata channels.
   entry's record CONE (`session.walk` from that label's marked output — the whole cone, NOT §3.4's
   reachability difference, because the shared prefix is exactly where a fused failure raises), map
   every reached id through the accessor, and UNION the labels per resulting key — which is what
-  makes the map set-valued. **`"nominal"` is EXCLUDED from that union, and a key whose union is
-  empty carries no entry**: the empty rendering `""` stays the single encoding of nominal/unvaried
-  (§8.1), and no key ever renders the literal string `nominal`. It pairs each key with the frame
-  the artifact already carries and returns the whole association list through §7.2's (β) channel.
+  makes the map set-valued. **`"nominal"` is EXCLUDED from that union, and a key no non-nominal
+  label reaches keeps its entry with an EMPTY label tuple** — it still has a frame, so a failure in
+  the shared prefix is still attributed to the user's line, and it renders `""` per the rule below,
+  which stays the single encoding of nominal/unvaried (§8.1); no key ever renders the literal string
+  `nominal`. The producer pairs each key with the frame the artifact carries and returns the whole
+  association list through §7.2's (β) channel.
   `graphed` itself never produces the CLOSURE field: §2.3d makes `compile_ir`/`aggregate_plan`
-  refuse a `Varied` output, and frozen m48 law pins the field to `None` when no hook is supplied.
-  **That `None` is a bound state, not an oversight, and (ii)'s wrap is conditional on it**: a
-  hook-less program — every plain `aggregate_plan` build and every unvaried one — ships `None`, the
-  wrap attributes nothing, and the original exception propagates exactly as it does today. Only a
-  program whose builder supplied the hook gains labelled `StageError`s. So §7.3's scope holds
-  verbatim (unvaried programs keep the `None` default and churn nothing at m49), and the M6 contract
-  is extended where attribution exists rather than narrowed anywhere; constructing a `StageError`
+  refuse a `Varied` output. **When the artifact carries no correspondence — the gate above, i.e. a
+  program that registered no variation — the hook returns `None`**, which is what the as-built
+  guard's own return type already says; frozen m48 pins that `None` for a hook-less build, and m49
+  makes it the answer for a hook-ED unvaried one too. This matters because §7.2's widened refusal
+  reaches the artifact only through the (α) hook, so at m49 both builders supply a hook on EVERY
+  program: hook presence stops discriminating anything and cannot classify the wrap.
+  **What classifies it is the ENTRY**: (ii) attributes a failure when the field carries an entry for
+  the failing key, and re-raises the original exception untouched otherwise — which is today's
+  behaviour, and is what every unvaried program gets. So §7.3's scope holds verbatim (unvaried
+  programs keep the `None` default and churn nothing at m49), the M6 contract is extended where
+  attribution exists rather than narrowed anywhere, and constructing a `StageError`
   with no frames is not a case the design admits. Consequence for §10: `graphed`'s m49 anchor
   witnesses the ACCESSOR (and the
   set-valuedness its key space must support); the LABEL association is witnessed in
@@ -2169,8 +2192,8 @@ existing metadata channels.
   descoping it removes per-label attribution entirely.
   (ii) *Attributed worker-side errors*, which do not exist today: the `evaluate_ir` call site in
   `_PartitionReduce.__call__` is wrapped so that a worker failure becomes a `StageError` **when the
-  closure carries attribution, and re-raises untouched when it does not** — `StageError` needs the
-  user's frames at construction, so with the field at its `None` default there is nothing to build
+  field carries an entry for the failing key, and re-raises untouched when it does not** (i) —
+  `StageError` needs the user's frames at construction, so with no entry there is nothing to build
   one from and today's behaviour is the correct behaviour. The frames ride the SAME field as (i),
   one entry per key, **re-keyed through the same accessor** by `compile_ir` (i), since
   `Session._provenance` is keyed by
@@ -2948,8 +2971,8 @@ unchanged**.
   `graphed-executors` — the repo list is what R0.5's full-matrix-CI-green check and per-repo
   freeze tagging key on).
   Targets: §3.3, §3.4 (frozen anchor), §5 **including §6.1d's awkward broadcast-blame wrapper**,
-  **§7 — EXCEPT §7.2's SEAM, which lands at m48 (§10/m48); m49 owns only §7.2's widening of the
-  merge-shortfall refusal to unvaried programs**,
+  **§7 — EXCEPT §7.2's SEAM, which lands at m48 (§10/m48); m49 owns §7.2's merge-shortfall refusal
+  on every builder and every program, which on `Histogram.plan()` is new work, not a widening**,
   **§8 — EXCEPT §8.2(i)'s `variation_labels` FIELD DECLARATION, which lands at m48 with §7.2's (β)
   return channel (its `tuple[Any, ...] | None` annotation is the shipped one and m49 does not
   narrow it); m49 adds the record→reduced correspondence through all four reduction passes and both
@@ -3020,9 +3043,12 @@ unchanged**.
     coverage must come from `graphed`'s own frozen suite, which no `graphed-executors` test can
     supply. It carries the in-process failure through `_PartitionReduce` and a spawn-based
     cross-process test (`tests/frozen/debug/m6/test_process_boundary.py` precedent), **plus the
-    hook-less arm**: an `aggregate_plan` build with no hook ships the `None` field, and a worker
-    failure there re-raises the ORIGINAL exception unchanged — not a `StageError` and not the
-    `IndexError` an unconditional wrap would produce from empty frames. Its attributed arm supplies
+    UNATTRIBUTED arm**: a program that registers no variation carries no entry for the failing key,
+    and a worker failure there re-raises the ORIGINAL exception unchanged — not a `StageError` and
+    not the `IndexError` an unconditional wrap would produce from empty frames — **and the
+    tie-break**, whose source is `compile_ir`'s: two record ids recorded at DIFFERENT user lines
+    that the reducer merges onto one key, asserting the frame of the LOWEST (a last-writer-wins
+    implementation reports the other line and is red). Its attributed arm supplies
     a (β) hook, which is legal because §5.2a's self-derivation ban is worded over the LABEL
     association, not over the mechanism this anchor witnesses. The `debug`
     subtree runs whole, so basenames are unique against every debug milestone.
@@ -3188,14 +3214,14 @@ unchanged**.
     distinct labels have distinct FILL nodes by §6.1b's count, so no fill-node key is ever reached
     by two labels. **Plus the nominal-exclusion clause** (§8.2(i)): the shared prefix, which every
     label's cone reaches, carries the non-nominal labels and NOT the string `nominal`, and a key
-    reached only from the nominal cone carries no entry at all — the two encodings the rendering
-    rule and §8.1's empty-string contract would otherwise both admit.
+    reached only from the nominal cone carries an EMPTY label tuple beside a real frame — so it
+    renders `""` and still points at the user's line, the one encoding §8.1's empty-string contract
+    admits.
   - §8.2 cross-process labeled StageError (incl. §7.4 dead-letter label) **plus the shared-node
     multi-label RENDERING half** (without it the single-label anchor passes under a
-    pick-one-arbitrarily implementation) **and the PROVENANCE half on the same shared node** — two
-    record ids recorded at DIFFERENT user lines that the reducer merges onto one key, asserting the
-    frame of the LOWEST record id (§8.2(ii)'s tie-break); a last-writer-wins implementation reports
-    the other line and is red. §7.3 interrupt/resume byte-identity **over a
+    pick-one-arbitrarily implementation) — the tie-break behind it is `graphed` source and is
+    anchored in `debug/m49` above, so what this bullet adds is that a shared node's attribution
+    SURVIVES the process crossing. §7.3 interrupt/resume byte-identity **over a
     `DurablePlan` built by value exactly as the §8.2(i) anchor above builds it** (under
     `OpSpec.from_ref` the fixture would exercise no varied lowering at all). **Plus §8.1's
     `__hash__` participation explicitly**: `__eq__` compares `self.__dict__` so a new field
