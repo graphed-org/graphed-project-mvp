@@ -2192,7 +2192,9 @@ existing metadata channels.
   descoping it removes per-label attribution entirely.
   (ii) *Attributed worker-side errors*, which do not exist today: the `evaluate_ir` call site in
   `_PartitionReduce.__call__` is wrapped so that a worker failure becomes a `StageError` **when the
-  field carries an entry for the failing key, and re-raises untouched when it does not** (i) —
+  field carries an entry for the failing key, and re-raises untouched when it does not** (i); a
+  `GraphedError` re-raises untouched on EVERY arm regardless of entry — it is already an attributed
+  error, and §6.1d's blame parity (the plan path re-raises the guard's message verbatim) binds it —
   `StageError` needs the user's frames at construction, so with no entry there is nothing to build
   one from and today's behaviour is the correct behaviour. The frames ride the SAME field as (i),
   one entry per key, **re-keyed through the same accessor** by `compile_ir` (i), since
