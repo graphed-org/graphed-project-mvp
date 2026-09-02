@@ -2056,7 +2056,7 @@ existing metadata channels.
   changes nothing; by-value journals exist only where a caller built the `DurablePlan` itself
   through `OpSpec.from_callable(plan.process)`, and `graphed-executors/src` has no
   `task_id`/`DurablePlan` references at all. Document the churn WITH that scope.
-  **The WRITE path has NO journal to churn**: §6.4f widens `_WritePart.__call__`'s single-output
+  **The WRITE path churns no SHIPPED journal**: §6.4f widens `_WritePart.__call__`'s single-output
   unpack, but `graphed.write.write_plan` builds `Plan(process=write_part, …)` — the same
   plain-callable `Plan` — so nothing that ships today is invalidated. Where a caller wraps a
   write closure by hand (`OpSpec.from_callable(write_part)`), the m48 churn scope above applies —
@@ -2064,7 +2064,7 @@ existing metadata channels.
   `CompiledGraph` by value and §8.2(i) adds a field to it. Same shape as m48's, same scope, same
   documentation duty, and unconditional: a dataclass field is in every instance's pickled state
   whatever its value, so no unvaried program escapes it and the m49 artifact also grows by roughly
-  an entry per record node. Document BOTH churns together; that is what m51's docs anchor says.
+  an entry per record node. Both churns are documented together, in m50's docs anchor.
   Stage-granular content addressing is the named
   Phase-2 fix (§11). Blob storage stays content-deduped (`store.py`).
 - **§7.4** Retry/dead-letter stay partition-atomic; docs state that one poisoned variation
@@ -2138,10 +2138,7 @@ existing metadata channels.
   the one place holding the map and `Session._provenance` together, and that dict is `graphed`-
   private, so the tie-break never runs across a repo boundary. The `graphed-histogram` hook READS
   the map (to fold its cone walk onto keys) and COPIES the frames; it computes neither.
-  **The field is unconditional, and its one-time cost is stated in §7.3 rather than gated away**: a
-  defaulted dataclass field is in every instance's pickled state whatever its value, and
-  `_WritePart` embeds the whole `CompiledGraph` by value, so no population rule can keep an m49
-  artifact byte-identical to an m48 one. Consequence: **m48's (α)
+  **The field is unconditional; its one-time cost is §7.3's.** Consequence: **m48's (α)
   hook signature — ONE argument, the `CompiledGraph` — stays sufficient at m49 and MUST NOT be
   widened**; the hook reads both halves off the artifact it already receives.
   **BOTH reduction paths carry it.** `compile_ir` reduces through `GraphStore.reduce_with_outputs`
@@ -2218,13 +2215,15 @@ existing metadata channels.
   not nominal appears in both impact sets), carried as (i)'s sorted tuple. Rendering is bound: a
   singleton renders as that label; a multi-label value renders as its labels sorted and joined
   by `,`; **an EMPTY label tuple — the only nominal encoding, since (i) excludes `"nominal"` from
-  the union and gives every key it maps an entry — renders `""` (nominal/unvaried, §8.1)**. A key
+  the union — renders `""` (nominal/unvaried, §8.1)**. A key
   with NO entry renders nothing: (ii) never builds a `StageError` for one.
   Frozen m49 anchors: a failure raised inside the `jes_up` universe on a worker across a process
   boundary re-raises driver-side carrying `variation == "jes_up"` AND the user's analysis line
   (M6 contract extended, not altered), and the dead-letter descriptor shows the label (§7.4);
   **plus a shared-node failure asserting the multi-label rendering** (a pick-one-arbitrarily
-  implementation passes the single-label anchor alone).
+  implementation passes the single-label anchor alone) **and a shared-PREFIX failure in the same
+  varied program asserting the empty-tuple rendering** — `variation == ""` WITH the user's line, so
+  an implementation that renders it `"nominal"` or skips the wrap for it is red.
 - **§8.3** Per-node provenance needs no new machinery (§2.3): varied nodes record at user op
   lines. `to_dot`/debug labels remain readable; the impact-set API (§3.4) is the "which nodes
   belong to which label" view.
@@ -3044,10 +3043,8 @@ unchanged**.
     coverage must come from `graphed`'s own frozen suite, which no `graphed-executors` test can
     supply. It carries the in-process failure through `_PartitionReduce` and a spawn-based
     cross-process test (`tests/frozen/debug/m6/test_process_boundary.py` precedent), **plus the
-    UNATTRIBUTED arm, spelled on the ADMITTED member**: an unvaried chain compiled in a session that
-    HAS registered variations on another chain — the ordinary multi-output analysis, and the member a
-    session-scoped predicate would wrongly attribute — carries no entry for the failing key, and a
-    worker failure there re-raises the ORIGINAL exception unchanged, not a `StageError` and not the
+    UNATTRIBUTED arm**, which is wrap-side and nothing else: with no entry for the failing key a
+    worker failure re-raises the ORIGINAL exception unchanged, not a `StageError` and not the
     `IndexError` an unconditional wrap would produce from empty frames — **and the
     tie-break**, whose source is `compile_ir`'s: two record ids recorded at DIFFERENT user lines
     that the reducer merges onto one key, asserting the frame of the LOWEST (a last-writer-wins
@@ -3215,7 +3212,12 @@ unchanged**.
     carries BOTH labels — the set-valued half the `graphed` accessor anchor can only witness as a
     key collapse. The fixture's shared node is UPSTREAM of the label fork (the §3.4 shape):
     distinct labels have distinct FILL nodes by §6.1b's count, so no fill-node key is ever reached
-    by two labels. **Plus the nominal-exclusion clause** (§8.2(i)): the shared prefix, which every
+    by two labels. **Plus the ADMITTED member of the hook's None rule** (§8.2(i)), which only this
+    repo can witness because only here does the producer run: an UNVARIED builder call made in a
+    session that registered a variation on ANOTHER chain ships `variation_labels is None`. A
+    session-scoped producer fails it; the `graphed` trees cannot, since a hook-less
+    `aggregate_plan` returns `None` whatever the producer does.
+    **Plus the nominal-exclusion clause** (§8.2(i)): the shared prefix, which every
     label's cone reaches, carries the non-nominal labels and NOT the string `nominal`, and a key
     reached only from the nominal cone carries an EMPTY label tuple beside a real frame — so it
     renders `""` and still points at the user's line, the one encoding §8.1's empty-string contract
@@ -3341,9 +3343,10 @@ unchanged**.
   - Docs: a "How variations work" design.rst section with **executed** examples (the docs-sweep
     rule) covering §7.3's limitations — **all three invalidation classes, each with the scope §7.3
     binds**: the IR-level one (adding/removing a variation) is unconditional, while the
-    label-RENAME class and **m48's** one-time closure churn (§7.2's (β) puts §8.2(i)'s field on
-    `_PartitionReduce` at m48; m49 only populates it) apply only to journals whose
-    `DurablePlan.process` `OpSpec` embeds the worker closure BY VALUE — the documented
+    label-RENAME class and the **by-value journal** class — which lands TWICE, once at m48
+    (§7.2's (β) puts §8.2(i)'s field on `_PartitionReduce`) and once at m49 (§8.2(i) adds a field
+    to `CompiledGraph`, which the write closures embed by value, §7.3) — apply only to journals
+    whose `DurablePlan.process` `OpSpec` embeds the worker closure BY VALUE — the documented
     `OpSpec.from_ref` idiom (`docs/checkpoint/design.rst`) is unaffected.
 
 - **m51 — variation-aware write-out (skim augmentation)** (repos: `graphed` +
