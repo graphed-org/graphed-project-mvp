@@ -3179,11 +3179,8 @@ unchanged**.
     off THAT artifact, never asserted as §3.3's raw-builder literals** — §5.2c bars those of a
     `vary`-built program, and the same reduction produced both sides here, so the artifact is the
     oracle and no literal is frozen.
-    **The clause is asserted on the BASE fixture (± the unmarked dead branch) ONLY,
-    NOT on the shared-node extension**: the dead branch changes nothing (DCE removes it), while
-    the shared-node extension changes both counts. The shared-node fixture carries the
-    BOTH-labels clause; the
-    cardinality literals stay with the base one.
+    **The cardinality clause is asserted on the BASE fixture (± the unmarked dead branch) ONLY,
+    NOT on the shared-node extension**, which carries the BOTH-labels clause instead.
     **Plus the clause that discriminates the composition from the DCE-only reading**: a THIRD
     extension carries a node the reduction removes AFTER dead-code elimination — an identity-token
     op (`x * 1.0`) on a live path, which is reachable from an output and so survives DCE, and is
@@ -3191,7 +3188,7 @@ unchanged**.
     input landed in, which only a map composed through canonicalization, CSE and stage fusion can
     answer. It is the NARROW discriminator: the base clauses above already red a DCE-`remap`-only
     accessor (where every universe's reduction is marked, DCE drops nothing, so its remap is the
-    identity and its image is neither the reduced store's node ids nor `2N + 2` of them), while this
+    identity and its image is not the reduced store's node ids), while this
     one isolates the post-DCE passes from the composition as a whole.
     **Plus BOTH reduction paths**: the same fixture compiled on a
     `Session(incremental=True)` — public M10 surface, which reduces through a canonical arena of
@@ -3230,9 +3227,10 @@ unchanged**.
     reached only from the nominal cone carries an EMPTY label tuple beside a real frame — so it
     renders `""` and still points at the user's line, the one encoding §8.1's empty-string contract
     admits.
-  - §8.2 cross-process labeled StageError (incl. §7.4 dead-letter label) **plus the shared-node
-    multi-label RENDERING half** (without it the single-label anchor passes under a
-    pick-one-arbitrarily implementation) — the tie-break behind it is `graphed` source and is
+  - §8.2 cross-process labeled StageError (incl. §7.4 dead-letter label) **plus both §8.2 rendering
+    members — the shared-node MULTI-LABEL half and the nominal-exclusive EMPTY-TUPLE half**
+    (without the first, the single-label anchor passes under a pick-one-arbitrarily
+    implementation) — the tie-break behind it is `graphed` source and is
     anchored in `debug/m49` above, so what this bullet adds is that a shared node's attribution
     SURVIVES the process crossing. §7.3 interrupt/resume byte-identity **over a
     `DurablePlan` built by value exactly as the §8.2(i) anchor above builds it** (under
@@ -3608,13 +3606,13 @@ NodeKey.
   - (2) **§6.4f numpy refusal.** The trigger (a `Varied` first positional) and entry point
     (`graphed.numpy.io.to_parquet`) are bound; the error CLASS and message wording are pinned at m51
     freeze. The numpy idiom bindingly gains no `select=` keyword, so no m51 anchor freezes that arm.
-  - (4) **§8.2(i)'s `CompiledGraph` correspondence field.** Its shape and owner are bound in
-    §8.2(i); the field NAME and the accessor's exported spelling are pinned at m49 freeze, like the
-    verbs in §9.1.
   - (3) **§8.2(i) producer cost.** The bound recipe walks one record CONE per label inside
     `plan()`. Its cost is bounded by the per-label cone size (the same traversal §3.4's verb
     performs) and is a driver-side, once-per-plan walk; m49 decomposition confirms it against §3.3's
     budget and states the measurement (R0.11) rather than assuming it here.
+  - (4) **§8.2(i)'s `CompiledGraph` correspondence field.** Its shape and owner are bound in
+    §8.2(i); the field NAME and the accessor's exported spelling are pinned at m49 freeze, like the
+    verbs in §9.1.
 
 ---
 
