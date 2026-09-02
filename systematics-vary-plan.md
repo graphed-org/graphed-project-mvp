@@ -2161,8 +2161,10 @@ existing metadata channels.
   `nominal`. The producer pairs each key with the frame the artifact carries and returns the whole
   association list through §7.2's (β) channel.
   `graphed` itself never produces the CLOSURE field: §2.3d makes `compile_ir`/`aggregate_plan`
-  refuse a `Varied` output. **The hook returns `None` when no key carries a label** — the predicate
-  is the PAYLOAD's own emptiness, so it quantifies over the compiled program and not over the
+  refuse a `Varied` output. **The hook returns `None` when no key carries a label** — not when the
+  payload is empty, which it never is (every key the map covers gets an entry, so an unvaried
+  program's payload is a full list of all-empty-tuple entries). The predicate reads the LABELS, so it
+  quantifies over the compiled program and not over the
   session, and an unvaried chain compiled beside a varied one in one session answers `None` like any
   other unvaried program. Hook PRESENCE classifies nothing at m49: §7.2's refusal reaches the
   artifact only through the (α) hook, so both builders supply one on every program.
@@ -2224,7 +2226,8 @@ existing metadata channels.
   **plus a shared-node failure asserting the multi-label rendering** (a pick-one-arbitrarily
   implementation passes the single-label anchor alone) **and a NOMINAL-EXCLUSIVE-node failure in the
   same varied program asserting the empty-tuple rendering** — a key reached only from the nominal
-  cone (the nominal sibling fill is one), `variation == ""` WITH the user's line, so an
+  cone — a nominal-branch-exclusive USER op, which the m6 house pattern can poison; the
+  builder-emitted nominal sibling fill cannot be — `variation == ""` WITH the user's line, so an
   implementation that renders it `"nominal"` or skips the wrap for it is red. Both ride the
   cross-process bullet's home, `graphed-executors`' flat `tests/frozen/m49` (§10/m49).
 - **§8.3** Per-node provenance needs no new machinery (§2.3): varied nodes record at user op
@@ -3056,8 +3059,8 @@ unchanged**.
     association, not over the mechanism this anchor witnesses. The `debug`
     subtree runs whole, so basenames are unique against every debug milestone.
     `graphed-executors`' flat `tests/frozen/m49` keeps the CROSS-REPO half — the labelled
-    `StageError` surviving a real process-pool boundary, including the dead-letter label — which
-    only that repo can exercise.
+    `StageError` surviving a real process-pool boundary, including the dead-letter label, and both
+    §8.2 rendering members (multi-label and empty-tuple) — which only that repo can exercise.
     The §5.5a comparison quantities are produced by a PLAN RUN — per-partition values concatenated
     in task order — and `Session.materialize` MUST NOT be the oracle: `materialize` is
     partition-blind, so the witness cannot observe `steps_per_file` through it. The deterministic
@@ -3171,13 +3174,15 @@ unchanged**.
     **Plus a PARTITIONING clause the §3.3 topology makes exact** (without it a degenerate constant
     map `record_id -> (one_stage_id, 0)` satisfies every clause above): the shared-prefix record
     ids all map to ONE reduced id, each universe's chain maps to a reduced id DISTINCT from every
-    other universe's, and the map's image over the WHOLE topology has exactly **2N + 2** distinct
-    reduced ids, of which exactly **N + 1** are of kind `stage` — matching §3.3's
-    `reduced_nodes == 2N + 2` / `stages == N + 1` shape.
-    **The cardinality clause is asserted on the BASE fixture (± the unmarked dead branch) ONLY,
+    other universe's, and the map's image over the WHOLE topology is exactly the set of the
+    compiled reduced store's node ids, its `stage`-kind subset exactly that store's stages. **Read
+    off THAT artifact, never asserted as §3.3's raw-builder literals** — §5.2c bars those of a
+    `vary`-built program, and the same reduction produced both sides here, so the artifact is the
+    oracle and no literal is frozen.
+    **The clause is asserted on the BASE fixture (± the unmarked dead branch) ONLY,
     NOT on the shared-node extension**: the dead branch changes nothing (DCE removes it), while
-    the shared-node extension gives `2N + 3` / `N + 2` — a literal frozen over a combined fixture
-    reds a correct accessor. The shared-node fixture carries the BOTH-labels clause; the
+    the shared-node extension changes both counts. The shared-node fixture carries the
+    BOTH-labels clause; the
     cardinality literals stay with the base one.
     **Plus the clause that discriminates the composition from the DCE-only reading**: a THIRD
     extension carries a node the reduction removes AFTER dead-code elimination — an identity-token
@@ -3603,6 +3608,9 @@ NodeKey.
   - (2) **§6.4f numpy refusal.** The trigger (a `Varied` first positional) and entry point
     (`graphed.numpy.io.to_parquet`) are bound; the error CLASS and message wording are pinned at m51
     freeze. The numpy idiom bindingly gains no `select=` keyword, so no m51 anchor freezes that arm.
+  - (4) **§8.2(i)'s `CompiledGraph` correspondence field.** Its shape and owner are bound in
+    §8.2(i); the field NAME and the accessor's exported spelling are pinned at m49 freeze, like the
+    verbs in §9.1.
   - (3) **§8.2(i) producer cost.** The bound recipe walks one record CONE per label inside
     `plan()`. Its cost is bounded by the per-label cone size (the same traversal §3.4's verb
     performs) and is a driver-side, once-per-plan walk; m49 decomposition confirms it against §3.3's
