@@ -1,6 +1,6 @@
 # Systematic variations in graphed — `vary`, the variation frontend + IR treatment (execution plan)
 
-Status: **r29 — streamlined design (extraction r28 + one critical streamlining pass).** Rationale
+Status: **streamlined design.** Revision identity lives in git, not here. Rationale
 (PART I) is context and binds nothing; PART II binds. Committed in the meta repo
 (`graphed-org/graphed-project-mvp`) together with its research companions. Measurements and
 evidence trails live in the files the plan cites — `systematics-vary-codebase-analysis.md`
@@ -2048,8 +2048,9 @@ existing metadata channels.
   §8.2(i) field onto `_PartitionReduce` at **m48**; adding the field changes the pickled instance
   state and therefore, through the opaque-`OpSpec` chain above, every by-value `task_id` — once,
   at m48, *unvaried* programs included (the field is unconditional). **m49 only POPULATES the
-  field**, which churns nothing further for unvaried programs (their value stays the `None`
-  default). **It is NOT "every existing journal"**: the documented checkpoint idiom embeds the
+  `_PartitionReduce` field**, which churns nothing further for unvaried programs (their value stays
+  the `None` default). The m49 artifact field is a separate, second churn, on the write path —
+  below. **It is NOT "every existing journal"**: the documented checkpoint idiom embeds the
   user's module-level functions BY REFERENCE (`process=OpSpec.from_ref("myanalysis:hist_chunk")`,
   `docs/checkpoint/design.rst`; the frozen m8 fixtures do the same), for which the added field
   changes nothing; by-value journals exist only where a caller built the `DurablePlan` itself
@@ -2058,8 +2059,13 @@ existing metadata channels.
   **The WRITE path has NO journal to churn**: §6.4f widens `_WritePart.__call__`'s single-output
   unpack, but `graphed.write.write_plan` builds `Plan(process=write_part, …)` — the same
   plain-callable `Plan` — so nothing that ships today is invalidated. Where a caller wraps a
-  write closure by hand (`OpSpec.from_callable(write_part)`), the m48 churn scope above applies
-  verbatim; that is what m51's docs anchor says. Stage-granular content addressing is the named
+  write closure by hand (`OpSpec.from_callable(write_part)`), the m48 churn scope above applies —
+  **and so does a SECOND one-time churn at m49**, because `_WritePart` embeds the whole
+  `CompiledGraph` by value and §8.2(i) adds a field to it. Same shape as m48's, same scope, same
+  documentation duty, and unconditional: a dataclass field is in every instance's pickled state
+  whatever its value, so no unvaried program escapes it and the m49 artifact also grows by roughly
+  an entry per record node. Document BOTH churns together; that is what m51's docs anchor says.
+  Stage-granular content addressing is the named
   Phase-2 fix (§11). Blob storage stays content-deduped (`store.py`).
 - **§7.4** Retry/dead-letter stay partition-atomic; docs state that one poisoned variation
   dead-letters the partition's whole composite (`runner.py`); the dead-letter surface names the
@@ -2132,15 +2138,10 @@ existing metadata channels.
   the one place holding the map and `Session._provenance` together, and that dict is `graphed`-
   private, so the tie-break never runs across a repo boundary. The `graphed-histogram` hook READS
   the map (to fold its cone walk onto keys) and COPIES the frames; it computes neither.
-  **Population is GATED on the session carrying registered variations** — no registration, no field,
-  no bytes. The gate is not cosmetic: unlike `_PartitionReduce`, which carries `ir` as bytes, the
-  write closures embed the whole `CompiledGraph` BY VALUE (`_WritePart`, `awkward/io.py`,
-  `numpy/io.py`), so an unconditional field would change every UNVARIED write program's pickled
-  closure and grow it by an entry per record node — re-churning by-value write journals a second
-  time and falsifying §7.3's write-path account. Gated, an unvaried program's artifact and closure
-  are byte-identical to m48's, which is also the §2.5 precedent's shape (`unreached_labels` is empty
-  for an unvaried program). A VARIED write program does carry it, and churns nothing either: varied
-  write-out is new surface at m51 (§6.4f), so no journal predates it. Consequence: **m48's (α)
+  **The field is unconditional, and its one-time cost is stated in §7.3 rather than gated away**: a
+  defaulted dataclass field is in every instance's pickled state whatever its value, and
+  `_WritePart` embeds the whole `CompiledGraph` by value, so no population rule can keep an m49
+  artifact byte-identical to an m48 one. Consequence: **m48's (α)
   hook signature — ONE argument, the `CompiledGraph` — stays sufficient at m49 and MUST NOT be
   widened**; the hook reads both halves off the artifact it already receives.
   **BOTH reduction paths carry it.** `compile_ir` reduces through `GraphStore.reduce_with_outputs`
@@ -2162,16 +2163,15 @@ existing metadata channels.
   `nominal`. The producer pairs each key with the frame the artifact carries and returns the whole
   association list through §7.2's (β) channel.
   `graphed` itself never produces the CLOSURE field: §2.3d makes `compile_ir`/`aggregate_plan`
-  refuse a `Varied` output. **When the artifact carries no correspondence — the gate above, i.e. a
-  program that registered no variation — the hook returns `None`**, which is what the as-built
-  guard's own return type already says; frozen m48 pins that `None` for a hook-less build, and m49
-  makes it the answer for a hook-ED unvaried one too. This matters because §7.2's widened refusal
-  reaches the artifact only through the (α) hook, so at m49 both builders supply a hook on EVERY
-  program: hook presence stops discriminating anything and cannot classify the wrap.
-  **What classifies it is the ENTRY**: (ii) attributes a failure when the field carries an entry for
-  the failing key, and re-raises the original exception untouched otherwise — which is today's
-  behaviour, and is what every unvaried program gets. So §7.3's scope holds verbatim (unvaried
-  programs keep the `None` default and churn nothing at m49), the M6 contract is extended where
+  refuse a `Varied` output. **The hook returns `None` when no key carries a label** — the predicate
+  is the PAYLOAD's own emptiness, so it quantifies over the compiled program and not over the
+  session, and an unvaried chain compiled beside a varied one in one session answers `None` like any
+  other unvaried program. Hook PRESENCE classifies nothing at m49: §7.2's refusal reaches the
+  artifact only through the (α) hook, so both builders supply one on every program.
+  **What classifies is the ENTRY**: (ii) attributes a failure when the field carries an entry for
+  the failing key, and re-raises the original exception untouched otherwise — today's behaviour, and
+  what every unvaried program gets. So §7.3's closure-field scope holds verbatim (unvaried
+  programs keep the `None` default), the M6 contract is extended where
   attribution exists rather than narrowed anywhere, and constructing a `StageError`
   with no frames is not a case the design admits. Consequence for §10: `graphed`'s m49 anchor
   witnesses the ACCESSOR (and the
@@ -2217,8 +2217,9 @@ existing metadata channels.
   **The map is set-valued, not a function** (§3.4: a node shared by `jes_up` and `jes_down` but
   not nominal appears in both impact sets), carried as (i)'s sorted tuple. Rendering is bound: a
   singleton renders as that label; a multi-label value renders as its labels sorted and joined
-  by `,`; **a key with no entry — the only nominal encoding, since (i) excludes `"nominal"` from
-  the union — renders `""` (nominal/unvaried, §8.1)**.
+  by `,`; **an EMPTY label tuple — the only nominal encoding, since (i) excludes `"nominal"` from
+  the union and gives every key it maps an entry — renders `""` (nominal/unvaried, §8.1)**. A key
+  with NO entry renders nothing: (ii) never builds a `StageError` for one.
   Frozen m49 anchors: a failure raised inside the `jes_up` universe on a worker across a process
   boundary re-raises driver-side carrying `variation == "jes_up"` AND the user's analysis line
   (M6 contract extended, not altered), and the dead-letter descriptor shows the label (§7.4);
@@ -3043,9 +3044,11 @@ unchanged**.
     coverage must come from `graphed`'s own frozen suite, which no `graphed-executors` test can
     supply. It carries the in-process failure through `_PartitionReduce` and a spawn-based
     cross-process test (`tests/frozen/debug/m6/test_process_boundary.py` precedent), **plus the
-    UNATTRIBUTED arm**: a program that registers no variation carries no entry for the failing key,
-    and a worker failure there re-raises the ORIGINAL exception unchanged — not a `StageError` and
-    not the `IndexError` an unconditional wrap would produce from empty frames — **and the
+    UNATTRIBUTED arm, spelled on the ADMITTED member**: an unvaried chain compiled in a session that
+    HAS registered variations on another chain — the ordinary multi-output analysis, and the member a
+    session-scoped predicate would wrongly attribute — carries no entry for the failing key, and a
+    worker failure there re-raises the ORIGINAL exception unchanged, not a `StageError` and not the
+    `IndexError` an unconditional wrap would produce from empty frames — **and the
     tie-break**, whose source is `compile_ir`'s: two record ids recorded at DIFFERENT user lines
     that the reducer merges onto one key, asserting the frame of the LOWEST (a last-writer-wins
     implementation reports the other line and is red). Its attributed arm supplies
@@ -3601,9 +3604,6 @@ NodeKey.
 
 ---
 
-r29 = the r28 design extraction of the review-clean r27 (`f85528e`) plus one critical
-streamlining pass: defensive test-litigation, negative-space enumerations, and cross-site
-restatements removed; binding content unchanged. Earlier revision history lives in git and the
-`systematics-vary-plan-revision-r*-notes.md` files; evidence trails live in the two research
-companions.
+Revision history lives in git and the `systematics-vary-plan-revision-r*-notes.md` files;
+evidence trails live in the two research companions.
 
