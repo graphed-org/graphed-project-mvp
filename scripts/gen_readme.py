@@ -25,13 +25,19 @@ README_PATH = ROOT / "README.md"
 
 STATUS_BADGE = {"DONE": "✅ DONE", "PENDING": "⬜ PENDING"}
 
-# The GitHub repositories carry an `-mvp` suffix; the orchestrator is the sole exception. Local
-# submodule paths and the logical names in `.graphed/state.json` are unsuffixed, so this maps a
-# logical name to its actual GitHub repository name.
-_NO_MVP_SUFFIX = {"graphed-orchestrator"}
+# Most GitHub repositories carry an `-mvp` suffix, but some don't: the orchestrator, and the
+# post-consolidation `graphed` and `graphed-histogram` repos. `graphed-exec-local` is the local
+# submodule path for the `graphed-executors` package. Local submodule paths and the logical names in
+# `.graphed/state.json` are the unsuffixed keys, so this maps a logical name to its GitHub repo.
+# The pre-consolidation per-package names (graphed-core, graphed-awkward, ...) still resolve to their
+# own `-mvp` repos, which still exist, so historical milestone rows keep valid links.
+_NO_MVP_SUFFIX = {"graphed-orchestrator", "graphed", "graphed-histogram"}
+_REPO_RENAME = {"graphed-exec-local": "graphed-executors"}
 
 
 def _gh(name: str) -> str:
+    if name in _REPO_RENAME:
+        return _REPO_RENAME[name]
     return name if name in _NO_MVP_SUFFIX else f"{name}-mvp"
 
 

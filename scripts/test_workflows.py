@@ -13,17 +13,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# Post-consolidation (2026-07-17) the frontend/core/awkward/numpy/debug/checkpoint/preserve packages
+# live in ONE repo, `graphed`; `graphed-exec-local` is the `graphed-executors` package. So the guard
+# now covers the five live submodules, not the pre-consolidation per-package repos.
 REPOS = [
     "graphed",
-    "graphed-core",
-    "graphed-awkward",
-    "graphed-numpy",
-    "graphed-debug",
     "graphed-exec-local",
-    "graphed-checkpoint",
-    "graphed-preserve",
     "graphed-corpus",
     "graphed-orchestrator",
+    "graphed-histogram",
 ]
 
 # what the A.5 matrix requires of every repo's test job
@@ -75,30 +73,32 @@ def test_every_repo_builds_wheel_artifacts() -> None:
 
 
 def test_no_branch_push_or_pr_workflow_publishes_to_pypi() -> None:
-    """Publishing may exist ONLY behind an explicit human release act (the M0 release-workflow
-    deliverable: a version tag -> TestPyPI staging, a published GitHub Release -> PyPI). Nothing
-    that runs on branch pushes or PRs — i.e. ordinary CI — may upload anywhere."""
+    """Publishing may exist ONLY behind an explicit human release act — a published GitHub `release:`
+    event, a version-TAG push (`vX.Y.Z`), or a manual `workflow_dispatch`. Nothing that runs on
+    branch pushes or PRs — i.e. ordinary CI — may upload anywhere. (The consolidated repos publish on
+    a version-tag push with OIDC provenance, which carries no `release:` event, so the guard checks
+    the invariant — no PR, no branch push — rather than mandating a `release:` trigger specifically.)"""
     for repo in REPOS:
         for name, text in _workflows(repo).items():
             has_publish = any(marker in text for marker in FORBIDDEN_PUBLISH_MARKERS)
             if not has_publish:
                 continue
             head = text.split("jobs:")[0]  # the `on:` trigger block
-            assert "release:" in head, (
-                f"{repo}/{name}: publish step outside a release workflow"
-            )
             assert "pull_request" not in head, (
                 f"{repo}/{name}: a PR workflow must never publish"
             )
+            # a `push:` trigger on a publishing workflow must be version-TAG-only, never a branch push
+            # (a `release:` event or a `workflow_dispatch` carries no push block and is fine).
             if "push:" in head:
-                push_block = head.split("push:")[1].split("release:")[0]
+                push_block = head.split("push:", 1)[1].split("release:", 1)[0]
                 assert "tags:" in push_block and "branches:" not in push_block, (
                     f"{repo}/{name}: a branch-push-triggered workflow must never publish"
                 )
 
 
-def test_core_wheels_cover_every_target_and_freethreaded() -> None:
-    wheels = _workflows("graphed-core")["wheels.yml"]
+def test_graphed_wheels_cover_every_target_and_freethreaded() -> None:
+    # Post-consolidation the Rust core ships in the `graphed` repo's wheels.
+    wheels = _workflows("graphed")["wheels.yml"]
     for marker in (
         "ubuntu-latest",
         "ubuntu-24.04-arm",
@@ -107,16 +107,17 @@ def test_core_wheels_cover_every_target_and_freethreaded() -> None:
         "universal2-apple-darwin",
         '"3.14t"',
     ):
-        assert marker in wheels, f"graphed-core/wheels.yml lost target {marker!r}"
+        assert marker in wheels, f"graphed/wheels.yml lost target {marker!r}"
 
 
-def test_core_gates_rust_coverage_and_freethreaded() -> None:
-    ci = _workflows("graphed-core")["ci.yml"]
+def test_graphed_gates_rust_coverage_and_freethreaded() -> None:
+    # Post-consolidation the Rust coverage + free-threaded gates live in the `graphed` repo's CI.
+    ci = _workflows("graphed")["ci.yml"]
     assert "cargo llvm-cov" in ci and "--fail-under-lines" in ci, (
-        "graphed-core/ci.yml lost the Rust coverage gate (finding B.5)"
+        "graphed/ci.yml lost the Rust coverage gate (finding B.5)"
     )
     assert (
         "test-freethreaded" in ci
         and "continue-on-error"
         not in ci.split("test-freethreaded")[1].split("steps:")[0]
-    ), "graphed-core 3.14t job must be a required gate"
+    ), "graphed 3.14t job must be a required gate"

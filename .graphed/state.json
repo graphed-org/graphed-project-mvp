@@ -4,8 +4,8 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "DONE",
-  "updated_at": "2026-06-19T02:59:56Z",
-  "note": "Project-level rollup. MVP COMPLETE: ORCH, M0 (10 repos), M0.5, M1–M9 all DONE and CI-green on the A.5 matrix. M9: new graphed-preserve repo — the analysis preservation bundle. build_bundle captures the canonical IR (M8, opt_level=0) + M6 provenance/sourcemap + every External payload (real correctionlib JSON + ONNX model) by content hash in the M8 Store + input datasets + environment + config + seed into a manifest whose hash is the bundle fingerprint; reproduce interprets the IR (awkward backend + payload-backed evaluators) bit-for-bit on a clean machine with no originals (raising UnresolvedPayload on any missing reference); inspect renders IR + provenance + payload inventory + opaque-node risk flags without executing (faithful to reproduce). Self-fingerprinting (changes iff a content/result input changes). graphed-core gained GraphStore.nodes() IR introspection; graphed gained Session.sourcemap(). All 10 package repos public. M10 REMEDIATION (2026-06-09): the mvp-shortcomings.md findings fixed across the repos — genuine IncrementalReducer + Session(incremental=True) (A.1); IR-driven execution via compile_ir/evaluate_ir, one dispatch per REDUCED node, fork executor glue rewired (A.2); buffer-level projection project_buffers/necessary_buffers, count-only -> {col: OFFSETS} served from TTree counter branches (A.3); full A.5 CI matrices + build-only wheels (NO PyPI publish) + cargo llvm-cov gate, guarded by scripts/test_workflows.py (B.4/B.5); opt-in maximal stage fusion + full symmetric commute rule set + ParamMap token-injectivity fix (C.6/C.7); opt-in pooled combines (C.8); first-class Partition.blind, fork sentinel retired under freeze-UPROOT-1, graphed_write hardening (C.9); integrity scan catches bare-pass targets (C.10). Every fix has a NEW frozen suite (tests/frozen/m10); no pre-existing frozen test modified except the recorded freeze-UPROOT-1 encoding amendment.",
+  "updated_at": "2026-09-03T21:41:35Z",
+  "note": "Project-level rollup. The MVP (M0-M9 + M10 remediation) shipped as 10 package repos; on 2026-07-17 the core/frontend/awkward/numpy/debug/checkpoint/preserve packages were CONSOLIDATED into one repo, graphed-org/graphed, so the superproject now pins five submodules: graphed (consolidated), graphed-executors (path graphed-exec-local), graphed-histogram, graphed-corpus, graphed-orchestrator. Phase-2 arcs since: dask-awkward parity + histogram filling (M11-M36), live dashboard + inter-worker comms (M37/M38, root prompt R20/R21), distributed joins + repartitioning + cluster data plane (M39-M41, R22), dask & parsl executor backends (M42-M47), and the systematics-vary arc — an RDF-Vary analogue (M48-M51, root prompt R23): the vary/Varied frontend, weight+shift lowering, the sink variation axis, and variation-aware skim write-out. All milestones DONE and CI-green on the A.5 matrix.",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
     "cumulative_tokens_cap": null,
@@ -13,7 +13,7 @@
     "consecutive_pauses_cap": 2,
     "tripped": false
   },
-  "current_milestone": "DONE",
+  "current_milestone": "m51",
   "phases": [
     "PENDING",
     "DECOMPOSE",
@@ -49,56 +49,20 @@
       "visibility": "public",
       "is_submodule": true
     },
-    "graphed-core": {
-      "role": "M1/M4/M7-contract/M8-plan",
-      "created": true,
-      "visibility": "public",
-      "is_submodule": true
-    },
     "graphed": {
-      "role": "M2/M3 frontend",
-      "created": true,
-      "visibility": "public",
-      "is_submodule": true
-    },
-    "graphed-awkward": {
-      "role": "M3/M5 reference backend",
-      "created": true,
-      "visibility": "public",
-      "is_submodule": true
-    },
-    "graphed-numpy": {
-      "role": "M2 trivial backend",
-      "created": true,
-      "visibility": "public",
-      "is_submodule": true
-    },
-    "graphed-debug": {
-      "role": "M6 debug/tracebacks",
+      "role": "consolidated package: frontend + core (Rust IR/optimizer) + awkward + numpy + debug + checkpoint + preserve",
       "created": true,
       "visibility": "public",
       "is_submodule": true
     },
     "graphed-exec-local": {
-      "role": "M7 reference executor",
-      "created": true,
-      "visibility": "public",
-      "is_submodule": true
-    },
-    "graphed-checkpoint": {
-      "role": "M8 checkpoint/resume",
-      "created": true,
-      "visibility": "public",
-      "is_submodule": true
-    },
-    "graphed-preserve": {
-      "role": "M9 preservation bundle",
+      "role": "graphed-executors: reference + dask + parsl executors, shuffle/join data plane",
       "created": true,
       "visibility": "public",
       "is_submodule": true
     },
     "graphed-histogram": {
-      "role": "M23/M29 deferred histogram filling",
+      "role": "histogram filling (M23/M29) + systematics-vary sink variation axis (M48-M51)",
       "created": true,
       "visibility": "public",
       "is_submodule": true
@@ -559,6 +523,143 @@
       "repos": [
         "graphed-core",
         "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M39": {
+      "title": "Distributed joins I — the `Exchange` (shuffle) IR boundary + `ShuffleBackend` protocol with a keyed all-to-all over the p2p transport (merge-to-large-blocks, never M×R). Root prompt R22.",
+      "repos": [
+        "graphed",
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M40": {
+      "title": "Distributed relational joins — a `Join` IR boundary + `JoinBackend`, `graphed.join(on,how)` with SQL-duplicating semantics and a deterministic broadcast-vs-shuffle cost model; bounded-memory join + skew salting. Root prompt R22.",
+      "repos": [
+        "graphed",
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M41": {
+      "title": "Cluster-runtime hardening — fetch RAM budget + reader-plane spill, incast coalescing, per-node disk budget, tested cross-process over routable addresses behind a `ClusterExecutor` launch seam (real launcher deferred). Root prompt R22.",
+      "repos": [
+        "graphed",
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M42": {
+      "title": "Dask executor backend — a `SubmitBackend` protocol driving reference execution over `dask.distributed`.",
+      "repos": [
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M43": {
+      "title": "Dask backend completion — full graphed-on-dask execution + resume parity with the reference executor.",
+      "repos": [
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M44": {
+      "title": "`DaskWorkerTransport` — graphed's `WorkerTransport` seam atop dask worker-to-worker comms.",
+      "repos": [
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M45": {
+      "title": "Unified shuffle facade — one entry point selecting the shuffle transport via `shuffle_method`.",
+      "repos": [
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M46": {
+      "title": "Parsl backend I — a parsl executor adapter with a self-built HTTP rendezvous transport (parsl has no p2p).",
+      "repos": [
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M47": {
+      "title": "Parsl backend completion — full parsl execution + mutation-verified acceptance.",
+      "repos": [
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M48": {
+      "title": "Systematics-vary I — the `graphed.vary`/`Varied` frontend + weight-path lowering (record-time expansion, no Rust `Vary` NodeKey); sibling weight fills. Root prompt R23.",
+      "repos": [
+        "graphed",
+        "graphed-histogram"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M49": {
+      "title": "Systematics-vary II — shift-path lowering + impact introspection + cross-process executor end-to-end vs the corpus references. Root prompt R23.",
+      "repos": [
+        "graphed",
+        "graphed-histogram",
+        "graphed-exec-local"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M50": {
+      "title": "Systematics-vary III — scale + integration: the sink variation axis (`StrCategory`) fill lowering + varied preservation bundle. Root prompt R23.",
+      "repos": [
+        "graphed-histogram",
+        "graphed"
+      ],
+      "status": "DONE",
+      "phase": "DONE",
+      "blocked_on": null,
+      "iterations_cap": 14
+    },
+    "M51": {
+      "title": "Systematics-vary IV — variation-aware skim write-out: `graphed.awkward.to_parquet(select=)` superset base + XOR-delta/packbits universe columns under a parquet-KV manifest (+ uproot-fork derived-column ROOT half). Root prompt R23.",
+      "repos": [
+        "graphed"
       ],
       "status": "DONE",
       "phase": "DONE",

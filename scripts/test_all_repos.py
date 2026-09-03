@@ -18,15 +18,12 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# Post-consolidation (2026-07-17) the core/frontend/awkward/numpy/debug/checkpoint/preserve packages
+# are one repo, `graphed`; `graphed-exec-local` is the `graphed-executors` package. These are the
+# five live submodules.
 REPOS = (
-    "graphed-core",
     "graphed",
-    "graphed-numpy",
-    "graphed-awkward",
-    "graphed-debug",
     "graphed-exec-local",
-    "graphed-checkpoint",
-    "graphed-preserve",
     "graphed-corpus",
     "graphed-histogram",
     "graphed-orchestrator",
