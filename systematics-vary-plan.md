@@ -1706,8 +1706,7 @@ existing metadata channels.
   the RECORD'S OWN structure at depth k for a BARE depth-`k` entry (single-valued by the bare-key
   legality condition) — and a depth mismatch at ANY supplied level is refused at the `to_parquet`
   call, naming the level. Depth is a FORM property known at record time — read from the
-  typetracer form (`session.form(array).tt.ndim`, equivalently
-  `session.form(array).tt.layout.minmax_depth`), since the awkward-idiom `AwkwardForm` exposes no
+  typetracer form (`session.form(array).tt.ndim`), since the awkward-idiom `AwkwardForm` exposes no
   depth accessor of its own. m51's (2c) negative control carries the too-shallow level-1 mask
   alongside the jagged level-0 one.
   **Levels ≥ 1** — lineage is not the available handle, so the check is STRUCTURAL: each
