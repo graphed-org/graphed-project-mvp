@@ -2449,12 +2449,13 @@ gate, added to `graphed.yml` (the `graphed-histogram` `.github/workflows/ci.yml`
 explicit statement, in m51's DoD record, of the CI matrix its DONE is keyed on for this repo —
 either widen `graphed.yml` toward §A.5 or record the reduced matrix (ubuntu / 3.11–3.12) as the
 accepted scope — and either add `pull_request` to the trigger or state that DONE is keyed on a
-branch push. **(d) Cross-repo merge order.** m51 lands as TWO PRs (graphed + fork). The fork
-suite references NEW graphed symbols (e.g. `graphed.selection`, absent on graphed `@main`), so the
-fork's TEST_SANITY cannot COLLECT until graphed's m51 is reachable — during fork m51 development
-repoint `graphed.yml`'s `GRAPHED` env from `@main` to the graphed m51 branch, and after graphed's
-m51 merges to main reshuffle it back to `@main` (the m49/m50 precedent). That temporary pin is what
-makes the fork's TEST_SANITY collectible.
+branch push. **(d) Cross-repo landing.** m51 lands as TWO INDEPENDENT PRs (graphed + fork). The fork's m51
+scope is derived-column IR evaluation ONLY, using graphed's already-shipped IR API
+(`compile_ir`/`evaluate_ir`/`Array`/`Session`, ≥m10) — NO m51-new graphed symbol
+(`graphed.selection`/`select=`/`read_varied`, all awkward-side) reaches the fork — so the fork's
+TEST_SANITY is collectible against `graphed@main` with NO `graphed.yml` repoint. Land graphed
+first for tidiness. (A temporary `GRAPHED`-env pin — the m49/m50 precedent — is the fallback ONLY
+if a future revision restores a variation-aware ROOT reading, §11.)
 
 Each milestone runs the full §12 process. Frozen anchors listed here are the acceptance
 skeleton the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **binding and
