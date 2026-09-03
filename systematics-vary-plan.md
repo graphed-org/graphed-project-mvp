@@ -1660,9 +1660,12 @@ existing metadata channels.
   admitted: a skim written after ANY weight `vary` is written from a `vary`-derived context, and
   `vary` links do not move the row space (§6.1d link kind (2)) — bare handle equality alone would
   refuse a legal configuration, since a read through `E2 = graphed.vary(E1, …)` carries `E2` while
-  a read through `E1` carries `E1`, different handles and identical row spaces; m51's bridge
-  anchor (`select=graphed.selection(sel2)` for `sel2 = graphed.vary(sel, …)`) requires the
-  admission. Links of the universe/nominal projection kind are NOT admitted. The direction
+  a read through `E1` carries `E1`, different handles and identical row spaces. The admission is
+  WITNESSED by §10's discriminating control — `E2 = graphed.vary(E1, …)`, `sel = E2[mask]`,
+  `to_parquet(E1.Jet, select=graphed.selection(sel))` (record handle `E1`, mask handle `E2`,
+  accepted across the `vary` link) — NOT by the `sel2 = graphed.vary(sel, …)` bridge anchor, whose
+  mask already carries the record's root handle and so accepts by bare handle equality. Links of
+  the universe/nominal projection kind are NOT admitted. The direction
   matters: in the canonical `to_parquet(events.Jet, select=graphed.selection(sel))` with
   `sel = events[mask]`, the record's own context is the ROOT `events`, whose `graphed.selection`
   is `None` (§9.1) — the m51 anchor's wording, "a record whose context is not the one the
@@ -1686,8 +1689,9 @@ existing metadata channels.
   NOT "derived no context": a mask recorded entirely from reads through the record's own context
   (`select=(events.MET.pt > 50)` passed directly) carries handle `events` by §2.3e's ORIGINATION
   rule, so **a contexted mask carrying the RECORD'S OWN handle is ACCEPTED whether or not any
-  context was ever derived from it** — m51's fifth positive control, the only fixture that
-  distinguishes the two readings.
+  context was ever derived from it** — the case-(ii) origination control, the only fixture that
+  distinguishes the two readings (distinct from the enumerated fifth control, the
+  re-recorded-equal-expression positive control above).
   **(2b) ROW-COUNT EQUALITY between the record and that mask — EXECUTION-time, per partition**,
   raised by `_WritePart` before any buffer is stored, exactly like predicate (1).
   **(2c) LEVEL-0 DEPTH, record-time** — a mask supplied at level 0 MUST be FLAT over the record's
@@ -1701,8 +1705,10 @@ existing metadata channels.
   the record's structure — over the NAMED FIELD for a field-scoped level-k ≥ 1 entry, and over
   the RECORD'S OWN structure at depth k for a BARE depth-`k` entry (single-valued by the bare-key
   legality condition) — and a depth mismatch at ANY supplied level is refused at the `to_parquet`
-  call, naming the level. Depth is a FORM property known at record time (`_form_meta` in
-  `python/graphed/array.py`). m51's (2c) negative control carries the too-shallow level-1 mask
+  call, naming the level. Depth is a FORM property known at record time — read from the
+  typetracer form (`session.form(array).tt.ndim`, equivalently
+  `session.form(array).tt.layout.minmax_depth`), since the awkward-idiom `AwkwardForm` exposes no
+  depth accessor of its own. m51's (2c) negative control carries the too-shallow level-1 mask
   alongside the jagged level-0 one.
   **Levels ≥ 1** — lineage is not the available handle, so the check is STRUCTURAL: each
   per-label member of the mask must carry **that NAMED FIELD's own offsets at that depth — or,
@@ -1718,17 +1724,23 @@ existing metadata channels.
   which positive control.
   **Writing from a context (§2.6 idiom).** Contexts expose no mask accessor
   (§2.2/§9.1 list `labels`/`universe`/`nominal`/`weight`/`variations` only), so a binding bridge:
-  **`graphed.selection(ctx)`** returns the `Varied` mask that derived `ctx` from its parent (the
-  §2.6b lineage already retains it; a root context returns `None`), and the skim spelling is
+  **`graphed.selection(ctx)`** implements §9.1's FULL three-case contract — including CASE-2,
+  which returns a NON-`None` handle-carrying mask on a universe/nominal-derived context (that
+  label's member of the argument's own selection, an unvaried `Array` in the GRANDparent's row
+  space), the case §6.4a's universe/nominal REFUSE control relies on to fire for the specified
+  row-space/context reason. It is therefore NOT a thin wrapper over the current private
+  `EventContext._selection()` walk, which returns `None` on any project/universe/nominal link. A
+  root context returns `None`; the skim spelling is
   `to_parquet(events.Jet, select=graphed.selection(sel))`. Frozen-anchored in m51.
   **Where the checks RUN.** Offsets are data: at the `to_parquet` call the frontend holds a
   recorded graph and typetracer forms, and the write is evaluated **per partition inside the
   worker** (`_WritePart.__call__` reads the partition, calls `evaluate_ir`, then writes one
   part — `python/graphed/awkward/io.py`; the per-partition task graph is built by
   `python/graphed/write.py`). Binding: predicate (2a)'s **level-0 lineage** half **and (2c)'s
-  level-0 DEPTH half** ARE record-time checks raised from the `to_parquet` call; predicate (1)
+  DEPTH half at EVERY supplied level** ARE record-time checks raised from the `to_parquet` call
+  (depth is a form property at every level, §6.4a); predicate (1)
   (offsets), **predicate (2b)'s level-0 row-count equality** **and predicate (2)'s level-≥1
-  structural half** are **execution-time, per-partition checks raised by `_WritePart` BEFORE any
+  STRUCTURAL (offsets) half** are **execution-time, per-partition checks raised by `_WritePart` BEFORE any
   buffer is stored**, surfacing through the executor's error path — the same treatment §6.1d
   already takes for its length check. m51's anchors are worded accordingly; do NOT freeze a
   record-time raise for any offsets- or row-count-shaped predicate, (2b) included.
@@ -1818,8 +1830,8 @@ existing metadata channels.
   metadata channels: parquet key-value file metadata (unused by graphed today — greenfield).
   **The writer swap is CONDITIONAL, not unconditional**: measured (awkward 2.12.0 / pyarrow
   25.0.1), `ak.to_parquet(a, p)` and `pq.write_table(ak.to_arrow_table(a), p)` produce
-  **different bytes** for every array probed, and the arrow path **drops awkward's own
-  `awkward_array_metadata` KV entry**, which would break `ak.from_parquet` round-tripping;
+  **different bytes** for every array probed (so a naive arrow write breaks the §6.4g unvaried
+  byte-golden), and the arrow path **drops awkward's own `awkward_array_metadata` KV entry**;
   `ak.to_parquet` has no metadata parameter (signature verified), so the swap genuinely is
   required for the manifest. (`ak:parameters` appears only when the array carries awkward
   parameters — a property of the DATA, not of the writer — so no test may freeze a literal KV
@@ -1838,7 +1850,7 @@ existing metadata channels.
   never one that imports awkward's private package. **The no-private-import half is knowingly
   left UNANCHORED, and rides code review plus the repo's integrity scan**; an m51 implementation
   MAY discharge it with a one-line static assertion (the varied-write module's source contains
-  no `awkward._connect` import) in `tests/extra`. The ROOT-side equivalent pinned at m51 freeze.
+  no `awkward._connect` import) in `tests/extra`.
   The manifest maps each label to its stored column/branch names and per-column representation,
   **serialized with SORTED keys** (set/dict-iteration order would make the written bytes depend
   on `PYTHONHASHSEED`, the hazard §8.2(i) names for the plan closure). **The selection-LEVELS
@@ -1857,8 +1869,9 @@ existing metadata channels.
   freeze) reconstructs `{label: array}` per universe from the manifest — the round-trip is the
   m51 frozen anchor. **The reader is awkward-idiom, symmetric with the writer** (awkward and
   pyarrow live only in `graphed`'s extras, so a neutral `graphed.read_varied` returning awkward
-  arrays would put both behind the neutral namespace). The ROOT-side equivalent lives in the
-  uproot fork.
+  arrays would put both behind the neutral namespace). A variation-aware ROOT write-out and reader
+  (its own manifest channel + delta storage) is Phase-2 (§11); m51's ROOT half is derived-column
+  IR evaluation only (§6.4f, §10).
   (f) **Seam binding (write-seam evidence).** Parquet: appended columns are extra marked outputs
   of the SAME `compile_ir` (variadic by design), so the M4 optimizer shares the pass with the
   primary expression — appended between the evaluate and write steps of `_WritePart.__call__`.
@@ -1878,7 +1891,7 @@ existing metadata channels.
   path (record-time, at the call) with §7.2's message and workaround; the read list widens at
   `_evaluation_columns` (`awkward/io.py`) or projection starves the task. ROOT: `graphed_write`
   today copies branches verbatim with NO IR evaluation (`_graphed_write.py`; zero
-  `compile_ir`/`evaluate_ir` use) — adding evaluation is the **larger half** of m51 and is
+  `compile_ir`/`evaluate_ir` use) — adding evaluation (derived columns) is the ROOT half of m51 and is
   scoped there explicitly. numpy backend: EXEMPT — it hard-caps output at one 1-D column; the
   numpy-idiom write function refuses a varied write with a clear error naming the awkward
   backend. **The TRIGGER and the ENTRY POINT are pinned**: the function is
@@ -2423,7 +2436,7 @@ Vendoring follows `graphed`'s own precedent and adds no cross-repo resolution su
 a future revision prefers the dependency route, it MUST bind the pair — dev-extra name PLUS the
 env var and its `pip install` line in every job that runs the frozen suite.
 
-**`uproot5-graphed-mvp` gates** (m51's ROOT half is "the larger half of m51", §6.4f): the new
+**`uproot5-graphed-mvp` gates** (m51's ROOT half, §6.4f): the new
 tree IS collected (`testpaths = ["tests"]`), but the only workflow that installs `graphed` and
 runs the graphed tests is `.github/workflows/graphed.yml`, whose test step is
 `python -m pytest -vv tests -m "not xrootd"` with **zero `--cov`**, on **ubuntu-latest only**,
@@ -2437,7 +2450,12 @@ gate, added to `graphed.yml` (the `graphed-histogram` `.github/workflows/ci.yml`
 explicit statement, in m51's DoD record, of the CI matrix its DONE is keyed on for this repo —
 either widen `graphed.yml` toward §A.5 or record the reduced matrix (ubuntu / 3.11–3.12) as the
 accepted scope — and either add `pull_request` to the trigger or state that DONE is keyed on a
-branch push.
+branch push. **(d) Cross-repo merge order.** m51 lands as TWO PRs (graphed + fork). The fork
+suite references NEW graphed symbols (e.g. `graphed.selection`, absent on graphed `@main`), so the
+fork's TEST_SANITY cannot COLLECT until graphed's m51 is reachable — during fork m51 development
+repoint `graphed.yml`'s `GRAPHED` env from `@main` to the graphed m51 branch, and after graphed's
+m51 merges to main reshuffle it back to `@main` (the m49/m50 precedent). That temporary pin is what
+makes the fork's TEST_SANITY collectible.
 
 Each milestone runs the full §12 process. Frozen anchors listed here are the acceptance
 skeleton the test-author starts from; the frozen m05/m4/m9/m23/m29 artifacts are **binding and
@@ -3579,7 +3597,8 @@ unchanged**.
     behaviour, i.e. a `Varied` RECORD and/or a `Varied` `select=` (both arms) is consumed
     internally and no per-label result is returned to the caller.
   - ROOT half: `graphed_write` gains IR evaluation (derived columns in ROOT skims — the §6.4f
-    larger half) with the same round-trip anchor.
+    ROOT half) with a DERIVED-COLUMN round-trip anchor. A variation-aware ROOT write-out is
+    Phase-2 (§11), so no varied ROOT reader/manifest is frozen at m51.
   - **numpy-backend refusal (§6.4f), in `graphed`'s `tests/frozen/numpy/m51`** (it is
     `graphed`-side source, `python/graphed/numpy/io.py`; unique basename per §10's rule). **The
     anchor is worded over §6.4f's trigger**: `graphed.numpy.io.to_parquet(<a Varied>, …)` raises
@@ -3607,6 +3626,8 @@ variation automation (separate-sample variations stay a partition-metadata patte
 lossy/ratio ("1+delta") storage for §6.4 reconstruction columns (it is NOT bit-exact; any opt-in
 must leave §6.4c's exact default intact); per-variation file fan-out (one file per universe — §6.4
 appends columns instead; the `part_path` prefix/suffix seam exists in `write.py`);
+a **variation-aware ROOT write-out and reader** (its own manifest channel + delta/packbits storage;
+m51's ROOT half is derived-column IR evaluation only, §6.4e/§6.4f);
 auto-symmetric weight derivation from a lone `up` (§2.6b);
 **user-declared `"variation"` axes** for §6.2 (the frontend declares them in v1; a user-constructed
 variation axis is unfillable today — `Histogram.fill` requires one array per axis
