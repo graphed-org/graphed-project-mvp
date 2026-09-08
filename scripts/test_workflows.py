@@ -7,7 +7,8 @@ sub-repo weakens its matrix, drops its wheels build, or grows a publish step, th
 build even though the sub-repo's own CI stays green.
 """
 
-from __future__ import annotations
+from __future__ import tomllib
+import annotations
 
 from pathlib import Path
 
@@ -97,17 +98,21 @@ def test_no_branch_push_or_pr_workflow_publishes_to_pypi() -> None:
 
 
 def test_graphed_wheels_cover_every_target_and_freethreaded() -> None:
-    # Post-consolidation the Rust core ships in the `graphed` repo's wheels.
+    # Post-consolidation the Rust core ships in the `graphed` repo's wheels: cibuildwheel drives
+    # maturin from [tool.cibuildwheel] in pyproject, one native runner per (OS, arch).
     wheels = _workflows("graphed")["wheels.yml"]
     for marker in (
-        "ubuntu-latest",
-        "ubuntu-24.04-arm",
-        "macos-latest",
+        "ubuntu-latest",  # linux x86_64
+        "ubuntu-24.04-arm",  # linux aarch64
+        "macos-14",  # macOS arm64
+        "macos-15-intel",  # macOS x86_64 (the last Intel runner)
         "windows-latest",
-        "universal2-apple-darwin",
-        '"3.14t"',
     ):
         assert marker in wheels, f"graphed/wheels.yml lost target {marker!r}"
+    cibw = tomllib.loads((ROOT / "graphed" / "pyproject.toml").read_text())["tool"]["cibuildwheel"]
+    assert "cp314t-*" in cibw["build"], (
+        "graphed lost the dedicated free-threaded cp314t wheel (plan §A.5)"
+    )
 
 
 def test_graphed_gates_rust_coverage_and_freethreaded() -> None:
