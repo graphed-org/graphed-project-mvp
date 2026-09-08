@@ -4,8 +4,8 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "DONE",
-  "updated_at": "2026-09-03T21:41:35Z",
-  "note": "Project-level rollup. The MVP (M0-M9 + M10 remediation) shipped as 10 package repos; on 2026-07-17 the core/frontend/awkward/numpy/debug/checkpoint/preserve packages were CONSOLIDATED into one repo, graphed-org/graphed, so the superproject now pins five submodules: graphed (consolidated), graphed-executors (path graphed-exec-local), graphed-histogram, graphed-corpus, graphed-orchestrator. Phase-2 arcs since: dask-awkward parity + histogram filling (M11-M36), live dashboard + inter-worker comms (M37/M38, root prompt R20/R21), distributed joins + repartitioning + cluster data plane (M39-M41, R22), dask & parsl executor backends (M42-M47), and the systematics-vary arc — an RDF-Vary analogue (M48-M51, root prompt R23): the vary/Varied frontend, weight+shift lowering, the sink variation axis, and variation-aware skim write-out. All milestones DONE and CI-green on the A.5 matrix.",
+  "updated_at": "2026-09-08T02:24:48Z",
+  "note": "Project-level rollup. The MVP (M0-M9 + M10 remediation) shipped as 10 package repos; on 2026-07-17 the core/frontend/awkward/numpy/debug/checkpoint/preserve packages were CONSOLIDATED into one repo, graphed-org/graphed, so the superproject now pins five submodules: graphed (consolidated), graphed-executors (path graphed-exec-local), graphed-histogram, graphed-corpus, graphed-orchestrator. Phase-2 arcs since: dask-awkward parity + histogram filling (M11-M36), live dashboard + inter-worker comms (M37/M38, root prompt R20/R21), distributed joins + repartitioning + cluster data plane (M39-M41, R22), dask & parsl executor backends (M42-M47), and the systematics-vary arc \u2014 an RDF-Vary analogue (M48-M51, root prompt R23): the vary/Varied frontend, weight+shift lowering, the sink variation axis, and variation-aware skim write-out; then the nuisance-points arc (m52/m53: correlated points, dependency fanout, the unified `points=` surface, numeric tag keys) and its 2026-09-07 follow-ups (fanout hot paths, in-process correctionlib routing, the plain-fill broadcast seam, merge queues gated by CI). All milestones DONE and CI-green on the A.5 matrix.",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
     "cumulative_tokens_cap": null,
@@ -13,7 +13,7 @@
     "consecutive_pauses_cap": 2,
     "tripped": false
   },
-  "current_milestone": "m51",
+  "current_milestone": "m53",
   "phases": [
     "PENDING",
     "DECOMPOSE",
@@ -154,7 +154,7 @@
       "phase": "DONE",
       "blocked_on": null,
       "iterations_cap": 16,
-      "evidence": "RewriteEngine trait (egg-free boundary; no egg leak) + EggEngine genuine equality saturation with SOUND rules only (commutativity, +/* identities; mask-fusion/field-collapse excluded as unsound). DCE+CSE outside the engine; stage fusion never crosses a boundary. O(N) cost-quotient extraction (egg's Extractor is O(N^2) on deep chains — caught + guarded by the super-linear benchmark). 10k-node systematics graph reduces to O(stage) in <1s; reduction sub-linear across {1k,2k,4k,8k}; byte-stable. 13 Rust tests (toy-interpreter semantic equivalence) + 13 M4 Python tests; clippy/rustfmt/mypy/ruff/sphinx-W/loom clean. CI green on A.5 matrix."
+      "evidence": "RewriteEngine trait (egg-free boundary; no egg leak) + EggEngine genuine equality saturation with SOUND rules only (commutativity, +/* identities; mask-fusion/field-collapse excluded as unsound). DCE+CSE outside the engine; stage fusion never crosses a boundary. O(N) cost-quotient extraction (egg's Extractor is O(N^2) on deep chains \u2014 caught + guarded by the super-linear benchmark). 10k-node systematics graph reduces to O(stage) in <1s; reduction sub-linear across {1k,2k,4k,8k}; byte-stable. 13 Rust tests (toy-interpreter semantic equivalence) + 13 M4 Python tests; clippy/rustfmt/mypy/ruff/sphinx-W/loom clean. CI green on A.5 matrix."
     },
     "M5": {
       "title": "Necessary-buffer (column) projection",
@@ -218,7 +218,7 @@
       "phase": "DONE",
       "blocked_on": null,
       "iterations_cap": 14,
-      "externals_plugin_refactor": "Externals generalized into a validated plugin system (no longer hardwired to onnx/correctionlib). An ExternalPlugin gives a kind a deterministic content-based content_hash (ONNX -> hash of weights + graph structure; correctionlib -> hash of canonical contents; sha256_bytes -> raw bytes), an evaluate, and >=2 sample payloads. register_plugin VALIDATES the hash before trusting it: cross-process determinism (runs the hash under two PYTHONHASHSEEDs via a cloudpickle-by-value subprocess, rejecting any hash built from hash()/id()/time/randomness) and non-vacuity (distinct payloads must not collide -> rejects a constant/trivial hash). record_external(session, plugin, payload, inputs) records a preservable External via graphed-awkward's new generic 'external' op; the same plugin.evaluate runs at build-time materialize and at reproduce -> bit-for-bit. build_bundle verifies each stored payload hashes to its recorded id (cache-poisoning-safe). onnx + correctionlib ship as plugins and double as templates; a user-defined plugin is tested end-to-end (record -> preserve -> reproduce bit-for-bit, fingerprint tracks the payload). graphed-awkward gained op='external' (additive; correction/onnx/map unchanged, M3 frozen intact). The plugin API was stress-tested against real ML frameworks (PyTorch TorchScript w/ weights-hash + multi-input, XGBoost booster bytes, and the NVIDIA Triton remote-inference pattern) — optional [mltest] extra, importorskip so CI skips them; the shape held. Findings then addressed: a per-worker ResourceCache (load(payload,params)->resource + close) so a model/connection is materialized once (open_once for Externals), and the remote/connection hook makes Triton first-class. A dedicated CI 'triton' job starts a real nvcr.io/nvidia/tritonserver container serving tests/samples/triton_models and reproduces a bundle through it over BOTH gRPC and HTTP, bit-for-bit vs a numpy reference (env-gated; skipped locally). torch+xgboost vendor clashing OpenMP runtimes (env capture matters).",
+      "externals_plugin_refactor": "Externals generalized into a validated plugin system (no longer hardwired to onnx/correctionlib). An ExternalPlugin gives a kind a deterministic content-based content_hash (ONNX -> hash of weights + graph structure; correctionlib -> hash of canonical contents; sha256_bytes -> raw bytes), an evaluate, and >=2 sample payloads. register_plugin VALIDATES the hash before trusting it: cross-process determinism (runs the hash under two PYTHONHASHSEEDs via a cloudpickle-by-value subprocess, rejecting any hash built from hash()/id()/time/randomness) and non-vacuity (distinct payloads must not collide -> rejects a constant/trivial hash). record_external(session, plugin, payload, inputs) records a preservable External via graphed-awkward's new generic 'external' op; the same plugin.evaluate runs at build-time materialize and at reproduce -> bit-for-bit. build_bundle verifies each stored payload hashes to its recorded id (cache-poisoning-safe). onnx + correctionlib ship as plugins and double as templates; a user-defined plugin is tested end-to-end (record -> preserve -> reproduce bit-for-bit, fingerprint tracks the payload). graphed-awkward gained op='external' (additive; correction/onnx/map unchanged, M3 frozen intact). The plugin API was stress-tested against real ML frameworks (PyTorch TorchScript w/ weights-hash + multi-input, XGBoost booster bytes, and the NVIDIA Triton remote-inference pattern) \u2014 optional [mltest] extra, importorskip so CI skips them; the shape held. Findings then addressed: a per-worker ResourceCache (load(payload,params)->resource + close) so a model/connection is materialized once (open_once for Externals), and the remote/connection hook makes Triton first-class. A dedicated CI 'triton' job starts a real nvcr.io/nvidia/tritonserver container serving tests/samples/triton_models and reproduces a bundle through it over BOTH gRPC and HTTP, bit-for-bit vs a numpy reference (env-gated; skipped locally). torch+xgboost vendor clashing OpenMP runtimes (env capture matters).",
       "evidence": "graphed-preserve (new repo, the final milestone). build_bundle(root, *, session, value, weight, datasets, payloads, histogram, config, seed) captures: the canonical serialized IR (M8, opt_level=0 so it is auditable + 1:1 with user ops); the M6 provenance/sourcemap (basenames -> build-location independent); every External PayloadDescriptor + the real correctionlib JSON + ONNX model bytes (in the M8 content-addressed Store); input datasets by content hash; environment (python + pinned versions, optional container digest); config + seed; into a canonical manifest whose SHA-256 is the bundle fingerprint. reproduce(bundle) interprets the IR (op/reduction via the awkward backend; External via payload-backed correctionlib/onnx evaluators that are the SAME code as build-time -> bit-for-bit; sources from the Store) and raises UnresolvedPayload('... <hash>') on any missing reference (never a silent wrong result). inspect(bundle) renders IR + provenance + payload inventory + opaque-node risk flags WITHOUT executing, faithful to reproduce (same GraphStore.nodes() IR). Self-fingerprinting: the fingerprint changes iff a content/result input changes (correctionlib JSON, ONNX weights, dataset, config, seed, env) and NOT on irrelevant ones (no timestamps/abs-paths; provenance basenames). AGC-ttbar fixture: reduced ttbar slice recorded through graphed/graphed-awkward with a real correctionlib v2 SF (weight systematic), a real ONNX model (per-event inference), and JES (kinematic) + correctionlib (weight) systematics. 21 frozen tests incl. a machine-B scrubbed-subprocess reproduce (originals deleted, agc unimportable) matching bit-for-bit; 95% cov. graphed-core gained GraphStore.nodes() IR introspection (5 tests); graphed gained Session.sourcemap() (1 test). ruff + mypy --strict + sphinx -W clean; CI green on the full A.5 matrix (3 OS x py3.11-3.13 + 3.14/3.14t experimental). Resolved M9 design choices: all payloads referenced by hash from the Store (never inlined); environment captured (not enforced -> container is Phase-2); opt_level=0 IR; one systematic variation per bundle (systematics-as-axis is Phase-2)."
     },
     "M10": {
@@ -315,7 +315,7 @@
       "iterations_cap": 14
     },
     "M18": {
-      "title": "dask-awkward parity P2: behaviors — with_name + backend behavior registration; vector four-vectors record, evaluate, and project to exactly the leaves they read",
+      "title": "dask-awkward parity P2: behaviors \u2014 with_name + backend behavior registration; vector four-vectors record, evaluate, and project to exactly the leaves they read",
       "repos": [
         "graphed-awkward"
       ],
@@ -335,7 +335,7 @@
       "iterations_cap": 14
     },
     "M20": {
-      "title": "Partitioned-write base: a format-agnostic graphed.write that client integrations specialize (parquet in the backends, ROOT in the reader fork) instead of borrowing parquet tools — a deferred write_plan with worker-reported paths, blind partition indexing, and exact step reconstruction",
+      "title": "Partitioned-write base: a format-agnostic graphed.write that client integrations specialize (parquet in the backends, ROOT in the reader fork) instead of borrowing parquet tools \u2014 a deferred write_plan with worker-reported paths, blind partition indexing, and exact step reconstruction",
       "repos": [
         "graphed"
       ],
@@ -355,7 +355,7 @@
       "iterations_cap": 14
     },
     "M22": {
-      "title": "Output-scoped compiles: graph outputs are a property of the compile REQUEST, not session/store state — fixes the compile_ir output-accumulation footgun; sequential compiles from one session/store are history-independent and byte-identical to fresh-session compiles",
+      "title": "Output-scoped compiles: graph outputs are a property of the compile REQUEST, not session/store state \u2014 fixes the compile_ir output-accumulation footgun; sequential compiles from one session/store are history-independent and byte-identical to fresh-session compiles",
       "repos": [
         "graphed",
         "graphed-core"
@@ -447,7 +447,7 @@
       "iterations_cap": 14
     },
     "M31": {
-      "title": "Ship the process callable to each worker ONCE, not per task: the driver pickles the compiled-IR-bearing process once and broadcasts it (cached by content hash), submitting only (token, partition) per task — results and determinism unchanged",
+      "title": "Ship the process callable to each worker ONCE, not per task: the driver pickles the compiled-IR-bearing process once and broadcasts it (cached by content hash), submitting only (token, partition) per task \u2014 results and determinism unchanged",
       "repos": [
         "graphed-exec-local"
       ],
@@ -467,7 +467,7 @@
       "iterations_cap": 14
     },
     "M33": {
-      "title": "LocalResources is bounded and closeable: open_once's per-worker locality cache is LRU-bounded (eviction closes the handle) and close() releases all handles — no unbounded handle accumulation on a long-lived worker",
+      "title": "LocalResources is bounded and closeable: open_once's per-worker locality cache is LRU-bounded (eviction closes the handle) and close() releases all handles \u2014 no unbounded handle accumulation on a long-lived worker",
       "repos": [
         "graphed-core"
       ],
@@ -530,7 +530,7 @@
       "iterations_cap": 14
     },
     "M39": {
-      "title": "Distributed joins I — the `Exchange` (shuffle) IR boundary + `ShuffleBackend` protocol with a keyed all-to-all over the p2p transport (merge-to-large-blocks, never M×R). Root prompt R22.",
+      "title": "Distributed joins I \u2014 the `Exchange` (shuffle) IR boundary + `ShuffleBackend` protocol with a keyed all-to-all over the p2p transport (merge-to-large-blocks, never M\u00d7R). Root prompt R22.",
       "repos": [
         "graphed",
         "graphed-exec-local"
@@ -541,7 +541,7 @@
       "iterations_cap": 14
     },
     "M40": {
-      "title": "Distributed relational joins — a `Join` IR boundary + `JoinBackend`, `graphed.join(on,how)` with SQL-duplicating semantics and a deterministic broadcast-vs-shuffle cost model; bounded-memory join + skew salting. Root prompt R22.",
+      "title": "Distributed relational joins \u2014 a `Join` IR boundary + `JoinBackend`, `graphed.join(on,how)` with SQL-duplicating semantics and a deterministic broadcast-vs-shuffle cost model; bounded-memory join + skew salting. Root prompt R22.",
       "repos": [
         "graphed",
         "graphed-exec-local"
@@ -552,7 +552,7 @@
       "iterations_cap": 14
     },
     "M41": {
-      "title": "Cluster-runtime hardening — fetch RAM budget + reader-plane spill, incast coalescing, per-node disk budget, tested cross-process over routable addresses behind a `ClusterExecutor` launch seam (real launcher deferred). Root prompt R22.",
+      "title": "Cluster-runtime hardening \u2014 fetch RAM budget + reader-plane spill, incast coalescing, per-node disk budget, tested cross-process over routable addresses behind a `ClusterExecutor` launch seam (real launcher deferred). Root prompt R22.",
       "repos": [
         "graphed",
         "graphed-exec-local"
@@ -563,7 +563,7 @@
       "iterations_cap": 14
     },
     "M42": {
-      "title": "Dask executor backend — a `SubmitBackend` protocol driving reference execution over `dask.distributed`.",
+      "title": "Dask executor backend \u2014 a `SubmitBackend` protocol driving reference execution over `dask.distributed`.",
       "repos": [
         "graphed-exec-local"
       ],
@@ -573,7 +573,7 @@
       "iterations_cap": 14
     },
     "M43": {
-      "title": "Dask backend completion — full graphed-on-dask execution + resume parity with the reference executor.",
+      "title": "Dask backend completion \u2014 full graphed-on-dask execution + resume parity with the reference executor.",
       "repos": [
         "graphed-exec-local"
       ],
@@ -583,7 +583,7 @@
       "iterations_cap": 14
     },
     "M44": {
-      "title": "`DaskWorkerTransport` — graphed's `WorkerTransport` seam atop dask worker-to-worker comms.",
+      "title": "`DaskWorkerTransport` \u2014 graphed's `WorkerTransport` seam atop dask worker-to-worker comms.",
       "repos": [
         "graphed-exec-local"
       ],
@@ -593,7 +593,7 @@
       "iterations_cap": 14
     },
     "M45": {
-      "title": "Unified shuffle facade — one entry point selecting the shuffle transport via `shuffle_method`.",
+      "title": "Unified shuffle facade \u2014 one entry point selecting the shuffle transport via `shuffle_method`.",
       "repos": [
         "graphed-exec-local"
       ],
@@ -603,7 +603,7 @@
       "iterations_cap": 14
     },
     "M46": {
-      "title": "Parsl backend I — a parsl executor adapter with a self-built HTTP rendezvous transport (parsl has no p2p).",
+      "title": "Parsl backend I \u2014 a parsl executor adapter with a self-built HTTP rendezvous transport (parsl has no p2p).",
       "repos": [
         "graphed-exec-local"
       ],
@@ -613,7 +613,7 @@
       "iterations_cap": 14
     },
     "M47": {
-      "title": "Parsl backend completion — full parsl execution + mutation-verified acceptance.",
+      "title": "Parsl backend completion \u2014 full parsl execution + mutation-verified acceptance.",
       "repos": [
         "graphed-exec-local"
       ],
@@ -623,7 +623,7 @@
       "iterations_cap": 14
     },
     "M48": {
-      "title": "Systematics-vary I — the `graphed.vary`/`Varied` frontend + weight-path lowering (record-time expansion, no Rust `Vary` NodeKey); sibling weight fills. Root prompt R23.",
+      "title": "Systematics-vary I \u2014 the `graphed.vary`/`Varied` frontend + weight-path lowering (record-time expansion, no Rust `Vary` NodeKey); sibling weight fills. Root prompt R23.",
       "repos": [
         "graphed",
         "graphed-histogram"
@@ -634,7 +634,7 @@
       "iterations_cap": 14
     },
     "M49": {
-      "title": "Systematics-vary II — shift-path lowering + impact introspection + cross-process executor end-to-end vs the corpus references. Root prompt R23.",
+      "title": "Systematics-vary II \u2014 shift-path lowering + impact introspection + cross-process executor end-to-end vs the corpus references. Root prompt R23.",
       "repos": [
         "graphed",
         "graphed-histogram",
@@ -646,7 +646,7 @@
       "iterations_cap": 14
     },
     "M50": {
-      "title": "Systematics-vary III — scale + integration: the sink variation axis (`StrCategory`) fill lowering + varied preservation bundle. Root prompt R23.",
+      "title": "Systematics-vary III \u2014 scale + integration: the sink variation axis (`StrCategory`) fill lowering + varied preservation bundle. Root prompt R23.",
       "repos": [
         "graphed-histogram",
         "graphed"
@@ -657,7 +657,7 @@
       "iterations_cap": 14
     },
     "M51": {
-      "title": "Systematics-vary IV — variation-aware skim write-out: `graphed.awkward.to_parquet(select=)` superset base + XOR-delta/packbits universe columns under a parquet-KV manifest (+ uproot-fork derived-column ROOT half). Root prompt R23.",
+      "title": "Systematics-vary IV \u2014 variation-aware skim write-out: `graphed.awkward.to_parquet(select=)` superset base + XOR-delta/packbits universe columns under a parquet-KV manifest (+ uproot-fork derived-column ROOT half). Root prompt R23.",
       "repos": [
         "graphed"
       ],
