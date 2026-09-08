@@ -7,10 +7,11 @@ sub-repo weakens its matrix, drops its wheels build, or grows a publish step, th
 build even though the sub-repo's own CI stays green.
 """
 
-from __future__ import tomllib
-import annotations
+from __future__ import annotations
 
 from pathlib import Path
+
+import tomllib
 
 ROOT = Path(__file__).resolve().parent.parent
 
