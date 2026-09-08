@@ -78,7 +78,8 @@ The root `README.md` is **generated** from `.graphed/state.json` + the submodule
 state, the README, and every submodule pointer:
 
 ```bash
-python scripts/bookkeep.py --set-current M6 --touch --commit "M5 DONE: ..." [--push]
+python scripts/bookkeep.py --set-current M6 --touch --commit "M5 DONE: ..." \
+    --trailer "Assisted-by: ClaudeCode:<model>" [--push]
 ```
 
 Per-milestone status/evidence edits stay explicit in `.graphed/state.json`; run `bookkeep.py`

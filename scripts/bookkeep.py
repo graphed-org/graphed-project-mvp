@@ -26,7 +26,6 @@ import gen_readme
 
 ROOT = gen_readme.ROOT
 STATE_PATH = gen_readme.STATE_PATH
-CO_AUTHOR = "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 
 # ---- pure state helpers (unit-tested) ---------------------------------------
@@ -70,6 +69,11 @@ def main(argv: list[str] | None = None) -> int:
         "--commit", metavar="MSG", help="commit the staged bookkeeping changes"
     )
     ap.add_argument("--push", action="store_true", help="push after committing")
+    ap.add_argument(
+        "--trailer",
+        metavar="LINE",
+        help="commit trailer appended after a blank line, e.g. 'Assisted-by: ClaudeCode:<model>'",
+    )
     args = ap.parse_args(argv)
 
     state = gen_readme.load_state()
@@ -93,7 +97,8 @@ def main(argv: list[str] | None = None) -> int:
 
     _git("add", *files_to_stage(gen_readme.submodule_pins()))
     if args.commit:
-        _git("commit", "-m", f"{args.commit}\n\n{CO_AUTHOR}")
+        message = f"{args.commit}\n\n{args.trailer}" if args.trailer else args.commit
+        _git("commit", "-m", message)
         if args.push:
             _git("push", "origin", "HEAD")
     else:
