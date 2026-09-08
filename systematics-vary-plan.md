@@ -119,8 +119,8 @@ loops, deepcopies, exclusion rule, growth axes, suffix generator — survived co
 irreducible accidental complexity by construction, precisely what `vary` deletes.
 
 Universal conventions across the surveyed analyses: `"nominal"` reserved; `Up`/`Down`-suffixed
-labels; shift × weight cross products never produced (under a kinematic shift, only the central
-weight fills — evaluated on that shift's selection); one histogram with a `systematic` StrCategory
+labels; none of the surveyed analyses produced shift × weight cross products (under a kinematic
+shift, only the central weight fills — evaluated on that shift's selection); one histogram with a `systematic` StrCategory
 axis; data special-cased (no shifts, no variation axis). Universal failure modes: whole-chain
 re-execution per shift; defensive `copy.deepcopy` of accumulate-by-mutation Weights;
 hand-maintained name lists where a typo silently drops a systematic; per-variation cutflow
@@ -372,8 +372,11 @@ existing metadata channels.
   context, and the descendant case as a negative control.
   (c) **Event-context target, shift form** (no `is_weight`): each kwarg names a **collection**;
   each value maps tags to varied records — `graphed.vary(events, "jes", Jet={"up": j_up, "down":
-  j_dn}, MET={…}) -> new context` with every named collection replaced by a `Varied` (all
-  collections in one call MUST share one tag set — the lockstep Jet+MET form; §2.6a).
+  j_dn}, MET={…}) -> new context` — or is a `Varied` carrying exactly the family being
+  registered on the context's central collection (m55, `lockstep-varied-plan.md`: MET propagated
+  from loose-form jets, unpacked to the map form before anything else runs), with every named
+  collection replaced by a `Varied` (all collections in one call MUST share one tag set — the
+  lockstep Jet+MET form; §2.6a).
   **`nominal=` is REJECTED in the shift form**, with an error naming `collections=`: the
   collections' central members come from the target context, so `nominal=` has nothing to mean,
   and as a shadowed name it cannot be read as a tag (the m48 grammar anchor covers the shadowed
@@ -407,9 +410,13 @@ existing metadata channels.
   then `_btag_weight(sel_jets, variation=variation)`, which returns the central SF unless
   `variation` is `btag_up`/`btag_down`), so the `ttbar_4j1b_jes_up` reference IS b-tag
   weighted; a one-level reading would take the b-tag SF on NOMINAL jets and miss the reference.
-  Each label still differs from `"nominal"` in exactly **one** knob — the one-at-a-time rule is
-  structural, and a weight variation layered on a shift-propagated weight (the corpus
-  b-tag-on-JES case) is expressible without cross products.
+  Each label NAMES A POINT in nuisance space. A label registered without `points=` carries the
+  default point `{name: tag}` and so differs from `"nominal"` on exactly one axis — **unless its
+  member depends on another registered nuisance's varied nodes, in which case the joint point is
+  minted automatically** (m53, `systematics-design/dependency-fanout-design.md`, superseding the
+  "≥2 axes only via explicit `points=`" rule for that case). That axis-aligned set is the default for
+  INDEPENDENT members. A universe the graph cannot infer as dependent is displaced on ≥2 axes only via
+  explicit `points=`, which m53 inverts to PRUNE the automatic fanout rather than add to it.
   **Ordering rule**: a shift `vary` replaces collections and leaves the ambient registry
   untouched (§2.6b), so a jet-dependent weight registered BEFORE a JES `vary` fills every shift
   universe with its PRE-shift value — structurally unfixable after the fact, since the
@@ -808,7 +815,7 @@ existing metadata channels.
   attributes each varied node to the user's own op line with no provenance copying
   (`provenance.py` skips graphed frames).
 
-- **§2.4 (Combination rule — label-aligned union; one-at-a-time; no cross products.)** When an
+- **§2.4 (Combination rule — label-aligned union by point projection; implicit cross products ONLY where the graph carries the dependency.)** When an
   operation combines `Varied` inputs — including a `Varied` combined with one derived from it
   (`jets[jets.pt > 25]` is the canonical case) — the result's labels are the **union**, and for
   each label L every container contributes **its own member for L when present, else its
@@ -816,11 +823,18 @@ existing metadata channels.
   positional layout in `boost.py` both depend on it): the first operand's order, then labels
   new to the second operand in its own order, `"nominal"` always first. Within a universe L, all
   uses of varied quantities are therefore coherent (RDF's whole-cone-substitution semantic).
-  Because §2.1 makes each label belong to exactly one knob, cross products can never arise
-  implicitly: at a fill combining shift-varied kinematics with a stacked weight `Varied`, shift
-  labels fill with the central weight *as evaluated in that shift's universe* (label-aligned),
-  and weight labels fill with nominal kinematics — exactly the corpus reference semantics
-  (`systematics.py`) and the universal exclusion convention (lit §pythonic-analyses).
+  Because a label's point is fixed at registration and resolution only PROJECTS it, cross products
+  never arise implicitly — **except where a member's graph GENUINELY CONSUMES another nuisance's
+  varied nodes: such a dependent joint universe is minted AUTOMATICALLY (m53,
+  `systematics-design/dependency-fanout-design.md`), because the physics cross-term already exists in
+  the graph and dropping it would be silent.** At a fill combining shift-varied kinematics with a
+  stacked weight `Varied`, a label whose point names no weight axis fills with the central weight *as
+  evaluated in that universe*, and one whose point names no shift axis fills with nominal kinematics —
+  the corpus reference semantics (`systematics.py`). **Independent members (no such consumption) stay
+  union.** A label whose point names both is one the graph minted as a dependent joint or the analyst
+  named with `points=` (m53 inverts `points=` to PRUNE the automatic fanout; the one-at-a-time
+  exclusion convention that lit §pythonic-analyses documents is reached with `composes_as_union=True`,
+  and is no longer the default).
 - **§2.5 (Validation over convention.)** Silent-drop failure modes from the survey become errors
   or diagnostics: unknown label on `graphed.universe(x, label)` → KeyError listing valid labels;
   form-incompatible or cross-Session/cross-source member → construction-time error naming the
@@ -2356,7 +2370,7 @@ existing metadata channels.
   singular shape and version. Exact spellings pinned at m50 freeze. This replaces the m9 fixture's
   one-bundle-per-config pattern *additively*: existing m9 frozen tests are untouched.
 
-## §10 Milestones (strictly ordered; m48 → m49 → m50 → m51)
+## §10 Milestones (strictly ordered; m48 → m49 → m50 → m51 → m52 → m53)
 
 Numbering: the executors repo froze m47 last. Frozen layouts by repo:
 
@@ -3621,7 +3635,8 @@ full-matrix CI green at the pinned revision (R0.5), attempts log + reviewer APPR
 ## §11 Out of scope (Phase 2 — named, not silently dropped)
 
 Declarative nuisance registry / config layer (mkShapesRDF-style `{name, type, kind, samples}`);
-correlation/decorrelation metadata, envelope/RMS/symmetrize post-aggregation ops; dataset-level
+correlation/decorrelation **export** metadata (datacard/HS3 serialization of a point, the `up ≡ +1σ`
+convention) — correlation-by-name and the Session point registry ship in m52; envelope/RMS/symmetrize post-aggregation ops; dataset-level
 variation automation (separate-sample variations stay a partition-metadata pattern, documented);
 lossy/ratio ("1+delta") storage for §6.4 reconstruction columns (it is NOT bit-exact; any opt-in
 must leave §6.4c's exact default intact); per-variation file fan-out (one file per universe — §6.4
@@ -3638,7 +3653,7 @@ carve-out plus a declared-vs-inferred reconciliation rule);
 variation axis and its storage, but it carries the `histogram.weight_guard` `External`, for which
 no preserve plugin is registered — the plugin becomes a target only if that widening is adopted);
 per-variation monitor/dashboard axis; stage-granular checkpoint task ids (the §7.3 fix);
-variations crossing Exchange/Join boundaries (§5.4); implicit variation cross products; weight
+variations crossing Exchange/Join boundaries (§5.4); the *undirected* full grid across INDEPENDENT nuisances (a joint universe the graph cannot infer as dependent — m53 pulls in dependency-driven cross products, minting the joint AUTOMATICALLY when a member consumes another nuisance's varied nodes, while independent families stay union; `systematics-design/dependency-fanout-design.md`); weight
 clamping/validation hooks (narf `theory_weight_truncate` precedent); growth category axes;
 **per-sample divergence of the variation-label set** (merging outputs across samples whose label
 sets legitimately differ — the exemplar's suffix-blacklist pathology, lit §ewkcoffea-confirmed;
