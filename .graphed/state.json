@@ -4,7 +4,7 @@
   "org": "graphed-org",
   "meta_repo": "graphed-project",
   "pipeline_status": "DONE",
-  "updated_at": "2026-09-08T18:17:18Z",
+  "updated_at": "2026-09-08T20:23:39Z",
   "note": "Project-level rollup. The MVP (M0-M9 + M10 remediation) shipped as 10 package repos; on 2026-07-17 the core/frontend/awkward/numpy/debug/checkpoint/preserve packages were CONSOLIDATED into one repo, graphed-org/graphed, so the superproject now pins five submodules: graphed (consolidated), graphed-executors (path graphed-exec-local), graphed-histogram, graphed-corpus, graphed-orchestrator. Phase-2 arcs since: dask-awkward parity + histogram filling (M11-M36), live dashboard + inter-worker comms (M37/M38, root prompt R20/R21), distributed joins + repartitioning + cluster data plane (M39-M41, R22), dask & parsl executor backends (M42-M47), and the systematics-vary arc \u2014 an RDF-Vary analogue (M48-M51, root prompt R23): the vary/Varied frontend, weight+shift lowering, the sink variation axis, and variation-aware skim write-out; then the nuisance-points arc (m52/m53: correlated points, dependency fanout, the unified `points=` surface, numeric tag keys) and its 2026-09-07 follow-ups (fanout hot paths, in-process correctionlib routing, the plain-fill broadcast seam, merge queues gated by CI). All milestones DONE and CI-green on the A.5 matrix.",
   "global_breakers": {
     "cumulative_tokens_spent": 0,
@@ -13,7 +13,7 @@
     "consecutive_pauses_cap": 2,
     "tripped": false
   },
-  "current_milestone": "m53",
+  "current_milestone": "m54",
   "phases": [
     "PENDING",
     "DECOMPOSE",
