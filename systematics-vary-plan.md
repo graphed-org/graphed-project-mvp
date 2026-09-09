@@ -3422,8 +3422,10 @@ unchanged**.
     the two outputs carry the same variations, so the listing must not vary with the MODE.
   - **§9.1 `graphed.variations(ctx)`** (load-bearing because §6.2 explicitly refuses to give
     numeric ordering from bin index): per-name tags and kinds — **over §9.1's shape
-    `{name: {tag: (kind, value | None)}}` with the two-word kind vocabulary `"weight"`/`"shift"`,
-    so the fixture registers ONE of each and asserts both strings** — plus the parsed float value
+    `{name: {tag: (kind, value | None)}}` where the kind is the `graphed.Kind` flag (`Kind.WEIGHT`,
+    `Kind.SHIFT`, their union for a tag registered both ways — a `Kind` since the kinds change,
+    graphed#24, which replaced the `"weight"`/`"shift"`/`"both"` strings), so the fixture registers
+    ONE of each and asserts both members** — plus the parsed float value
     under **both** parsers — canonical e-form `m?\d+(em\d+)?` (`5em1` → 0.5, `m15em1` → −1.5) and
     datacard p-form `m?\d+(p\d+)?` (`2p5` → 2.5) — and a non-numeric tag (`up`) returning no
     value rather than raising.

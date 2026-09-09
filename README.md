@@ -86,7 +86,7 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | Repo | Role | Pinned commit | State |
 |---|---|---|:--:|
 | [graphed-project-mvp](https://github.com/graphed-org/graphed-project-mvp) | meta/superproject | — | meta |
-| [graphed](https://github.com/graphed-org/graphed) | consolidated package: frontend + core (Rust IR/optimizer) + awkward + numpy + debug + checkpoint + preserve | `bfbb9a9` | ✅ submodule |
+| [graphed](https://github.com/graphed-org/graphed) | consolidated package: frontend + core (Rust IR/optimizer) + awkward + numpy + debug + checkpoint + preserve | `cccff9b` | ✅ submodule |
 | [graphed-corpus-mvp](https://github.com/graphed-org/graphed-corpus-mvp) | M0.5 requirements + fixtures | `9ea9f90` | ✅ submodule |
 | [graphed-executors](https://github.com/graphed-org/graphed-executors) | graphed-executors: reference + dask + parsl executors, shuffle/join data plane | `bb5aa51` | ✅ submodule |
 | [graphed-histogram](https://github.com/graphed-org/graphed-histogram) | histogram filling (M23/M29) + systematics-vary sink variation axis (M48-M51) | `bfe46e2` | ✅ submodule |
@@ -114,4 +114,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-09-08T22:42:15Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-09-09T02:31:08Z).</sub>
