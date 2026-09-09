@@ -827,7 +827,14 @@ existing metadata channels.
   never arise implicitly — **except where a member's graph GENUINELY CONSUMES another nuisance's
   varied nodes: such a dependent joint universe is minted AUTOMATICALLY (m53,
   `systematics-design/dependency-fanout-design.md`), because the physics cross-term already exists in
-  the graph and dropping it would be silent.** At a fill combining shift-varied kinematics with a
+  the graph and dropping it would be silent.** Consumption is decided on nodes, not on the
+  nuisance's kind (m56, `both-kind-fanout-plan.md`): a foreign coordinate on a member is
+  *composition* — excluded from the fan-out — only when its nuisance is a family in the ambient
+  tag map AND the member's node at that label reads a lineage factor's varied member there (the
+  factor's two-level member at the label where it differs from the factor's nominal); every other
+  foreign coordinate, including one reached through objects shifted by a nuisance that is ALSO a
+  weight (the b-tag SF's jes-correlated table by name identity over jes-shifted jets), is a
+  dependency and mints its joints, whichever registration comes first. At a fill combining shift-varied kinematics with a
   stacked weight `Varied`, a label whose point names no weight axis fills with the central weight *as
   evaluated in that universe*, and one whose point names no shift axis fills with nominal kinematics —
   the corpus reference semantics (`systematics.py`). **Independent members (no such consumption) stay
