@@ -370,6 +370,31 @@ existing metadata channels.
   precondition assumes: **`graphed.weight(ctx)` always answers in `ctx`'s own row space.** m48's
   stacking anchor carries a positive control registering a factor computed at the PARENT
   context, and the descendant case as a negative control.
+  **The nominal NAMES the factor (m57, graphed#28; binding design
+  `graphed-workdir/weight-dedupe-plan.md`).** The ambient weight is a registration-ordered list
+  of OPERATIONS decided by node identity, never value, before anything is minted. A weight-form
+  registration whose `nominal` is a live factor's nominal node JOINS that factor: its members
+  become that container's values in their universes, the container's nominal member becomes the
+  union of the two centrals' coordinate universes, and a coordinate both centrals declare with
+  different nodes is refused. A registration whose `nominal` is a composition a
+  `graphed.weight()` read handed out (the relative-delta idiom `mu_up = 1.05 · w`) is an OVERLAY:
+  it replaces the running product at its family's labels, anchored right after the factors it was
+  read over, so a factor registered later multiplies its result; a handle read before a join
+  widened a nominal member it was read over is stale and refused, naming the read to repeat. Any
+  other `nominal` is a NEW factor, as before, and the §2.4 label-aligned composition below applies
+  to it unchanged; an expression with equal values is a new factor. Every operation carries a
+  rider (kind, families with coordinates, nominal identity per row space, the member it became at
+  each projected label, an overlay's prefix, fixed mark, the context that registered or last
+  re-indexed it, and links) and every decision reads the rider for an entry's ROLE — its kind, its
+  families, its nominal identity, the member it became at a projected label — never the
+  re-indexed object, which carries neither tags nor role (the widening refusal is the one decision
+  that reads an entry, and only for the LABEL SET of its nominal member, which no rider records):
+  a family registered on a mask-derived child extends the parent's factor in place; a projection
+  re-indexes each entry by its rider, refuses a central that NAMES the factor the universe is OF —
+  its nominal identity in the central's own row space, or the member it became at a projected
+  label — joins a non-owner's member, keeps a fixed overlay fixed and leaves an unfixed one without
+  a coordinate there out. `graphed.explain(ctx)`
+  and `graphed.systematics.ambient_entries(ctx)` are the instruments (§9.1); both are reads.
   (c) **Event-context target, shift form** (no `is_weight`): each kwarg names a **collection**;
   each value maps tags to varied records — `graphed.vary(events, "jes", Jet={"up": j_up, "down":
   j_dn}, MET={…}) -> new context` — or is a `Varied` carrying exactly the family being
@@ -385,8 +410,9 @@ existing metadata channels.
   result inherits those labels and adds the new labels; a new label's member is the provided
   value's central universe (`graphed.nominal(v)` if the provided value is itself `Varied`, else
   the Array as given). In the loose/shift forms (a)/(c) inherited members pass through
-  **unchanged**; in the **weight form (b)** the newly registered factor is combined into the
-  ambient weight **label-aligned per §2.4**, so an inherited label L's ambient member becomes
+  **unchanged**; in the **weight form (b)** a newly registered FACTOR (a `nominal` naming no live
+  factor and no read composition — the nominal rule above; a join or an overlay composes as that
+  rule says) is combined into the ambient weight **label-aligned per §2.4**, so an inherited label L's ambient member becomes
   `old_ambient[L] × factor[L]` — the factor evaluated in *that label's own universe* (its
   central universe only when L is new to the factor). **L ranges over the §2.4 union — the
   labels the target already carries (§2.2) TOGETHER WITH the labels this call registers** — not
@@ -862,8 +888,8 @@ existing metadata channels.
   ambient weight — `_stamp` rebuilds the container after `register`, so the registry's weak
   reference is dead before compile, and no Session-retained object ever carries a COLLECTION name.
   Both operands are live at exactly one place, the shift `vary` call itself (`_vary_shift`,
-  `context.py`): the ambient weight `ctx._weight` and the collection about to be replaced, read off
-  the target context. Binding: **the weight form records `(factor family name, that factor's own
+  `context.py`): the ambient weight (`ctx`'s operation list, read as `_ambient_weight()`) and the
+  collection about to be replaced, read off the target context. Binding: **the weight form records `(factor family name, that factor's own
   member node ids)` on the Session BY VALUE** — the shape `register` already uses, and for the same
   reason — **and the shift form reports the families whose cone (§3.4's walk) reaches the replaced
   collection's node, paired with that collection's name.** The report is a SECOND additive
@@ -878,8 +904,9 @@ existing metadata channels.
 - **§2.6 (The event context — systematics attach to `events`, functionally; owner semantics,
   respun functional per collaborator feedback.)** The primary user idiom
   is not loose `Varied` threading but an **event context**: a frontend wrapper over the root
-  event record carrying (a) the collections and (b) an **ambient event-weight registry** (itself
-  a `Varied` of accumulated M29 factors). Pure frontend sugar over §§2.1–2.5 — no IR change,
+  event record carrying (a) the collections and (b) an **ambient event-weight registry** (a
+  registration-ordered list of weight OPERATIONS — §2.1(b)'s factors and overlays, each with its
+  rider — composed into a `Varied` at every read). Pure frontend sugar over §§2.1–2.5 — no IR change,
   §3.1 intact. Binding, in the functional form:
   (a) **The context reserves NO NAMES.** Attribute access, and `[]` **with a string (or list of
   strings)**, resolve ONLY tree content (collections/branches); `[]` **with an `Array`/`Varied`
@@ -896,9 +923,10 @@ existing metadata channels.
   (b) **Contexts are immutable; `graphed.vary` returns a NEW context** (§2.1 overloads b/c). The
   shift form replaces the named collections with `Varied` members (thereafter
   `events.<Collection>` is a `Varied` and §2.3 broadcast carries it; repeated calls stack,
-  §2.1); the weight form registers the factor into the returned context's ambient weight (M29
-  factor-list semantics; explicit tags in v1 — auto-symmetric derivation from a lone `up` is
-  Phase 2, §11). Each returned context links to its parent: variation history is **object
+  §2.1); the weight form registers a weight OPERATION into the returned context's ambient weight
+  — a new factor (M29 factor-list semantics), a JOIN of a live factor, or an OVERLAY that replaces
+  the product it was read over, decided by the `nominal` per §2.1(b); explicit tags in v1 —
+  auto-symmetric derivation from a lone `up` is Phase 2, §11). Each returned context links to its parent: variation history is **object
   lineage** — the provenance handle the collaborators asked for; no hidden mutable registry.
   **CONTEXT HANDLE IDENTITY is bound here, once** — three binding rules compare handles
   (§2.3e's divergence error when input handles are not on ONE ancestry chain, §6.1d(A)'s
@@ -2297,8 +2325,16 @@ existing metadata channels.
   re-expressed in a context's row space across §6.1d's link kinds; read-only; both m48, spellings
   pinned at m48 freeze),
   **`graphed.weight(ctx)`** (the context's ambient weight as a `Varied`, `None` when nothing is
-  registered; read-only — it returns the registry's current `Varied`, it does not mutate; m48;
-  the readable surface §6.4b's stored varied factors presuppose),
+  registered; it COMPOSES the registry's operations at the read, minting the composition's
+  members, and RECORDS the composition it handed out — the record §2.1(b)'s overlay rule reads;
+  it registers nothing and changes no composed value; m48, recomposed at m57; the readable
+  surface §6.4b's stored varied factors presuppose),
+  **`graphed.explain(ctx)`** (a frozen `Explanation` — `families` with how each entered and its
+  composes-with / shares-with / reads-shifted-by / fans-out-over / independent-of relations,
+  `operations` from the ambient's riders in composition order, `variations` with each label's
+  origin and point — whose `str()` is one line per item carrying no node id; read-only, mints
+  nothing beyond a `weight` read; m57) and **`graphed.systematics.ambient_entries(ctx)`** (the
+  `(slot, rider, entry)` records of the live ambient in composition order; read-only; m57),
   `graphed.variations(ctx)` (per-name listing of a context's registered variations, their tags
   and kinds — **the KIND vocabulary is exactly two words: `"weight"` for a §2.1 overload-(b)
   registration and `"shift"` for an overload-(c) one (overload (a) is loose and reaches no
