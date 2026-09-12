@@ -17,7 +17,7 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 
 ## Milestone status
 
-**54 of 54 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **m56**.
+**54 of 54 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **m57**.
 
 | Milestone | Status | Repo(s) | What it delivered |
 |---|:--:|---|---|
@@ -86,10 +86,10 @@ the orchestrator refuses to record DONE off an unfinished CI run.
 | Repo | Role | Pinned commit | State |
 |---|---|---|:--:|
 | [graphed-project-mvp](https://github.com/graphed-org/graphed-project-mvp) | meta/superproject | — | meta |
-| [graphed](https://github.com/graphed-org/graphed) | consolidated package: frontend + core (Rust IR/optimizer) + awkward + numpy + debug + checkpoint + preserve | `9374bd8` | ✅ submodule |
+| [graphed](https://github.com/graphed-org/graphed) | consolidated package: frontend + core (Rust IR/optimizer) + awkward + numpy + debug + checkpoint + preserve | `079d92f` | ✅ submodule |
 | [graphed-corpus-mvp](https://github.com/graphed-org/graphed-corpus-mvp) | M0.5 requirements + fixtures | `b14d145` | ✅ submodule |
 | [graphed-executors](https://github.com/graphed-org/graphed-executors) | graphed-executors: reference + dask + parsl executors, shuffle/join data plane | `6137242` | ✅ submodule |
-| [graphed-histogram](https://github.com/graphed-org/graphed-histogram) | histogram filling (M23/M29) + systematics-vary sink variation axis (M48-M51) | `05aed7d` | ✅ submodule |
+| [graphed-histogram](https://github.com/graphed-org/graphed-histogram) | histogram filling (M23/M29) + systematics-vary sink variation axis (M48-M51) | `cec8911` | ✅ submodule |
 | [graphed-orchestrator](https://github.com/graphed-org/graphed-orchestrator) | Part B deterministic orchestrator | `7050dbe` | ✅ submodule |
 
 `lazy` repos are created when their milestone begins.
@@ -114,4 +114,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-09-09T17:49:04Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-09-12T15:33:34Z).</sub>
