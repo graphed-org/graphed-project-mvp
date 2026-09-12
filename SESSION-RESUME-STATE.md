@@ -683,3 +683,27 @@ LANE C UPDATE (2026-09-08): rounds 4-5 REJECT (see weight-composition-worklog.md
   + 4 MED (§2.6a registry = operations list; §2.5 `ctx._weight` gone; §2.6b registers an OPERATION; m56 re-freeze = one fixture
   line, no oracle) + 2 LOW (rider `home`; "nine" count). All folded; reports `$S/w5check/{behavioural,consistency}/report.md`.
 - nb-adl asked about port 8989 (notebook cells 34–37 start/stop a Dashboard there): allowed, port free, lsof before/after required.
+
+### 2026-09-12 ~12:35 — bookkeep committed (c604408), memory updated; superproject main ahead 2 (NOT pushed)
+- graphed-histogram#14 merged cec8911 (watcher enqueued it after CI). Superproject: afad29f (W5) + c604408 (bookkeep: current m57,
+  pins graphed 079d92f, histogram cec8911, corpus b14d145 unchanged, exec-local 6137242 unchanged). Push of graphed-project-mvp main
+  pending the docs-tour PR (one more pin bump) — push both together, or the owner pushes.
+- Memory: systematics-vary-plan.md → m57 DONE; weight-form-factor-semantics.md RETIRED (deleted + index line dropped).
+- TRAP HIT: SendMessage to a WORKFLOW subagent (nb-adl) RESUMED A DUPLICATE instance (the standing rule). Duplicate told to stand
+  down; the workflow instance (nbconvert pid 40674) owns the ADL commit. Never message wf agents; wait for the workflow result.
+- Worktrees to remove after the docs PR: $S/dedupe-impl (dedupe/prototype, merged), $S/ta57-graphed (m57-tests, merged via #28),
+  $S/docs-tour (after its PR merges).
+
+### 2026-09-12 ~13:20 — notebooks re-executed; docs PR #29 open + enqueue watcher; superproject pushed
+- wf_95c574dd-903 DONE (5 agents). nb-tour: fork tour re-executed on 079d92f — ZERO outputs moved (the widening fix has no surface
+  in the tour); cells ruff-cleaned; fork commit 8de23f6. nb-adl: ADL notebook re-executed — 7 cells moved, all timing/pid noise;
+  cell 32 (15-universe grid) byte-identical; tests/test_adl_queries.py 20 passed (bit-for-bit vs coffea); fork commit 856f757.
+  Fork commits 9d4963f, 8de23f6, 856f757 PUSHED to origin/graphed-mvp 2026-09-12 ~13:30 at the owner's request (3917bd4..856f757).
+- docs-tour: branch docs/systematics-tour 9940e06 + 97bf570 + a2d50b6 (review REJECT on a false install line → fold; sphinx -W 0,
+  ruff clean, re-exec zero moves) → **graphed PR #29**; enqueue watcher pid 43194 (log $S/dedupe/pr29/enqueue.log).
+  After #29 merges: pull m52/graphed, bookkeep pin bump (graphed), push superproject, remove worktree $S/docs-tour.
+- Superproject main pushed (fbc0a64..c604408).
+
+### 2026-09-12 ~13:45 — docs PR #29 MERGED f79d719; final pin bump
+- graphed main f79d719 (docs tour page). m52/graphed pulled; submodule graphed → f79d719; worktree $S/docs-tour removed.
+- Nothing in flight. m57 arc CLOSED: graphed#28 (079d92f), histogram#14 (cec8911), graphed#29 (f79d719), fork graphed-mvp 856f757.
