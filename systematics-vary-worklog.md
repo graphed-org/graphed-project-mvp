@@ -2554,3 +2554,16 @@ Owner: (1) both idioms correct, dedupe route ("relative-delta/shift-style weight
   (1 BLOCKER: §9.1's "weight() does not mutate" was false post-m57; 8 MED; 3 LOW; all folded). Post-merge in flight:
   wf_95c574dd-903 (tour + ADL notebooks re-executed on the merged stack in the fork; tour integrated into graphed docs via
   myst-nb on branch docs/systematics-tour). Bookkeep: current m57, pins graphed 079d92f / histogram cec8911.
+- m57 post-merge docs 2026-09-12: tour + ADL notebooks re-executed on the merged stack (tour: 0 output moves, ruff-clean; ADL: only
+  timing/pid noise, grid byte-identical, 20/20 reference tests) → fork commits 8de23f6 / 856f757 (owner pushes). Tour integrated into
+  graphed docs (coffea model: myst_nb, executed notebook, nb_execution_mode off, "By example" toctree; pool level self-contained via
+  uproot.recreate; ruff lints notebooks) → graphed PR #29 after one REJECT→fold review round (false install line: hist.graphed /
+  uproot.graphed are fork-only). Superproject: afad29f (W5) + c604408 (bookkeep m57) pushed.
+- 0.0.2 RELEASES 2026-09-12: graphed 6464a3a (PR #30) → PyPI 0.0.2 (14 wheels + sdist, token auth + OIDC attestations);
+  graphed-histogram 0b01391 (PR #15) → PyPI 0.0.2 (Trusted Publishing); graphed-executors 3afd1cf (PR #15) → PyPI 0.0.2 (Trusted Publishing, one Windows flake rerun).
+  Prep = wf_4286cf8f-399 (3 preps + 1 cross-repo reviewer + 2 folds): versions/floors, docs/changelog.rst per repo, every docs
+  "code-block + Prints" pair extracted and run on the release tree (graphed 62, histogram 14, executors all), sdists now exclude
+  CLAUDE.md/.graphed. TRAP: sibling floors in DEV extras form a cycle (histogram dev graphed-executors>=0.0.2 ↔ executors dev
+  graphed-histogram>=0.0.2) → unresolvable until both ship; dropped, runtime graphed>=0.0.2 kept. Owner decisions parked: corpus
+  catalog frozen test pins milestone vocabulary; histogram TypeError message vs frozen m23; histogram __version__ absent; executors
+  dev extra needs graphed-corpus (not on PyPI).

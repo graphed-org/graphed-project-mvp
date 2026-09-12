@@ -707,3 +707,70 @@ LANE C UPDATE (2026-09-08): rounds 4-5 REJECT (see weight-composition-worklog.md
 ### 2026-09-12 ~13:45 — docs PR #29 MERGED f79d719; final pin bump
 - graphed main f79d719 (docs tour page). m52/graphed pulled; submodule graphed → f79d719; worktree $S/docs-tour removed.
 - Nothing in flight. m57 arc CLOSED: graphed#28 (079d92f), histogram#14 (cec8911), graphed#29 (f79d719), fork graphed-mvp 856f757.
+
+### 2026-09-12 ~14:20 — 0.0.2 RELEASE prep launched (owner: "publish new releases (0.0.2 series), update the docs first")
+- Facts: PyPI has graphed / graphed-executors / graphed-histogram 0.0.1 (uploaded 2026-07-18, no release.yml run on record →
+  manual twine). release.yml triggers on tag `v*`: graphed = token auth (PYPI_TOKEN secret present) + OIDC attestations;
+  executors/histogram = Trusted Publishing (OIDC) — PyPI-side publisher config UNVERIFIABLE from here (PYPI_TOKEN secrets exist in
+  both as a fallback: switch publish step to `password: ${{ secrets.PYPI_TOKEN }}` + attestations:false if publish fails).
+  No `pypi` environment exists yet (GitHub auto-creates on first use). corpus/orchestrator not on PyPI — not released.
+- Version sites: graphed pyproject+Cargo.toml+5 __version__ literals+docs/conf.py+CONTRIBUTING printed line; executors pyproject+
+  2 __version__+conf.py; histogram pyproject+conf.py. Floors to add: executors/histogram `graphed>=0.0.2`, executors dev
+  `graphed-histogram>=0.0.2`. Executors CI pins graphed at 1598395 (old) → move to graphed's release commit before its PR.
+- ORDER: graphed release PR → merge → tag v0.0.2 (gh release create) → PyPI 0.0.2 visible → executors/histogram PRs (CI pins →
+  graphed release sha) → merge → tags. Docs examples validated by extract+run+compare ("Prints::" pairs). Changelog page per repo.
+- Workflow wf_4286cf8f-399 `rel-0-0-2-prep`: rel-graphed / rel-executors / rel-histogram (Opus high, worktrees $S/rel-graphed,
+  $S/rel-exec, $S/rel-hist, branch release/0.0.2) → rel-review (xhigh, per-repo verdicts) → folds. Briefs in
+  session-12dd48ff-handoff/rel002/. Reports under $S/rel/<name>/report.md.
+- Owner 2026-09-12 ~14:30: "It's all setup on pypi - go ahead." → Trusted Publishing for executors/histogram confirmed; cut all
+  three tags without further gate once each release PR merges (graphed first, then executors + histogram).
+
+### 2026-09-12 ~16:10 — 0.0.2 prep DONE; graphed release PR #30 open + enqueued
+- wf_4286cf8f-399: preps rel-graphed (770feb5 64a65ce 5da5f1b), rel-executors (2a13051 3be3302 ee8e18e), rel-histogram
+  (781d4db … cd572c7); review: graphed REJECT (G1 corpus catalog page false/internal), executors APPROVE (E1/E2/E3 MED/LOW left),
+  histogram REJECT (H1 CONTRIBUTING command red on clean tree; H2 RTD pin ≠ CI sha); folds: graphed be9e164 707dd6e (catalog
+  excluded from docs, sdist excludes .graphed), histogram de5d342 (ruff format exclude *.md, RTD pin = 079d92f, sdist exclude).
+  Lead applied E1/E2/E3 on executors: 86d0677 (sdist exclude verified 0 internal files / 235; description; RTD comment).
+  Reports: $S/rel/{rel-graphed,rel-executors,rel-histogram,rel-review}/report*.md.
+- OWNER DECISIONS surfaced (not blocking): (1) tests/frozen/corpus/m05/test_catalog.py pins milestone vocabulary in
+  docs/corpus/requirements/ops_catalog.md — retire two tests to publish the catalog as a page; (2) histogram H5: boost.py's
+  TypeError message says "explicit bins and range" while only range= is required — frozen m23 test pins the message; (3) histogram
+  has no __version__ (siblings do); (4) executors dev extra requires graphed-corpus which is not on PyPI (pre-existing).
+- **graphed PR #30** (release/0.0.2 tip 707dd6e) open; enqueue watcher pid above (log $S/rel/pr30/enqueue.log).
+  NEXT: on merge → `gh release create v0.0.2 --target <merge sha>` (notes from docs/changelog.rst 0.0.2 section) → watch release.yml
+  → PyPI graphed 0.0.2 → set executors ci.yml GRAPHED pin + histogram ci.yml GRAPHED pin (+ docs/requirements.txt) to the merge
+  sha → push both release branches → PRs → enqueue → tags.
+
+### 2026-09-12 ~18:35 — graphed 0.0.2 MERGED 6464a3a; GitHub release v0.0.2 created (release.yml running); histogram PR #15 open
+- graphed: PR #30 merged 6464a3a → `gh release create v0.0.2` (notes $S/rel/notes-graphed.md) → Monitor b6ki1ks49 watches the
+  release run + PyPI. m52/graphed pulled.
+- Pins: executors ci.yml GRAPHED → 6464a3a (22af386, local); histogram ci.yml + docs/requirements.txt → 6464a3a (98492c6, pushed).
+- ORDER CONSTRAINT: executors dev extra needs graphed-histogram>=0.0.2 and its CI installs histogram from git MAIN → histogram
+  release must merge FIRST. **graphed-histogram PR #15** open + enqueue watcher (log $S/rel/hist15/enqueue.log). After it merges:
+  `gh release create v0.0.2 --repo graphed-org/graphed-histogram --target <sha>` (notes $S/rel/notes-histogram.md), then push
+  executors release/0.0.2, PR, enqueue, release (notes $S/rel/notes-executors.md). Then bookkeep pins + push superproject; remove
+  worktrees $S/rel-graphed $S/rel-exec $S/rel-hist and the scratch venvs.
+- ~18:45 histogram #15 CI FAILED at install: dev extra `graphed-executors>=0.0.2` unresolvable (only 0.0.1 exists) — the two dev
+  extras formed a cycle. FIX: sibling floors dropped from BOTH dev extras (runtime `graphed>=0.0.2` kept): histogram dafd386
+  (pushed; PR #15 re-running, watcher + Monitor re-armed), executors bac90a1 (local, comment reworded). Sdist metadata verified.
+- ~19:05 **graphed 0.0.2 PUBLISHED on PyPI** (release run 34711368505 success): 14 wheels (manylinux/musllinux x86_64+aarch64,
+  macOS x86_64+arm64, win_amd64; abi3 + cp314t) + sdist; requires_python >=3.11. GitHub release v0.0.2 at 6464a3a.
+- ~19:15 histogram #15 MERGED 0b01391 → GitHub release v0.0.2 created (release.yml running; Trusted Publishing). m52/graphed-histogram
+  pulled. **graphed-executors PR #15** open (release/0.0.2 tip bac90a1) + enqueue watcher (log $S/rel/exec15/enqueue.log).
+- ~19:30 **graphed-histogram 0.0.2 PUBLISHED on PyPI** (run 34712139559, Trusted Publishing OK). Executors PR #15 pending (Monitor bvtgy3gy3).
+- ~19:45 executors #15 CI: windows py3.14 leg 1 failed / 361 passed — test_http_peer_actor_in_process_matches_flat_tree[31-8]
+  TimeoutError 30 s (Windows timing flake; branch touches only version strings in src; main's 2026-09-07 failure was also a
+  windows leg). Monitor bgfxj51oi reruns the failed jobs when run 34712157646 completes, then reports merge / second failure.
+  If it fails twice: inspect the leg (`gh api .../jobs/<id>/logs`) before touching anything — never edit the frozen test.
+
+### 2026-09-12 ~20:20 — 0.0.2 series: graphed + histogram PUBLISHED, executors release run in progress
+- executors #15 merged 3afd1cf after one rerun of the Windows py3.14 flake (attempt 2 green). GitHub release v0.0.2 created;
+  Monitor b6064nqzz watches the Trusted Publishing run + PyPI.
+- Superproject submodules → graphed 6464a3a, histogram 0b01391, exec-local 3afd1cf (bookkeep commit next).
+- After executors publishes: bookkeep --touch + commit + push; remove worktrees $S/rel-graphed $S/rel-exec $S/rel-hist and scratch
+  venvs $S/rel/rel-executors-venv $S/rel/rel-histogram-venv $S/docs-venv; memory: releases fact; worklog entry.
+
+### 2026-09-12 ~20:35 — 0.0.2 SERIES PUBLISHED (all three on PyPI)
+- graphed 0.0.2 (15 files, 18:39Z), graphed-histogram 0.0.2 (19:45... 18:45Z), graphed-executors 0.0.2 (19:16Z); executors and
+  histogram declare graphed>=0.0.2. GitHub releases v0.0.2 on all three repos (notes = changelog 0.0.2 sections).
+- Bookkeep commit below; worktrees + scratch venvs removed. Nothing in flight.
