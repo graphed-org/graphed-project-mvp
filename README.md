@@ -17,7 +17,7 @@ organization and replicates the M0 spine (per-package CI on the §A.5 matrix, wh
 
 ## Milestone status
 
-**54 of 54 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **m59**.
+**54 of 54 milestones DONE — all CI-green on the §A.5 matrix.** Current milestone: **m60**.
 
 | Milestone | Status | Repo(s) | What it delivered |
 |---|:--:|---|---|
@@ -114,4 +114,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-09-19T00:00:11Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-09-19T01:52:46Z).</sub>

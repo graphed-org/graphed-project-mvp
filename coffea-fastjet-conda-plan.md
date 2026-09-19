@@ -82,7 +82,9 @@ wires every surviving External itself, keyed by `external_key` (content hash + p
    count-only (`gak.num(events.Jet, axis=1)`), the plan's read list carries `nJet`, bit-for-bit vs eager.
 5. **fastjet arm = `src/fastjet/_graphed.py`** mirroring the dask half of `_pyjet.py` method for method,
    one `isinstance` branch in `ClusterSequence.__init__` (bind the class via `from … import`, never
-   `import fastjet._graphed` inside the method), recording through `Session.record_external(descriptor=,
+   `import fastjet._graphed` inside the method); a flat (single-event) particle collection is refused — a graphed array's first axis is the
+   partition axis, so one event cannot be split across partitions and the length-zero form recipe crashes
+   fastjet's single-event backend at record time, recording through `Session.record_external(descriptor=,
    form=)` with a content-hashed descriptor and a module-level picklable evaluator; forms from the
    length-zero recipe; Varied operands expanded per member. The descriptor hashes the jet definition;
    the query name and its arguments are the node's params, so two queries off one `JetDefinition` are
@@ -134,7 +136,7 @@ Sizes are src+test LOC from the precedents named in the findings; each unit ≤ 
 | C | conda | conda-forge/staged-recipes (owner's fork) | the drafts in `conda-recipes/` (recipes + LICENSE.txt) | ~290 | plan review |
 | m58 | projection honours declarations | graphed | the read-list helper + `projected_columns` at its three call sites (decision 4; `nano-factory-seam:G3`), existing sources and frozen suites untouched; External stand-in built from the node's recorded form (`fastjet-dask:G2`) | ~80 + ~250 | — |
 | m59 | awkward-idiom parity | graphed | tuple/`None` keys in `Array.__getitem__` (`nano-behaviors:G2`, `nano-factory-seam:G5`); numpy-scalar dtype preserved (`coffea-dask-surface:G1`); nested-tuple method outputs (`nano-behaviors:G3`) | ~250 + ~300, 2 commits | m58 DONE |
-| m60 | library-integration seams | graphed | `provenance.register_internal(prefix)` (`nano-behaviors:G1`); opaque-callable identity no longer `__name__`-only (`graphed-seams:G2`); `from_parquet` keeps record parameters (`fastjet-dask:G5`); export `expand`; architecture.rst: module-level-callables contract (`graphed-seams:G4`) | ~200 + ~250, 2 commits | m59 DONE |
+| m60 | library-integration seams | graphed | `provenance.register_internal(prefix)` (`nano-behaviors:G1`); `Session.record_external` refuses an input recorded in another Session, as `record_op` does (today it reads the foreign `node_id` at face value — silently wrong; F1's cross-session test lands on this); opaque-callable identity no longer `__name__`-only (`graphed-seams:G2`); `from_parquet` keeps record parameters (`fastjet-dask:G5`); export `expand`; architecture.rst: module-level-callables contract (`graphed-seams:G4`) | ~200 + ~250, 2 commits | m59 DONE |
 | R | release request 0.0.3 | 3 graphed repos | owner cuts | — | L, m58–m60 |
 | U | `uproot.graphed(form_mapping=, known_base_form=, backend=)` | uproot fork, stacked branch | mapped form + read path, `projected_columns` on the source (decision 4), path→buffer-key walk shared with `necessary_columns/_buffers`, `_evaluation_columns`, `graphed_head`; `typenames` + dict `ak_add_doc` honoured | ~280 + ~420 | dev: m58 · upstream: #1720 merged, R |
 | F0 | list-starts fix | fastjet fork → upstream PR | scikit-hep/fastjet#400 open (decision 6) | — | upstream review |

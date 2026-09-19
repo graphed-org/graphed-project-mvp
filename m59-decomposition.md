@@ -27,6 +27,9 @@ grep -n "def method_outputs\|def _scalar_operands" -r python/graphed`.
   leading `Ellipsis`). The recorded form is the form eager awkward gives the same key, and execution equals
   eager bit-for-bit — `a[:, :2]`, `a[:, 0]`, `a[:, -1]`, `a[:, ::2]`, `a[:, :, None]`, `a[:, None, :]`,
   `a[..., 0]`, on jagged arrays and on records of jagged fields.
+- I1b. A leading `Ellipsis` must absorb at least the partitioned axis: the members after it address fewer axes
+  than the receiver has. The frontend cannot see depth (`Form` is opaque to it), so this is a typing rule of each
+  backend's form rule — `GraphedTypeError` at record time, nothing recorded.
 - I2. Such an op is NOT a boundary: it fuses like any per-row op, and a partitioned run (≥ 2 partitions) equals
   the unpartitioned one bit-for-bit.
 - I3. A tuple key that would consume or restructure the partitioned axis (first member an `int`, a non-full
@@ -40,8 +43,9 @@ grep -n "def method_outputs\|def _scalar_operands" -r python/graphed`.
 
 ## integ-m59-S — a numpy scalar operand keeps its dtype
 
-- S1. For binary arithmetic, comparison and bitwise operators and ufuncs with a scalar operand on either side,
-  the recorded form's dtype and the executed result equal eager awkward's, over {bool, int64, float64} arrays ×
+- S1. For binary arithmetic, comparison and bitwise operators and ufuncs with a scalar operand — on either side
+  wherever eager awkward defines an answer (a numpy scalar on the LEFT of a comparison raises in awkward
+  itself) — the recorded form's dtype and the executed result equal eager awkward's, over {bool, int64, float64} arrays ×
   {`np.uint64`, `np.int32`, `np.float32`, `np.bool_`} scalars (the expression `PackedSelection` packs bits
   with is `mask * np.uint64(1 << bit)`).
 - S2. Values round-trip exactly: `np.uint64(2**63)`, `np.uint64(2**64 - 1)`, `np.float32(0.1)`.
