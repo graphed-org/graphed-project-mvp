@@ -24,12 +24,13 @@ provenance" python/graphed/session.py; grep -rn '"fn"' python/graphed; grep -n "
 ## integ-m60-X — a Session refuses an Array it did not record
 
 - X1. Every `Session` method that takes an `Array` refuses one recorded in another Session, recording nothing:
-  the `record_*` family with `GraphedTypeError` (the message `record_op` gives today), the reading entries
-  (`form`, `materialize`, `provenance`, `walk`) with `TypeError`. The method set comes from an instrument, not
-  a list: the suite walks `inspect.getmembers(Session)` for public methods with an `Array`-typed parameter and
-  fails on one it has no leg for.
-- X2. Module-level verbs that take a session beside arrays (`compile_ir(session, *arrays)` and whatever the
-  same walk of `graphed.__all__` finds) refuse the same way.
+  the `record_*` family with `GraphedTypeError` (the message `record_op` gives today), every other entry
+  (the readers — `form`, `materialize`, `serialized_ir`, … ) with `TypeError`. The method set comes from an
+  instrument, not a list: the suite walks `inspect.getmembers(Session)` for public methods with an
+  `Array`-annotated parameter and fails on one it has no leg for.
+- X2. Module-level verbs that take a session beside arrays refuse the same way; the instrument keys on a
+  `session` parameter over the non-class callables of `graphed.__all__` (`compile_ir` annotates its arrays
+  `Any`, so an annotation walk cannot find it).
 - X3. Controls: own-session calls record/read exactly as today (same nodes, same IR bytes); `record_op`'s
   existing refusal is unchanged.
 - One guard on `Session`, called from every member — not a check per method.
