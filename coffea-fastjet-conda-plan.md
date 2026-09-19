@@ -55,9 +55,9 @@ wires every surviving External itself, keyed by `external_key` (content hash + p
 3. **Cross-references are explicit graph edges, not attrs magic.** A coffea `graphed.Array` subclass
    (installed through the backend's `array_type()`) mirrors `dask_awkward.Array.__getattr__`. Every
    behavior name takes exactly one route, tried in this order: (a) a field → field access; (b) a
-   `no_dispatch` descriptor → run eagerly on the session typetracer; (c) a descriptor with a `.graphed`
-   arm → that arm (`_apply_global_index`, `_apply_nested_global_index` — `_DaskProperty`/`_DaskMethod`
-   gain the slot beside `.dask`); (d) a refused name → `NotImplementedError` (the `Systematic` arms, which
+   `no_dispatch` descriptor → run eagerly on the session typetracer; (c) — none: a `.graphed`
+   registration slot beside `.dask` was measured dead (the global-index methods record the identical
+   `method` node through route (f)), so coffea's descriptors are untouched; (d) a refused name → `NotImplementedError` (the `Systematic` arms, which
    `map_partitions` and mutate); (e) a `_DaskProperty` with a `.dask` arm → that body, with the graphed
    array as `dask_array`; (f) anything else → `graphed.Array`'s own `__getattr__`, unchanged: plain
    `@property`s record as they do today, and methods — `_DaskMethod`s included (`metric_table`, `nearest`,
@@ -141,7 +141,7 @@ Sizes are src+test LOC from the precedents named in the findings; each unit ≤ 
 | U | `uproot.graphed(form_mapping=, known_base_form=, backend=)` | uproot fork, stacked branch | mapped form + read path, `projected_columns` on the source (decision 4), path→buffer-key walk shared with `necessary_columns/_buffers`, `_evaluation_columns`, `graphed_head`; `typenames` + dict `ak_add_doc` honoured | ~280 + ~420 | dev: m58 · upstream: #1720 merged, R |
 | F0 | list-starts fix | fastjet fork → upstream PR | scikit-hep/fastjet#400 open (decision 6) | — | upstream review |
 | F1 | graphed arm | fastjet fork → upstream PR | §2.5 incl. the marked `graphed` extra, tests mirroring `tests/test_008-dask.py` (collected tests only) | ~430 + ~300 | dev: F0, m58 (`graphed.varied.expand` by module path until m60 exports it) · upstream: F0 merged, R |
-| A1 | NanoEvents `mode="graphed"` | coffea fork → upstream PR | §2.1/2.3/2.11: factory arm, `_graphed.py` shim + route test, `.graphed` slot + 2 arms, `__graphed_capable__`, refusals, extra on the four CI install lines gated off py3.10, parity tests vs eager over the dask-armed NanoAOD/PFNano tests, docs page | ~350 + ~800 + docs, 2 commits | dev: U, m58–m60 · upstream: R, an uproot release carrying #1720 + U |
+| A1 | NanoEvents `mode="graphed"` | coffea fork → upstream PR | §2.1/2.3/2.11: factory arm, `_graphed.py` shim + route test, `__graphed_capable__`, refusals, extra on the four CI install lines gated off py3.10, parity tests vs eager over the dask-armed NanoAOD/PFNano tests, docs page | ~350 + ~800 + docs, 2 commits | dev: U, m58–m60 · upstream: R, an uproot release carrying #1720 + U |
 
 Order: L, C, m58, F0 start now and are independent. m58 → m59 → m60 strictly (project rule); the fork
 units are not gated milestones and run beside them. "dev" needs are what the unit's local environment
