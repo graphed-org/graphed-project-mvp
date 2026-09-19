@@ -20,13 +20,15 @@ inputs' data touched and continues with `inputs[0]` as the External's stand-in.
 
 Contract (each line is one frozen property):
 - H1. A source object with a callable `projected_columns` attribute is asked, driver-side, once per driver
-  call, with the tuple of output `Array`s the driver was given (all of them, in the caller's order); its
-  return, as a tuple, is exactly the `columns` every `read_partition` call of that plan receives. Holds for
-  all three drivers.
+  call, with the tuple of output `Array`s the driver evaluates (for `aggregate_plan` and the plain write:
+  the caller's own, in the caller's order; the varied write builds its own per-universe list, so there the
+  tuple's members are `Array`s of the writing session); its return, as a tuple, is exactly the `columns`
+  every `read_partition` call of that plan receives. Holds for all three drivers.
 - H2. A source without the attribute behaves as on `main`: same `columns`, and
   `isinstance(source, PartitionedSource)` is still true (the Protocol gains no member).
 - H3. The hook is not called on workers: the plan carries the result (witness: a call counter on the source
-  across plan build + a `ThreadExecutor` run; and the plan round-trips through `pickle` with a source whose
+  across plan build + a run on graphed's own in-process `SequentialRunner` — the repo does not depend on
+  `graphed_executors`; and the plan round-trips through `pickle` with a source whose
   hook raises if called again).
 - H4. Determinism: two builds of the same program give byte-identical plans; graphed neither sorts nor
   dedupes the hook's answer.
@@ -39,7 +41,8 @@ Contract (each line is one frozen property):
 
 - E1. In buffer/column projection, the value that stands in for an External's output is a typetracer of the
   node's RECORDED form, so an op downstream that is valid only on that form (e.g. `gak.num(x, axis=2)` on
-  an External declared one level deeper than its first input) projects instead of raising; the External's
+  an External declared one level deeper than its first input) projects instead of raising (under
+  `on_fail="pass"` — the default policy refuses every External before any stand-in exists); the External's
   inputs are reported fully read, as today.
 - E2. For an External whose recorded form equals its first input's, reports are identical to `main`.
 - E3. The stand-in carries the session backend's behavior (a behavior property read on the External's
