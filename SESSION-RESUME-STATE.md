@@ -774,3 +774,68 @@ LANE C UPDATE (2026-09-08): rounds 4-5 REJECT (see weight-composition-worklog.md
 - graphed 0.0.2 (15 files, 18:39Z), graphed-histogram 0.0.2 (19:45... 18:45Z), graphed-executors 0.0.2 (19:16Z); executors and
   histogram declare graphed>=0.0.2. GitHub releases v0.0.2 on all three repos (notes = changelog 0.0.2 sections).
 - Bookkeep commit below; worktrees + scratch venvs removed. Nothing in flight.
+
+### 2026-09-14 — UPSTREAM PR CLEANUP (owner: uproot5#1720 + hist#721: drop graphed.yml/.graphed/machinery scripts, backup branches, fix CI, push)
+- Owner also ruled: graphed stays at py>=3.11 (3.10 EOL soon; 3.15 later). The cp311-abi3 wheels cover 3.11–3.14; cp314t separate.
+- PR heads: uproot5-graphed-mvp:graphed-mvp f246f16 (base c979803), hist-graphed-mvp:graphed-mvp b4cb743 (base e1927a7). Local clones
+  (venv editable installs) are on PRE-REBASE history — same PR content, do not reset them.
+- CI: pre-commit.ci fails on both (autofix push denied — org PR); uproot CUDA-13 job = runner env (cuda-bindings '1a0' parse,
+  main fails too) — NOT ours. Upstream CI never installs graphed → tests importorskip → decision: add graphed to the TEST
+  dependency group with python_version>="3.11" + >=0.0.2 floors (own commit, flagged).
+- Workflow wf_d067f0e5-30f `upstream-pr-cleanup`: up-uproot / up-hist (worktrees $S/up/uproot, $S/up/hist, branch
+  graphed-mvp-cleanup; backup branch backup/graphed-mvp-project-machinery pushed to each fork) → up-review (xhigh) → folds.
+  Briefs session-12dd48ff-handoff/upstream-prs/. On APPROVE the LEAD pushes `graphed-mvp-cleanup:graphed-mvp` to each fork
+  (updates the PRs), edits PR bodies if the review says so, then watches pre-commit.ci + CI on both PRs.
+- 2026-09-14 ~afternoon: cleanup DONE + PUSHED. Review APPROVE both (MED-1 prose scrub folded: uproot 36→0 label hits, hist 4→0,
+  AST-identical code; LOW-4 test_graphed_m10.py → test_graphed_projection_and_compiled_reads.py). Lead fixed the stale meta-repo
+  link + `graphed-awkward` names. Pushed: uproot5-graphed-mvp graphed-mvp f246f16→e9db8fe (22 files +2415/−10), hist-graphed-mvp
+  graphed-mvp b4cb743→8b073a1 (5 files +410). Backups: backup/graphed-mvp-project-machinery = f246f16 / b4cb743 on each fork.
+  PR bodies updated via `gh api -X PATCH … -F body=@file` (gh pr edit no-ops). Monitor brygwem7s watches both PRs' checks.
+  uproot: test group gains graphed[awkward,parquet]/graphed-executors/graphed-histogram/vector (py>=3.11, >=0.0.2) + uv
+  exclude-newer-package opt-outs (7-day window hid 0.0.2 — drop after 2026-09-19); NOT [preserve] (onnxruntime has no cp314t).
+  hist: test group gains graphed[awkward,numpy]/graphed-histogram/graphed-executors; test_uproot_ttree_fill_end_to_end skips
+  upstream until uproot5#1720 lands. Local fork clones (venv editable) still on pre-rebase history — untouched.
+- 2026-09-14 ~17:10: uproot pre-commit.ci failed on `pretty-format-toml` only. Cause: toml-sort 0.25.0 (released 2026-09-12)
+  rewrites inline tables as `{ k = v }`; pre-commit.ci's cached hook env runs 0.24.3 and rejects that layout (main's own file also
+  fails under 0.25.0 — verified with `uvx --with toml-sort==<v> --from language-formatters-pre-commit-hooks==2.16.0
+  pretty-format-toml --autofix`). Fix: pyproject rebuilt from main's layout + only the graphed lines → 25f1ab8 pushed to the
+  uproot PR head. hist has no pretty-format-toml hook and its pre-commit.ci passed. Monitor b811utz2u watches both PRs.
+  TRAP: when hand-running upstream hooks, pin the CI's toml-sort (0.24.3) or SKIP=pretty-format-toml and keep main's layout.
+- 2026-09-14 ~17:50: uproot5#1720 @ 25f1ab8 SETTLED: 23 pass, 1 fail = "GPU test with CUDA 13" only (tests-cuda/ '1a0' parse; the
+  89 graphed tests PASSED inside that job too). Ubuntu py3.14 job installs graphed/-executors/-histogram==0.0.2, 89 graphed PASSED.
+  hist#721 @ 8b073a1 SETTLED 13/13 pass; py3.14 job 315 passed 1 skipped (test_uproot_ttree_fill_end_to_end: hist CI has NO
+  uproot at all). Pushed deaae37 = skip guard `hasattr(uproot, "graphed")` (proven: PyPI uproot 5.7.6 → SKIPPED with guard,
+  AttributeError without). Monitor bc8uao173 watches hist @ deaae37. PR bodies re-PATCHed (toml-sort note; guarded skip).
+  FOLLOW-UP (blocked on an uproot release carrying #1720): add `uproot>=<that>` + scikit-hep-testdata to hist's test group.
+- 2026-09-14 ~18:00: hist#721 @ deaae37 SETTLED 13/13. UPSTREAM PR CLEANUP DONE. Worktrees $S/up/{uproot,hist} + scratch venvs
+  removed; local branch graphed-mvp-cleanup deleted from both clones (the PR heads live on the forks). Nothing in flight.
+
+### 2026-09-14 ~18:30 — uproot5#1720 REVIEW ROUND 1 (ariostas: extras import; test_1720_* names; tests/graphed helper package)
+- Worktree $S/up/uproot re-created at 25f1ab8 (branch graphed-mvp-cleanup), venv $S/up/uproot-venv (graphed 0.0.2), baseline 89 passed.
+- Brief session-12dd48ff-handoff/upstream-prs/review-1720-r1.md. Workflow wf_3874b4a5-e86 (impl opus/high → review opus/xhigh, ≤1 fold).
+  Measured: bare `import graphed` lacks .awkward/.awkward.projection attrs (extras must import them); `import graphed_executors` lacks
+  .local; pytest puts the REPO ROOT on sys.path (tests/__init__.py) so `tests.graphed.*` imports/import-refs resolve from any cwd and
+  tests/ is never on sys.path → the new tests/graphed package cannot shadow graphed, but every sys.path.insert(tests dir) MUST go.
+- On APPROVE the lead pushes graphed-mvp-cleanup:graphed-mvp to the fork, re-PATCHes the PR body (test_1720_ names), replies to the
+  review, watches CI (CUDA 13 excluded).
+- 2026-09-14 ~19:05: wf_3874b4a5-e86 APPROVE (2 LOW: commit-msg count 15→14 fixed by amend; cwd=tests/ `python -m pytest` shadowing
+  noted in the PR reply). Pushed 93e8aab (extras) + b3e32e4 (test_1720_* + tests/graphed) to the fork → PR head b3e32e4. PR body
+  re-PATCHed; replies posted on all three review threads (ids 4008893031/243/387). Monitor ba2dpz02j watches CI (CUDA 13 excluded).
+- 2026-09-14 ~19:30: CI @ b3e32e4: 12 jobs fail on tests/test_0001_source_class.py (+test_0066 http fallback on Windows) and
+  Pyodide "Failed to fetch" — scikit-hep.org returns HTTP 403 for EVERYTHING (homepage too, probed from here); zero graphed
+  involvement; fail-fast cancelled the rest. Monitor blb7cyxzt: waits run 34888510095 completed + host 200 → `gh run rerun --failed`
+  → watches checks. If the host stays down past the monitor, rerun by hand: `gh run rerun 34888510095 --repo scikit-hep/uproot5 --failed`.
+- 2026-09-14 ~21:20: scikit-hep.org = Cloudflare edge 403 for everything (GitHub status all green) → uproot's HTTP source tests fail
+  in every job; run 34888510095 stuck "queued" on its aggregator job. Account has admin on scikit-hep/uproot5. Monitor bdibmvdda
+  (1 h, re-arm on TIMEOUT): when host answers 200 → cancel the stuck run if needed → `gh run rerun 34888510095 --failed`.
+  Detached nohup/setsid watchers die with the Bash call in this sandbox — use Monitor re-arms instead.
+
+## Update 2026-09-19 — integration arc (coffea / fastjet / conda): m60 closed pending ONE owner ruling
+
+Journal: `coffea-fastjet-conda-worklog.md` (§6 Execution, `tail`); plan `coffea-fastjet-conda-plan.md`; `m58`–`m60-decomposition.md`.
+- **BLOCKED ON OWNER:** re-freeze affirmation for `tests/frozen/preserve/m25/test_histogram_preservation.py` (takes `session`/`value` from two `_record()` calls; m60's cross-Session guard refuses it). Dispute + measured 3-line correction: `m52/graphed/.graphed/m60/disputes/`. On affirmation: apply under `--allow-refreeze tests/frozen/preserve/m25`, re-freeze tag, whole suite green, ONE final delta review round (covers the re-freeze + 393ee9a's prose) to record APPROVE, push `m60-integration-seams` + `freeze-m60`, PR stacked on graphed#33, then request release 0.0.3 → conda bump (version, sha256, `license_file`, drop recipe `LICENSE.txt` copies).
+- graphed clone `~/vibe-coding/m52/graphed`, branch `m60-integration-seams` LOCAL at 393ee9a (identity key closed: `type(fn) is types.MethodType` → `(id(__self__), id(__func__))`, else `id(fn)`).
+- Forks, all LOCAL, review loops closed, m60 follow-through applied (`register_internal`, public `expand`, cross-session test): uproot `~/vibe-coding/uproot5-graphed-form-mapping` @ `graphed-form-mapping` 6bdc948; fastjet `~/vibe-coding/fastjet-graphed-mvp` @ `graphed-arm` 7751717; coffea `~/vibe-coding/coffea-graphed-mvp` @ `graphed-mvp` 9c6cace8. Upstream PRs open only when: uproot5#1720 merged + release 0.0.3 (U); fastjet#400 merged + 0.0.3 (F1); 0.0.3 + a uproot release carrying #1720 and U (A1).
+- Dev envs: `~/vibe-coding/integ/venv` and `<scratchpad>/fj/venv-src` read graphed from the detached worktree `~/vibe-coding/integ/graphed-pin` (at 393ee9a).
+- Awaiting others: graphed#31/#32/#33, executors#16, histogram#16, orchestrator#1, scikit-hep/fastjet#400 (all CLEAN, owner merge); scikit-hep/uproot5#1720 (review required); conda-forge/staged-recipes#34887 (no reviewer yet).
+- Traps met this arc: `prek -a` in the uproot fork rewrites `pyproject.toml` (toml-sort 0.25) — use `--files`; `pytest --cov` dies in the integ venv — `coverage run --branch -m pytest`; implementer agents may commit in scratch clones — check the canonical clone.
