@@ -114,4 +114,4 @@ When guidance conflicts, the higher authority wins: **(1)** the project plan
 (`graphed-project-plan-gated.md`) always wins · **(2)** the root [`CLAUDE.md`](CLAUDE.md) · **(3)** a
 sub-repo's `CLAUDE.md` (local detail only).
 
-<sub>Generated from <code>.graphed/state.json</code> (updated 2026-09-19T01:52:46Z).</sub>
+<sub>Generated from <code>.graphed/state.json</code> (updated 2026-09-19T14:04:18Z).</sub>
